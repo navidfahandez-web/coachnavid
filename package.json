@@ -1,0 +1,9 @@
+{
+  "name": "navid-padel-lessons",
+  "private": true,
+  "type": "module",
+  "description": "Padel lesson booking page for Coach Navid Fahandezh (Lithuania) with WhatsApp confirmation",
+  "dependencies": {
+    "@netlify/blobs": ">=8.1.0"
+  }
+}
