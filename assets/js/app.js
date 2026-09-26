@@ -220,6 +220,11 @@ function renderStatus(panel) {
     </div>`;
 }
 
+function showThanks() {
+  const dialog = $('[data-thanks]');
+  if (!dialog.open) dialog.showModal();
+}
+
 // ---------- status polling ----------
 let pollTimer = null;
 async function refreshStatus() {
@@ -292,6 +297,11 @@ document.addEventListener('click', async (e) => {
   }
 });
 
+// Clicking the dimmed backdrop closes the thank-you window
+$('[data-thanks]').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.close();
+});
+
 document.addEventListener('input', (e) => {
   if (e.target.closest('[data-form]') && e.target.name in state.form) state.form[e.target.name] = e.target.value;
 });
@@ -317,6 +327,7 @@ document.addEventListener('submit', async (e) => {
   try {
     const res = await state.backend.book({ ...lesson, firstName, lastName, phone, company: data.company });
     saveRequest({ id: res.id, code: res.code, ...lesson, status: 'pending' });
+    showThanks();
     state.date = null;
     state.start = null;
     schedulePoll();

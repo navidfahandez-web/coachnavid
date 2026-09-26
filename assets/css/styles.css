@@ -298,6 +298,25 @@ button { font: inherit; color: inherit; }
 .demo strong { color: var(--lime); }
 .demo__row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
+/* thank-you window after a request */
+.thanks {
+  width: min(380px, calc(100% - 32px)); padding: 36px 28px 28px; text-align: center;
+  color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius);
+  overflow: hidden;
+}
+.thanks::backdrop { background: rgba(10, 10, 10, .7); backdrop-filter: blur(4px); }
+.thanks[open] { animation: pop .28s cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes pop { from { transform: scale(.92); opacity: 0; } }
+.thanks__ball {
+  width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--lime-glow), var(--lime) 50%, var(--lime-deep));
+  box-shadow: 0 0 40px rgba(195, 234, 91, .45);
+}
+.thanks h2 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -.04em; color: var(--lime); }
+.thanks p { margin: 10px 0 24px; color: var(--ink-2); }
+.thanks .btn { min-width: 120px; }
+@media (prefers-reduced-motion: reduce) { .thanks[open] { animation: none; } }
+
 /* ---------- coach ---------- */
 .coach, .how { padding: clamp(80px, 10vw, 130px) 0 20px; }
 .coach__grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(28px, 5vw, 72px); margin-top: 40px; }
