@@ -66,7 +66,7 @@ export default async (req, context) => {
   try {
     await notifyCoach(booking);
   } catch (err) {
-    console.error('WhatsApp notify failed', err);
+    console.error(`WhatsApp notify failed: ${err.message}`);
     // Release the hold — Navid never heard about it.
     await updateDay(date, (bookings) => {
       const b = bookings.find((x) => x.id === booking.id);

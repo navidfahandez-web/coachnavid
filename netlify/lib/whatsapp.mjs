@@ -14,7 +14,12 @@ async function send(to, message) {
     headers: { Authorization: `Bearer ${env('WHATSAPP_TOKEN')}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ messaging_product: 'whatsapp', to, ...message }),
   });
-  if (!res.ok) throw new Error(`WhatsApp API ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let e = {};
+    try { e = JSON.parse(text).error ?? {}; } catch { /* not JSON */ }
+    throw new Error(`code ${e.code ?? '?'}${e.error_subcode ? `/${e.error_subcode}` : ''} (HTTP ${res.status}) — ${e.message ?? text}`);
+  }
   return res.json();
 }
 
