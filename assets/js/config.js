@@ -2,5 +2,5 @@
 // that receives requests) live in Netlify environment variables instead.
 export const COACH = {
   // Public WhatsApp for questions, e.g. '+370 612 34567'. Leave empty to hide the links.
-  whatsapp: '',
+  whatsapp: '+971 56 167 7227',
 };

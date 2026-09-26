@@ -1,6 +1,7 @@
 // Booking rules shared by the browser and the Netlify Functions, so the page
 // and the server always agree on what a valid lesson is.
 // All dates/times are wall-clock time in Lithuania (Europe/Vilnius).
+import { OPEN_DATES } from './schedule.js';
 
 export const RULES = {
   timeZone: 'Europe/Vilnius',
@@ -67,21 +68,21 @@ export function overlaps(aStart, aDuration, bStart, bDuration) {
 
 // Why a given start/duration can't be booked, or null if it can.
 // `busy` = [{ start, duration }] of lessons that are confirmed or held.
-export function unavailableReason({ date, start, duration, busy = [], blockedDates = [], now = nowInLithuania() }) {
+export function unavailableReason({ date, start, duration, busy = [], blockedDates = [], openDates = OPEN_DATES, now = nowInLithuania() }) {
   if (!isValidDate(date)) return 'invalid-date';
   if (!DURATIONS.includes(duration)) return 'invalid-duration';
   if (!startTimes(duration).includes(start)) return 'outside-hours';
   if (date < now.date || date > lastBookableDate(now)) return 'out-of-range';
-  if (blockedDates.includes(date)) return 'day-off';
+  if (!openDates.includes(date) || blockedDates.includes(date)) return 'day-off';
   if (date === now.date && toMin(start) < now.minutes + RULES.minNoticeMinutes) return 'too-soon';
   if (busy.some((b) => overlaps(start, duration, b.start, b.duration))) return 'taken';
   return null;
 }
 
 // Does this day still have at least one bookable 1-hour lesson?
-export function dayHasOpening({ date, busy, blockedDates, now }) {
+export function dayHasOpening({ date, busy, blockedDates, openDates, now }) {
   return startTimes(RULES.minDuration).some(
-    (start) => !unavailableReason({ date, start, duration: RULES.minDuration, busy, blockedDates, now }),
+    (start) => !unavailableReason({ date, start, duration: RULES.minDuration, busy, blockedDates, openDates, now }),
   );
 }
 

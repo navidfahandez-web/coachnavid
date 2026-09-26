@@ -1,6 +1,7 @@
 // WhatsApp Cloud API (Meta) helpers.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { formatDuration, toHHMM, toMin } from '../../shared/rules.js';
+import { locationLabel } from '../../shared/schedule.js';
 
 const env = (k) => process.env[k] ?? '';
 const GRAPH = 'https://graph.facebook.com/v21.0';
@@ -23,7 +24,8 @@ export function describeSlot(b) {
   const day = new Date(`${b.date}T12:00:00Z`).toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
   });
-  return `${day}, ${b.start}–${toHHMM(toMin(b.start) + b.duration)} (${formatDuration(b.duration)})`;
+  const where = locationLabel(b.location);
+  return `${day}, ${b.start}–${toHHMM(toMin(b.start) + b.duration)} (${formatDuration(b.duration)})${where ? ` · ${where}` : ''}`;
 }
 
 // Template params can't contain newlines, tabs or 4+ spaces.

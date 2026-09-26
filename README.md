@@ -1,6 +1,6 @@
 # coachnavid.com — padel lesson booking
 
-Landing page for Coach Navid Fahandezh's padel lessons in Lithuania. Students pick a day, a lesson
+Landing page for Coach Navid Fahandezh's padel lessons in Klaipėda and Palanga, Lithuania. Students pick a day, a lesson
 length (1h / 1h 30 / 2h) and a start time between 10:00 and 17:00 (Lithuanian time). Navid gets the
 request on WhatsApp and taps **Yes** or **No**. A confirmed lesson blocks the slot for everyone else
 until it's cancelled.
@@ -37,8 +37,16 @@ netlify/lib/                 storage (Netlify Blobs) + WhatsApp Cloud API helper
 
 Only messages from `COACH_WHATSAPP` are acted on. Everyone else is ignored.
 
-Rules (hours, 30-min steps, 60-day booking window, 2h minimum notice, 24h hold) are in
-`shared/rules.js`. To block days off, set the `BLOCKED_DATES` env var, e.g. `2026-10-12,2026-10-13`.
+### Changing your dates or clubs
+
+Edit **`shared/schedule.js`** and redeploy. Only the dates in `OPEN_DATES` can be booked (currently
+1, 2, 5, 6 and 7 October 2026). The clubs are in `LOCATIONS`: Klaipėda at A1 Padel and Palanga at Oshee,
+which is still marked "to be confirmed". Students pick the city when they book, and it appears in the
+"When" line of your WhatsApp message. To close one of the open dates at short notice without a redeploy,
+set the `BLOCKED_DATES` env var, e.g. `2026-10-06`.
+
+Other rules are in `shared/rules.js`: hours 10:00–17:00, 30-min steps, 2h minimum notice and the 24h hold.
+The public "Message Navid" WhatsApp number is in `assets/js/config.js`.
 
 ---
 

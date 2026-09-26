@@ -4,6 +4,7 @@ import {
   addDays, DURATIONS, dayHasOpening, formatDuration, lastBookableDate, nowInLithuania,
   RULES, startTimes, toHHMM, toMin, unavailableReason,
 } from '../../shared/rules.js';
+import { LOCATIONS, OPEN_DATES, locationById, locationLabel } from '../../shared/schedule.js';
 
 const $ = (s, root = document) => root.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -19,6 +20,7 @@ const state = {
   date: null,
   duration: 60,
   start: null,
+  location: null,
   form: { firstName: '', lastName: '', phone: '+370 ' },
   error: '',
   submitting: false,
@@ -89,14 +91,28 @@ function renderCalendar() {
     const date = `${state.month}-${String(d).padStart(2, '0')}`;
     const outOfRange = date < now.date || date > last;
     const off = state.blockedDates.includes(date);
-    const full = !outOfRange && !off && state.loaded &&
+    const open = OPEN_DATES.includes(date) && !outOfRange && !off;
+    const full = open && state.loaded &&
       !dayHasOpening({ date, busy: busyOn(date), blockedDates: state.blockedDates, now });
-    const disabled = outOfRange || off || full || !state.loaded;
-    const cls = ['day', date === now.date && 'day--today', full && 'day--full'].filter(Boolean).join(' ');
-    const label = `${longDay(date)}${full ? ', fully booked' : off ? ', unavailable' : outOfRange ? ', not bookable' : ''}`;
+    const disabled = !open || full || !state.loaded;
+    const cls = ['day', date === now.date && 'day--today', open && !full && 'day--open', full && 'day--full'].filter(Boolean).join(' ');
+    const label = `${longDay(date)}${full ? ', fully booked' : open ? ', open for lessons' : ', not available'}`;
     html += `<button type="button" class="${cls}" data-date="${date}" aria-label="${label}" aria-pressed="${date === state.date}" ${disabled ? 'disabled' : ''}>${d}</button>`;
   }
   $('[data-days]').innerHTML = html;
+  renderDatePills();
+}
+
+// Lime pills under the calendar, one per open date (like the reference poster's legend)
+function renderDatePills() {
+  const upcoming = OPEN_DATES.filter((d) => d >= state.now.date && !state.blockedDates.includes(d));
+  $('[data-open-dates]').innerHTML = upcoming.length
+    ? upcoming.map((d) => {
+      const full = state.loaded && !dayHasOpening({ date: d, busy: busyOn(d), blockedDates: state.blockedDates, now: state.now });
+      return `<button type="button" class="date-pill" data-date="${d}" aria-pressed="${d === state.date}" ${full || !state.loaded ? 'disabled' : ''}>
+        <b>${Number(d.slice(8))}</b>${fmt(d, { weekday: 'long' })}${full ? ' · full' : ''}</button>`;
+    }).join('')
+    : '<p class="note">No lesson dates open right now — new dates are added regularly.</p>';
 }
 
 // ---------- right panel ----------
@@ -131,6 +147,12 @@ function renderPanel() {
     <h3>${esc(fmt(state.date, { weekday: 'short', day: 'numeric', month: 'short' }).toLowerCase())}</h3>
     <p class="panel__sub">${esc(longDay(state.date))} · lessons between ${RULES.open} and ${RULES.close}</p>
 
+    <div class="step-label"><span>where</span><small>pick your club</small></div>
+    <div class="places-pick" role="group" aria-label="Location">
+      ${LOCATIONS.map((l) => `<button type="button" data-location="${l.id}" aria-pressed="${l.id === state.location}">
+        <b>${esc(l.city)}</b><span>${esc(l.club)}${l.note ? ` <em>· ${esc(l.note)}</em>` : ''}</span></button>`).join('')}
+    </div>
+
     <div class="step-label"><span>lesson length</span><small>30-min steps</small></div>
     <div class="seg" role="group" aria-label="Lesson length">
       ${DURATIONS.map((d) => `<button type="button" data-duration="${d}" aria-pressed="${d === state.duration}">${formatDuration(d)}</button>`).join('')}
@@ -152,12 +174,12 @@ function renderPanel() {
       <label class="hp" aria-hidden="true">Company<input name="company" tabindex="-1" autocomplete="off" /></label>
       <div class="summary">
         ${state.start
-          ? `<span>${esc(fmt(state.date, { weekday: 'short', day: 'numeric', month: 'short' }))} · <b>${state.start}–${endOf(state.start, state.duration)}</b></span><span>${formatDuration(state.duration)}</span>`
+          ? `<span>${esc(fmt(state.date, { weekday: 'short', day: 'numeric', month: 'short' }))} · <b>${state.start}–${endOf(state.start, state.duration)}</b>${state.location ? ` · ${esc(locationById(state.location).city)}` : ''}</span><span>${formatDuration(state.duration)}</span>`
           : '<span>Pick a start time above</span>'}
       </div>
       ${state.error ? `<p class="form__error" role="alert">${esc(state.error)}</p>` : ''}
-      <button class="btn btn--lime btn--block" type="submit" ${!state.start || state.submitting ? 'disabled' : ''}>
-        ${state.submitting ? 'Sending…' : 'Request this lesson'}
+      <button class="btn btn--lime btn--block" type="submit" ${!state.start || !state.location || state.submitting ? 'disabled' : ''}>
+        ${state.submitting ? 'Sending…' : !state.location ? 'Choose Klaipėda or Palanga' : !state.start ? 'Pick a start time' : 'Request this lesson'}
       </button>
       <p class="form__fine">Navid gets your request on WhatsApp and confirms it there. The slot is held for you while he replies.</p>
     </form>`;
@@ -166,6 +188,7 @@ function renderPanel() {
 function renderStatus(panel) {
   const r = state.request;
   const when = `${fmt(r.date, { weekday: 'short', day: 'numeric', month: 'short' })} · <b>${r.start}–${endOf(r.start, r.duration)}</b>`;
+  const where = r.location ? `<p class="panel__sub">${esc(locationLabel(r.location))}</p>` : '';
   const views = {
     pending: ['⏳', 'request sent', 'Navid has your request on WhatsApp. This page updates by itself as soon as he confirms — you can also come back later.'],
     confirmed: ['✓', 'you’re booked!', 'Navid confirmed your lesson. He’ll message you on WhatsApp with the court details. See you on court!'],
@@ -188,6 +211,7 @@ function renderStatus(panel) {
       <div class="status__icon" aria-hidden="true">${icon}</div>
       <h3>${title}</h3>
       <div class="status__card">${when}<span>${formatDuration(r.duration)}</span></div>
+      ${where}
       <p>${text}</p>
       <p class="panel__sub">Reference ${esc(r.code)}</p>
       ${wa}
@@ -232,7 +256,15 @@ document.addEventListener('click', async (e) => {
   const t = e.target.closest('button');
   if (!t) return;
 
-  if (t.matches('[data-date]')) return selectDate(t.dataset.date);
+  if (t.matches('[data-date]')) {
+    state.month = t.dataset.date.slice(0, 7);
+    return selectDate(t.dataset.date);
+  }
+  if (t.matches('[data-location]')) {
+    state.location = t.dataset.location;
+    state.error = '';
+    return renderPanel();
+  }
   if (t.matches('[data-prev], [data-next]')) {
     const [y, m] = state.month.split('-').map(Number);
     const d = new Date(Date.UTC(y, m - 1 + (t.matches('[data-next]') ? 1 : -1), 1));
@@ -275,12 +307,13 @@ document.addEventListener('submit', async (e) => {
   state.error =
     !firstName || !lastName ? 'Please enter your first and last name.'
     : !/^\+\d{8,15}$/.test(phone) ? 'Please enter your WhatsApp number with country code, e.g. +370 612 34567.'
+    : !state.location ? 'Please choose Klaipėda or Palanga.'
     : '';
   if (state.error) return renderPanel();
 
   state.submitting = true;
   renderPanel();
-  const lesson = { date: state.date, start: state.start, duration: state.duration };
+  const lesson = { date: state.date, start: state.start, duration: state.duration, location: state.location };
   try {
     const res = await state.backend.book({ ...lesson, firstName, lastName, phone, company: data.company });
     saveRequest({ id: res.id, code: res.code, ...lesson, status: 'pending' });
@@ -305,7 +338,8 @@ async function boot() {
     link.href = `https://wa.me/${COACH.whatsapp.replace(/\D/g, '')}`;
     link.hidden = false;
   }
-  state.month = state.now.date.slice(0, 7);
+  const firstOpen = OPEN_DATES.find((d) => d >= state.now.date);
+  state.month = (firstOpen ?? state.now.date).slice(0, 7);
   renderCalendar();
   renderPanel();
 

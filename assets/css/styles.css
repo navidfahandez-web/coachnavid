@@ -103,6 +103,7 @@ button { font: inherit; color: inherit; }
   display: grid; grid-template-columns: 1.25fr 1fr; gap: clamp(28px, 5vw, 72px);
   align-items: center; padding: clamp(28px, 6vw, 80px) 0 40px;
 }
+.hero__lede strong { color: var(--ink); font-weight: 500; }
 .hero__lede { color: var(--ink-2); max-width: 30em; font-size: 17px; font-weight: 300; margin: 28px 0 30px; }
 .hero__cta { display: flex; gap: 12px; flex-wrap: wrap; }
 .hero__photo { margin: 0; position: relative; }
@@ -166,7 +167,47 @@ button { font: inherit; color: inherit; }
 .day[aria-pressed='true'] { border-color: var(--lime); color: var(--ink); background: rgba(195, 234, 91, .08); }
 .day[disabled] { cursor: default; color: var(--faint); }
 .day--full { text-decoration: line-through; text-decoration-color: var(--muted); }
-.day--today::after { content: ''; position: absolute; bottom: 6px; width: 4px; height: 4px; border-radius: 50%; background: var(--lime); }
+.day--today::after { content: ''; position: absolute; bottom: 6px; width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+.day--open { color: var(--ink); font-weight: 500; border-color: rgba(195, 234, 91, .55); }
+.day--open[aria-pressed='true'] { border-color: var(--lime); background: var(--lime); color: #111; }
+
+.date-pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.date-pill {
+  display: inline-flex; align-items: center; gap: 12px; cursor: pointer;
+  border: 1.5px solid var(--line); border-radius: var(--radius-sm); padding: 9px 16px;
+  background: rgba(18, 18, 18, .8); font-size: 14px; transition: border-color .15s, background .15s;
+}
+.date-pill b { color: var(--lime); font-weight: 700; font-size: 16px; }
+.date-pill:hover:not([disabled]) { border-color: var(--lime); }
+.date-pill[aria-pressed='true'] { background: var(--lime); border-color: var(--lime); color: #111; }
+.date-pill[aria-pressed='true'] b { color: #111; }
+.date-pill[disabled] { opacity: .4; cursor: default; text-decoration: line-through; }
+
+.places-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.places-pick button {
+  text-align: left; cursor: pointer; background: transparent; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line-soft); padding: 12px 14px; display: grid; gap: 2px;
+  transition: border-color .15s, background .15s;
+}
+.places-pick button:hover { border-color: var(--line); }
+.places-pick b { font-size: 16px; font-weight: 600; }
+.places-pick span { font-size: 13px; color: var(--muted); }
+.places-pick em { font-style: normal; }
+.places-pick button[aria-pressed='true'] { border-color: var(--lime); background: rgba(195, 234, 91, .1); }
+.places-pick button[aria-pressed='true'] b { color: var(--lime); }
+
+.where { padding: clamp(80px, 10vw, 130px) 0 20px; }
+.places { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 40px; }
+.place {
+  border: 1.5px solid var(--line); border-radius: var(--radius); padding: 28px;
+  background: rgba(18, 18, 18, .8); backdrop-filter: blur(8px);
+}
+.place__city { color: var(--lime); font-size: 15px; }
+.place h3 { margin: 6px 0 10px; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.place h3 em { font-style: normal; font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--muted); vertical-align: middle; margin-left: 6px; }
+.place p { margin: 0; color: var(--ink-2); font-weight: 300; }
+.where__dates { margin: 20px 0 0; color: var(--ink-2); }
+.where__dates b { color: var(--lime); }
 .day--pad { visibility: hidden; }
 
 .legend { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; padding: 0; margin: 20px 0 0; }
@@ -300,7 +341,7 @@ blockquote { margin: 30px 0; font-size: clamp(1.4rem, 2.6vw, 1.9rem); font-weigh
   .stats li { flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 14px; }
   .cal__days { padding: 12px 6px 16px; }
   .cal__bar { grid-template-columns: 32px 1fr 32px; }
-  .steps { grid-template-columns: 1fr; }
+  .steps, .places { grid-template-columns: 1fr; }
   .form { grid-template-columns: 1fr; }
   .book__head { flex-direction: column; align-items: flex-start; gap: 0; }
   .month-title { text-align: left; }

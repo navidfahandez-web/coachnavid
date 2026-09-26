@@ -2,8 +2,9 @@
 // a plain static server), falls back to a demo backend kept in localStorage so
 // the whole flow can still be tried — including "Navid" answering.
 import {
-  addDays, isBlocking, lastBookableDate, nowInLithuania, RULES, unavailableReason,
+  isBlocking, lastBookableDate, nowInLithuania, RULES, unavailableReason,
 } from '../../shared/rules.js';
+import { OPEN_DATES } from '../../shared/schedule.js';
 
 async function request(path, options) {
   const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...options });
@@ -24,24 +25,24 @@ const live = {
 };
 
 // ---------- demo backend ----------
-const KEY = 'navid-lessons-demo-v1';
+const KEY = 'navid-lessons-demo-v2';
 const read = () => {
   try { return JSON.parse(localStorage.getItem(KEY)) ?? null; } catch { return null; }
 };
 const write = (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* private mode */ } };
 
 function seed() {
-  const today = nowInLithuania().date;
-  const at = (d, start, duration) => ({
-    id: `${addDays(today, d)}_SEED${d}${start.slice(0, 2)}`, code: 'SEED', date: addDays(today, d), start, duration,
+  // A few made-up lessons on the real open dates so the demo calendar looks lived-in
+  const days = OPEN_DATES.filter((d) => d >= nowInLithuania().date);
+  const at = (i, start, duration) => days[i] && ({
+    id: `${days[i]}_SEED${i}${start.slice(0, 2)}`, code: 'SEED', date: days[i], start, duration, location: 'klaipeda',
     status: 'confirmed', createdAt: new Date().toISOString(),
   });
   const list = [
-    at(1, '10:00', 120), at(1, '15:00', 60),
-    at(2, '13:30', 90),
-    at(4, '10:00', 120), at(4, '12:00', 120), at(4, '14:00', 120), at(4, '16:00', 60), // fully booked day
-    at(6, '11:00', 60), at(6, '16:00', 60),
-  ];
+    at(0, '10:00', 120), at(0, '15:00', 60),
+    at(1, '13:30', 90),
+    at(3, '11:00', 60), at(3, '16:00', 60),
+  ].filter(Boolean);
   write(list);
   return list;
 }
@@ -57,13 +58,13 @@ const demo = {
     }
     return { rules: RULES, now, from, to: to > lastBookableDate(now) ? lastBookableDate(now) : to, blockedDates: [], days };
   },
-  async book({ date, start, duration, firstName, lastName, phone }) {
+  async book({ date, start, duration, location, firstName, lastName, phone }) {
     await new Promise((r) => setTimeout(r, 600));
     const list = bookings();
     const reason = unavailableReason({ date, start, duration, busy: list.filter((b) => b.date === date && isBlocking(b)) });
     if (reason) throw Object.assign(new Error('Sorry — that time was just taken. Please pick another slot.'), { status: 409 });
     const code = Math.random().toString(36).slice(2, 6).toUpperCase();
-    const b = { id: `${date}_${code}DEMO`, code, date, start, duration, firstName, lastName, phone, status: 'pending', createdAt: new Date().toISOString() };
+    const b = { id: `${date}_${code}DEMO`, code, date, start, duration, location, firstName, lastName, phone, status: 'pending', createdAt: new Date().toISOString() };
     write([...list, b]);
     return { id: b.id, code, status: 'pending' };
   },
