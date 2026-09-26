@@ -72,19 +72,29 @@ Netlify issues the HTTPS certificate automatically once DNS resolves (anywhere f
 
 ### 3. WhatsApp Cloud API (Meta)
 
-The messages come **from a WhatsApp Business sender number** and go **to your personal WhatsApp**.
-The sender can't be your personal number. Start with Meta's free test number, then add a real one later.
+Two numbers are involved:
+
+| Role | Number | Where it's set |
+|---|---|---|
+| **Sender**: the business number students see | business WhatsApp +971 56 167 7227 | connected to the Cloud API (below) → `WHATSAPP_PHONE_NUMBER_ID` |
+| **Receiver**: gets requests, taps Yes/No | Navid's personal WhatsApp | `COACH_WHATSAPP` (digits only, private env var) |
+
+The real values are in the local, gitignored `.env` file. Copy them into Netlify's environment variables.
 
 1. Go to <https://developers.facebook.com> → **Create app** → type **Business** → add the **WhatsApp** product.
-2. Open **WhatsApp → API Setup**:
-   - Copy the **Phone number ID** into `WHATSAPP_PHONE_NUMBER_ID`.
-   - Under "To", add and verify **your personal WhatsApp number**. Put the same number in `COACH_WHATSAPP`,
-     digits only with country code, e.g. `37061234567`.
-3. Create a **permanent token**: go to Business Settings → Users → **System users** → Add, then
+2. **First test with Meta's free test sender.** Under **WhatsApp → API Setup**, add and verify your **personal**
+   number in the "To" list. Copy the test number's **Phone number ID** into `WHATSAPP_PHONE_NUMBER_ID`.
+   Everything below works with the test sender, so you can try the whole flow before connecting the business number.
+3. **Then connect the business number as the sender.** In **API Setup → Add phone number**, choose the option to
+   **connect an existing WhatsApp Business app number**. You scan a QR code from the WhatsApp Business app, and the
+   number keeps working in the app as normal. Replace `WHATSAPP_PHONE_NUMBER_ID` with the new number's ID.
+   ⚠️ If Meta only offers to *register/migrate* the number instead, stop there: migrating removes it from the
+   WhatsApp Business app. Use a separate number as the sender instead, or keep the test sender for now.
+4. Create a **permanent token**: go to Business Settings → Users → **System users** → Add, then
    generate a token with the `whatsapp_business_messaging` and `whatsapp_business_management` permissions.
    Put it in `WHATSAPP_TOKEN`. The temporary token on the API Setup page expires after 24h.
-4. Get the app secret from **App settings → Basic → App secret** and put it in `WHATSAPP_APP_SECRET`.
-5. Create the message template under **WhatsApp Manager → Message templates → Create**:
+5. Get the app secret from **App settings → Basic → App secret** and put it in `WHATSAPP_APP_SECRET`.
+6. Create the message template under **WhatsApp Manager → Message templates → Create**:
    - Category **Utility**, name **`lesson_request`**, language **English**
    - Body:
      ```
@@ -99,7 +109,7 @@ The sender can't be your personal number. Start with Meta's free test number, th
      ```
    - Buttons: **Quick reply** `Yes, confirm`, then **Quick reply** `No, decline`. Keep this order.
    - Submit it. Approval usually takes minutes. Then set `WHATSAPP_TEMPLATE=lesson_request`.
-6. Set up the webhook under **WhatsApp → Configuration → Webhook → Edit**:
+7. Set up the webhook under **WhatsApp → Configuration → Webhook → Edit**:
    - Callback URL: `https://coachnavid.com/api/whatsapp`
    - Verify token: any random string. Put the same value in `WHATSAPP_VERIFY_TOKEN` and redeploy **before** clicking Verify.
    - After it verifies, **subscribe to the `messages` field**.
