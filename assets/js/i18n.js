@@ -81,6 +81,9 @@ const STRINGS = {
     'thanks.text': 'The lesson will be confirmed as soon as possible!',
     'foot.text': 'Padel lessons at The Padel Project, Musaffah · Coach Navid Fahandezh · Technical Director, <a href="https://thepadelbeast.com" target="_blank" rel="noopener">Padel Beast</a>',
     'foot.privacy': 'Privacy',
+    'foot.shop': 'Shop',
+    'beast.about': 'About Padel Beast',
+    'beast.shop': 'Shop the merch',
 
     // dynamic
     'cal.full': 'fully booked',
@@ -212,6 +215,9 @@ const STRINGS = {
     'thanks.text': 'Pamoka bus patvirtinta kuo greičiau!',
     'foot.text': 'Padelio pamokos The Padel Project, Musafa · Treneris Navid Fahandezh · <a href="https://thepadelbeast.com" target="_blank" rel="noopener">Padel Beast</a> techninis direktorius',
     'foot.privacy': 'Privatumas',
+    'foot.shop': 'Parduotuvė',
+    'beast.about': 'Apie Padel Beast',
+    'beast.shop': 'Atributika ir apranga',
 
     'cal.full': 'viskas užimta',
     'cal.open': 'laisva pamokoms',
