@@ -5,7 +5,7 @@ import {
   addDays, DURATIONS, dayHasOpening, lastBookableDate, nowLocal,
   startTimes, toHHMM, toMin, unavailableReason,
 } from '../../shared/rules.js';
-import { DEFAULT_LOCATION, DEFAULT_PHONE_PREFIX, WEEKLY_HOURS, hoursOn, locationLabel } from '../../shared/schedule.js';
+import { DEFAULT_LOCATION, DEFAULT_PHONE_PREFIX, WEEKLY_HOURS, hoursOn, locationById, locationLabel } from '../../shared/schedule.js';
 
 const $ = (s, root = document) => root.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -206,7 +206,8 @@ function renderStatus(panel) {
   const status = ['pending', 'confirmed', 'declined', 'cancelled', 'expired'].includes(r.status) ? r.status : 'pending';
   const icon = { pending: '⏳', confirmed: '✓', declined: '✕', cancelled: '✕', expired: '…' }[status];
   const when = `${esc(shortDay(r.date))} · <b>${r.start}–${endOf(r.start, r.duration)}</b>`;
-  const where = r.location ? `<p class="panel__sub">${esc(locationLabel(r.location) || '')}</p>` : '';
+  const loc = locationById(r.location);
+  const where = loc ? `<p class="panel__sub">${esc(locationLabel(r.location))}${loc.mapsUrl ? ` · <a href="${esc(loc.mapsUrl)}" target="_blank" rel="noopener">${esc(t('status.map'))}</a>` : ''}</p>` : '';
   const demo = state.backend?.demo && status === 'pending'
     ? `<div class="demo"><strong>Demo:</strong> on the live site Navid answers on WhatsApp or the admin page. Simulate his reply:
         <div class="demo__row">

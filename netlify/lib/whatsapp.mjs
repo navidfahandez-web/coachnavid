@@ -1,7 +1,7 @@
 // WhatsApp Cloud API (Meta) helpers.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { formatDuration, toHHMM, toMin } from '../../shared/rules.js';
-import { locationLabel } from '../../shared/schedule.js';
+import { locationById, locationLabel } from '../../shared/schedule.js';
 
 const env = (k) => (process.env[k] ?? '').trim(); // ignore stray spaces/newlines pasted into Netlify
 const GRAPH = 'https://graph.facebook.com/v21.0';
@@ -53,8 +53,20 @@ export function describeSlot(b) {
 }
 
 // The confirmation text a student gets — also used for Navid's one-tap backup link.
-export const studentConfirmationText = (b) =>
-  `Hi ${b.firstName}! ✅ Your padel lesson with Coach Navid is confirmed.\n\n📅 ${describeTime(b)}\n📍 ${locationLabel(b.location)}\n\nSee you on court!`;
+export function studentConfirmationText(b) {
+  const loc = locationById(b.location);
+  const club = loc ? `🎾 ${loc.club} – ${loc.city.toUpperCase()}` : '';
+  const map = loc?.mapsUrl ? `📍 Location: ${loc.mapsUrl}` : '';
+  return [
+    `Hi ${b.firstName}! ✅ Your padel lesson with Coach Navid is confirmed.`,
+    '',
+    `📅 ${describeTime(b)}`,
+    club,
+    map,
+    '',
+    'See you on court!',
+  ].filter((line, i, all) => line !== '' || all[i - 1] !== '').join('\n');
+}
 
 // One-tap link that opens WhatsApp with the confirmation already typed for the student.
 export const confirmLink = (b) =>
