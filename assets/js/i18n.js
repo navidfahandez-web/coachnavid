@@ -60,9 +60,9 @@ const STRINGS = {
 
     'soon.kicker': 'coming soon',
     'soon.title': 'next stops<br />on tour.',
-    'soon.ltCity': 'lithuania · klaipėda & palanga',
+    'soon.ltCity': 'lithuania · klaipeda & palanga',
     'soon.ltTitle': 'Back for Christmas',
-    'soon.ltText': 'Navid will be back in Klaipėda and Palanga over the Christmas holidays. Dates will open here soon — message him to get on the list.',
+    'soon.ltText': 'Navid will be back in Klaipeda and Palanga over the Christmas holidays. Dates will open here soon — message him to get on the list.',
     'soon.omCity': 'oman',
     'soon.omTitle': 'Padel Addicts',
     'soon.omText': 'Lessons at Padel Addicts in Oman are coming soon. Stay tuned.',
@@ -77,7 +77,7 @@ const STRINGS = {
     'how.t3': 'Navid confirms',
     'how.p3': 'Your request goes straight to Navid. Once he says yes, the slot is yours and you get a WhatsApp confirmation.',
 
-    'thanks.title': 'Ačiū labai!',
+    'thanks.title': 'Thank you!',
     'thanks.text': 'The lesson will be confirmed as soon as possible!',
     'foot.text': 'Padel lessons at The Padel Project, Musaffah · Coach Navid Fahandezh · Technical Director, <a href="https://thepadelbeast.com" target="_blank" rel="noopener">Padel Beast</a>',
     'foot.privacy': 'Privacy',
