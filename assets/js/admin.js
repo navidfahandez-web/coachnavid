@@ -104,6 +104,7 @@ async function load() {
     $('[data-logout]').hidden = backend.demo;
     $('[data-demo-note]').hidden = !backend.demo;
     render();
+    if (!studentsData.regions.length) loadStudents();
   } catch (err) {
     if (err.status === 401 || err.status === 503) return showLogin(err.message);
     toast(`Couldn’t load bookings: ${esc(err.message)}`);
@@ -151,6 +152,107 @@ document.addEventListener('click', async (e) => {
     toast(`Couldn’t ${act}: ${esc(err.message)}`);
   }
   await load();
+});
+
+// ---------- students & announcements ----------
+let studentsData = { regions: [], students: [] };
+let region = (() => { try { return localStorage.getItem('navid-admin-region') || 'uae'; } catch { return 'uae'; } })();
+const SENT_KEY = 'navid-admin-announced';
+const sentSet = () => { try { return new Set(JSON.parse(localStorage.getItem(SENT_KEY)) ?? []); } catch { return new Set(); } };
+const markSent = (k) => { const s = sentSet(); s.add(k); try { localStorage.setItem(SENT_KEY, JSON.stringify([...s])); } catch { /* ignore */ } };
+
+const TEMPLATES = {
+  en: 'Hi {name}! 👋 Coach Navid here. Great news — I’m coaching in {place} again{dates}. Lessons are now open for booking: https://coachnavid.com 🎾 See you on court!',
+  lt: 'Labas, {name}! 👋 Čia treneris Navid. Puikios naujienos – vėl atvykstu į {place}{dates}. Pamokas jau galite rezervuoti: https://coachnavid.com 🎾 Iki pasimatymo aikštelėje!',
+};
+
+async function loadStudents() {
+  try {
+    studentsData = backend.demo
+      ? { regions: [{ id: 'uae', name: 'UAE · Abu Dhabi', lang: 'en', place: 'Abu Dhabi' }, { id: 'lt', name: 'Lithuania · Klaipeda & Palanga', lang: 'lt', place: 'Klaipėdą ir Palangą' }], students: [
+        { firstName: 'Rūta', lastName: 'Demo', phone: '+37061234567', region: 'lt', lessons: 3, lastLesson: '2026-10-05', canContact: true, manual: false },
+        { firstName: 'Jonas', lastName: 'Demo', phone: '+37061234568', region: 'lt', lessons: 0, lastLesson: null, canContact: true, manual: true },
+        { firstName: 'Aisha', lastName: 'Demo', phone: '+971501234567', region: 'uae', lessons: 1, lastLesson: '2026-10-14', canContact: false, manual: false },
+      ] }
+      : await request('/api/admin/students', { headers: { 'x-admin-key': password } });
+    renderStudents(true);
+  } catch (err) {
+    $('[data-students]').innerHTML = `<p class="bk__err">${esc(err.message)}</p>`;
+  }
+}
+
+function annText(r, s) {
+  const dates = $('[data-ann-dates]').value.trim();
+  return $('[data-ann-text]').value
+    .replaceAll('{name}', s.firstName || '')
+    .replaceAll('{dates}', dates ? (r.lang === 'lt' ? ` (${dates})` : ` (${dates})`) : '')
+    .replaceAll('{place}', r.place);
+}
+
+function renderStudents(resetText) {
+  const { regions, students } = studentsData;
+  if (!regions.some((r) => r.id === region)) region = regions[0]?.id;
+  const r = regions.find((x) => x.id === region);
+  $('[data-region-tabs]').innerHTML = regions.map((x) => {
+    const n = students.filter((s) => s.region === x.id).length;
+    return `<button type="button" data-region="${esc(x.id)}" aria-pressed="${x.id === region}">${esc(x.name)} <small>(${n})</small></button>`;
+  }).join('');
+  document.querySelectorAll('[data-region-name]').forEach((el) => { el.textContent = r?.name ?? ''; });
+  $('[data-count="students"]').textContent = students.length ? `(${students.length})` : '';
+
+  const here = students.filter((s) => s.region === region);
+  $('[data-students]').innerHTML = here.length ? here.map((s) => `
+    <article class="bk stu">
+      <div class="bk__who">
+        <b>${esc(s.firstName)} ${esc(s.lastName)}</b>
+        <span><a href="https://wa.me/${digits(s.phone)}" target="_blank" rel="noopener">${esc(s.phone)}</a></span>
+        <small>${s.lessons ? `${s.lessons} lesson${s.lessons > 1 ? 's' : ''} · last ${esc(day(s.lastLesson))}` : 'no online bookings yet'}${s.manual ? ' · added by you' : ''}</small>
+      </div>
+      <span class="bk__badge">${s.canContact ? 'can message' : 'no consent'}</span>
+      ${s.manual ? `<div class="bk__actions"><button class="btn btn--ghost btn--danger" data-remove-student="${esc(s.phone)}">Remove</button></div>` : ''}
+    </article>`).join('') : '<p class="note">No students here yet. They appear after a confirmed lesson, or add them by hand below.</p>';
+
+  if (resetText || !$('[data-ann-text]').value) $('[data-ann-text]').value = TEMPLATES[r?.lang] ?? TEMPLATES.en;
+  renderAnnounce();
+}
+
+function renderAnnounce() {
+  const r = studentsData.regions.find((x) => x.id === region);
+  const sent = sentSet();
+  const list = studentsData.students.filter((s) => s.region === region && s.canContact);
+  $('[data-ann-list]').innerHTML = list.length ? list.map((s) => {
+    const text = annText(r, s);
+    const key = `${region}|${digits(s.phone)}|${text.length}`;
+    return `<div class="ann">
+      <span>${sent.has(key) ? '✅' : '•'} <b>${esc(s.firstName)} ${esc(s.lastName)}</b> <small>${esc(s.phone)}</small></span>
+      <a class="btn ${sent.has(key) ? 'btn--ghost' : 'btn--lime'}" data-sent-key="${esc(key)}" href="https://wa.me/${digits(s.phone)}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">${sent.has(key) ? 'Sent · send again' : 'Send ↗'}</a>
+    </div>`;
+  }).join('') : '<p class="note">Nobody in this location can be messaged yet.</p>';
+}
+
+document.addEventListener('click', async (e) => {
+  const tab = e.target.closest('[data-region]');
+  if (tab) { region = tab.dataset.region; try { localStorage.setItem('navid-admin-region', region); } catch { /* ignore */ } return renderStudents(true); }
+  const sent = e.target.closest('[data-sent-key]');
+  if (sent) { markSent(sent.dataset.sentKey); setTimeout(renderAnnounce, 300); return; }
+  const rm = e.target.closest('[data-remove-student]');
+  if (rm && confirm('Remove this student from the list?')) {
+    try {
+      studentsData = await request('/api/admin/students', { method: 'POST', headers: { 'x-admin-key': password }, body: JSON.stringify({ action: 'remove', phone: rm.dataset.removeStudent, region }) });
+      renderStudents(false);
+    } catch (err) { toast(esc(err.message)); }
+  }
+});
+document.addEventListener('input', (e) => { if (e.target.matches('[data-ann-text], [data-ann-dates]')) renderAnnounce(); });
+$('[data-add-student]').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = Object.fromEntries(new FormData(e.target));
+  try {
+    studentsData = await request('/api/admin/students', { method: 'POST', headers: { 'x-admin-key': password }, body: JSON.stringify({ action: 'add', ...f, region }) });
+    e.target.reset();
+    renderStudents(false);
+    toast(`${esc(f.firstName)} added ✅`);
+  } catch (err) { toast(esc(err.message)); }
 });
 
 // ---------- WhatsApp connection ----------

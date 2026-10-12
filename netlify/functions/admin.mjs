@@ -2,7 +2,8 @@
 //   GET  /api/admin/bookings        → recent + upcoming bookings, with student details
 //   POST /api/admin/bookings/:id    → { action: 'confirm' | 'decline' | 'cancel' }
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { bookingsFrom, readActivity } from '../lib/store.mjs';
+import { bookingsFrom, readActivity, readManualStudents, writeManualStudents } from '../lib/store.mjs';
+import { REGIONS, regionById, regionOfLocation } from '../../shared/regions.js';
 import { applyAction } from '../lib/actions.mjs';
 import { confirmLink, graph, isFirstLesson, phoneNumberId, wabaId } from '../lib/whatsapp.mjs';
 import { addDays, isBlocking, nowLocal } from '../../shared/rules.js';
@@ -27,11 +28,68 @@ const view = (b, all = []) => ({
   studentLink: b.status === 'confirmed' ? confirmLink(b, { firstTime: isFirstLesson(b, all) }) : null,
 });
 
+const digits = (p) => String(p ?? '').replace(/\D/g, '');
+
+// One row per (phone, region). Booking students: confirmed lessons only.
+// `canContact`: added by hand, or ticked "tell me when Navid is back" when booking.
+async function studentDatabase() {
+  const rows = new Map();
+  const row = (phone, region) => {
+    const key = `${digits(phone)}|${region}`;
+    if (!rows.has(key)) rows.set(key, { phone, region, firstName: '', lastName: '', lessons: 0, lastLesson: null, canContact: false, manual: false });
+    return rows.get(key);
+  };
+  for (const b of await bookingsFrom('0000-00-00')) {
+    const region = regionOfLocation(b.location);
+    if (b.status !== 'confirmed' || !region) continue;
+    const r = row(b.phone, region);
+    Object.assign(r, { firstName: b.firstName, lastName: b.lastName });
+    r.lessons += 1;
+    if (!r.lastLesson || b.date > r.lastLesson) r.lastLesson = b.date;
+    if (b.updates) r.canContact = true;
+  }
+  for (const s of await readManualStudents()) {
+    const r = row(s.phone, s.region);
+    if (!r.firstName) Object.assign(r, { firstName: s.firstName, lastName: s.lastName });
+    Object.assign(r, { manual: true, canContact: true });
+  }
+  return [...rows.values()].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+}
+
 export default async (req, context) => {
   if (!(process.env.ADMIN_PASSWORD ?? '').trim()) return json({ error: 'ADMIN_PASSWORD is not set in Netlify yet.' }, 503);
   if (!authorised(req)) {
     await new Promise((r) => setTimeout(r, 600)); // slow down guessing
     return json({ error: 'Wrong password.' }, 401);
+  }
+
+  // Student database: everyone who had a confirmed lesson + students added by hand.
+  if (new URL(req.url).pathname.endsWith('/students')) {
+    if (req.method === 'POST') {
+      let body;
+      try { body = await req.json(); } catch { return json({ error: 'Invalid request' }, 400); }
+      const list = await readManualStudents();
+      const phone = String(body.phone ?? '').replace(/[^\d+]/g, '').replace(/^00/, '+');
+      if (body.action === 'add') {
+        const firstName = String(body.firstName ?? '').trim().slice(0, 60);
+        const lastName = String(body.lastName ?? '').trim().slice(0, 60);
+        if (!firstName) return json({ error: 'Add at least a first name.' }, 400);
+        if (!/^\+\d{8,15}$/.test(phone)) return json({ error: 'Phone needs a country code, e.g. +370 612 34567.' }, 400);
+        if (!regionById(body.region)) return json({ error: 'Pick a location.' }, 400);
+        const i = list.findIndex((s) => digits(s.phone) === digits(phone) && s.region === body.region);
+        const entry = { firstName, lastName, phone, region: body.region, addedAt: new Date().toISOString() };
+        if (i >= 0) list[i] = entry; else list.push(entry);
+      } else if (body.action === 'remove') {
+        const before = list.length;
+        const kept = list.filter((s) => !(digits(s.phone) === digits(phone) && s.region === body.region));
+        if (kept.length === before) return json({ error: 'Only students you added by hand can be removed.' }, 400);
+        list.splice(0, list.length, ...kept);
+      } else {
+        return json({ error: 'Unknown action.' }, 400);
+      }
+      await writeManualStudents(list);
+    }
+    return json({ regions: REGIONS, students: await studentDatabase() });
   }
 
   // WhatsApp connection check: is the sending number OK, and is this app
@@ -82,4 +140,4 @@ export default async (req, context) => {
   return json({ error: 'Method not allowed' }, 405);
 };
 
-export const config = { path: ['/api/admin/bookings', '/api/admin/bookings/:id', '/api/admin/whatsapp'] };
+export const config = { path: ['/api/admin/bookings', '/api/admin/bookings/:id', '/api/admin/whatsapp', '/api/admin/students'] };

@@ -23,7 +23,7 @@ const state = {
   date: null,
   duration: 60,
   start: null,
-  form: { firstName: '', lastName: '', phone: DEFAULT_PHONE_PREFIX },
+  form: { firstName: '', lastName: '', phone: DEFAULT_PHONE_PREFIX, updates: false },
   error: '',             // i18n key, or a raw server message
   submitting: false,
   request: loadRequest(), // { id, code, date, start, duration, location, status }
@@ -187,6 +187,7 @@ function renderPanel() {
       <label class="field">${esc(t('form.first'))}<input name="firstName" autocomplete="given-name" required value="${esc(f.firstName)}" /></label>
       <label class="field">${esc(t('form.last'))}<input name="lastName" autocomplete="family-name" required value="${esc(f.lastName)}" /></label>
       <label class="field field--full">${esc(t('form.phone'))}<input name="phone" type="tel" inputmode="tel" autocomplete="tel" required value="${esc(f.phone)}" placeholder="+971 50 123 4567" /></label>
+      <label class="optin field--full"><input type="checkbox" name="updates" ${f.updates ? 'checked' : ''} /> <span>${esc(t('form.updates'))}</span></label>
       <label class="hp" aria-hidden="true">Company<input name="company" tabindex="-1" autocomplete="off" /></label>
       <div class="summary">
         ${state.start
@@ -317,7 +318,9 @@ $('[data-thanks]').addEventListener('click', (e) => {
 });
 
 document.addEventListener('input', (e) => {
-  if (e.target.closest('[data-form]') && e.target.name in state.form) state.form[e.target.name] = e.target.value;
+  if (e.target.closest('[data-form]') && e.target.name in state.form) {
+    state.form[e.target.name] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  }
 });
 
 document.addEventListener('submit', async (e) => {
@@ -335,7 +338,7 @@ document.addEventListener('submit', async (e) => {
   renderPanel();
   const lesson = { date: state.date, start: state.start, duration: state.duration, location: DEFAULT_LOCATION };
   try {
-    const res = await state.backend.book({ ...lesson, firstName, lastName, phone, company: data.company });
+    const res = await state.backend.book({ ...lesson, firstName, lastName, phone, updates: state.form.updates, company: data.company });
     saveRequest({ id: res.id, code: res.code, ...lesson, status: 'pending' });
     showThanks();
     state.date = null;

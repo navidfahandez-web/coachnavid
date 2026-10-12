@@ -38,6 +38,7 @@ export default async (req, context) => {
   const start = String(input.start ?? '');
   const duration = Number(input.duration);
   const location = locationById(input.location) ? String(input.location) : DEFAULT_LOCATION;
+  const updates = input.updates === true; // opted in to "tell me when Navid is back"
 
   if (!firstName || !lastName) return json({ error: 'Please enter your first and last name.', code: 'name' }, 400);
   if (!/^\+\d{8,15}$/.test(phone)) return json({ error: 'Please enter your phone number with country code, e.g. +971 50 123 4567.', code: 'phone' }, 400);
@@ -51,7 +52,7 @@ export default async (req, context) => {
       const reason = unavailableReason({ date, start, duration, busy, blockedDates: blocked });
       if (reason) throw Object.assign(new Error(MESSAGES[reason] ?? 'That slot can’t be booked.'), { status: 409, code: reason });
       const b = {
-        ...newIds(date), date, start, duration, location, firstName, lastName, phone,
+        ...newIds(date), date, start, duration, location, firstName, lastName, phone, updates,
         status: 'pending', createdAt: new Date().toISOString(),
       };
       bookings.push(b);

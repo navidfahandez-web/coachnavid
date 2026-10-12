@@ -48,6 +48,30 @@
         <h2 class="adm-h">upcoming lessons <span data-count="upcoming"></span></h2>
         <div class="adm-list" data-list="upcoming"></div>
       </section>
+      <section class="adm-section" data-students-section>
+        <h2 class="adm-h">students <span data-count="students"></span></h2>
+        <div class="seg seg--regions" role="tablist" data-region-tabs></div>
+        <div class="adm-list" data-students></div>
+
+        <details class="adm-box">
+          <summary>+ Add a student by hand</summary>
+          <form class="adm-form" data-add-student>
+            <label class="field">First name<input name="firstName" required /></label>
+            <label class="field">Last name<input name="lastName" /></label>
+            <label class="field">Phone (WhatsApp)<input name="phone" type="tel" placeholder="+370 612 34567" required /></label>
+            <button class="btn btn--lime" type="submit">Add to <span data-region-name></span></button>
+          </form>
+        </details>
+
+        <div class="adm-box adm-announce">
+          <h3>📣 Announce new dates</h3>
+          <p class="note">Write the message once — every student in <b data-region-name></b> who can be contacted gets a personal one-tap WhatsApp link. <code>{name}</code> becomes their first name.</p>
+          <label class="field">Dates (optional)<input data-ann-dates placeholder="20–30 December" /></label>
+          <label class="field">Message<textarea rows="6" data-ann-text></textarea></label>
+          <div class="adm-list" data-ann-list></div>
+        </div>
+      </section>
+
       <section class="adm-section">
         <h2 class="adm-h">whatsapp connection</h2>
         <div class="adm-conn" data-conn><p class="note">Checks the sending number and whether your replies (Yes/No) can reach this site.</p></div>

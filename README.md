@@ -44,6 +44,13 @@ on UAE time: **Mon–Fri 12:00–17:00** and **Sat–Sun 08:00–14:00**. To clo
 `BLOCKED_DATES` in Netlify, e.g. `2026-12-02,2026-12-03`. The "coming soon" text (Lithuania at Christmas, Oman / Padel Addicts)
 is in `assets/js/i18n.js`. All visitor text is there in English (`en`) and Lithuanian (`lt`).
 
+### Students & announcements (admin page)
+
+The admin page has a **Students** list grouped by location (UAE, Lithuania, Oman — see `shared/regions.js`).
+Everyone with a confirmed lesson appears automatically; add others by hand. Students can be messaged if they ticked
+“Let me know when Navid is coaching in my area again” when booking, or if you added them yourself.
+**Announce new dates** writes one message and gives a one-tap WhatsApp link per student (`{name}`, `{dates}`, `{place}` are filled in).
+
 ### Admin page: coachnavid.com/admin
 
 A private dashboard listing every request, with **Confirm / Decline / Cancel** buttons and a one-tap WhatsApp confirmation

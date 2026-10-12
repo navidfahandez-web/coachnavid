@@ -533,3 +533,6 @@ body::before { opacity: .12; }
   .nav .pill { padding: 6px 6px 6px 14px; font-size: 13px; }
   .nav__links { gap: 10px; }
 }
+
+.optin { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--ink-2); cursor: pointer; line-height: 1.4; }
+.optin input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; flex-shrink: 0; }

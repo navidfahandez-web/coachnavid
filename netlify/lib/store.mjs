@@ -84,3 +84,9 @@ export async function logActivity(entry) {
   }
 }
 export const readActivity = async () => (await store().get(LOG_KEY, { type: 'json' })) ?? [];
+
+// Students Navid added by hand (e.g. existing students who never booked online).
+// Booking-based students are derived from the bookings themselves (see admin.mjs).
+const STUDENTS_KEY = 'students/manual';
+export const readManualStudents = async () => (await store().get(STUDENTS_KEY, { type: 'json' })) ?? [];
+export const writeManualStudents = (list) => store().setJSON(STUDENTS_KEY, list);
