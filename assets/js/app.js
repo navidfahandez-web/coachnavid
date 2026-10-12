@@ -45,6 +45,7 @@ const longDay = (d) => fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }
 const shortDay = (d) => (getLang() === 'lt'
   ? `${fmt(d, { weekday: 'short' })}, ${fmt(d, { month: 'long', day: 'numeric' })}`
   : fmt(d, { weekday: 'short', day: 'numeric', month: 'short' }));
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 const endOf = (start, duration) => toHHMM(toMin(start) + duration);
 const span = (h) => `${h.open}–${h.close}`;
 const errorText = (e) => (e.startsWith('err.') ? t(e) : e);
@@ -98,7 +99,8 @@ function renderCalendar() {
   const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
   const lead = (dateObj(first).getUTCDay() + 6) % 7; // Monday-first
 
-  $('[data-month-name]').textContent = fmt(first, { month: 'long' }).toLowerCase();
+  const month = fmt(first, { month: 'long' });
+  $('[data-month-name]').textContent = month.charAt(0).toUpperCase() + month.slice(1);
   $('[data-year]').textContent = y;
   $('[data-prev]').disabled = state.month <= now.date.slice(0, 7);
   $('[data-next]').disabled = state.month >= last.slice(0, 7);
@@ -163,7 +165,7 @@ function renderPanel() {
 
   const f = state.form;
   panel.innerHTML = `
-    <h3>${esc(shortDay(state.date).toLowerCase())}</h3>
+    <h3>${esc(cap(shortDay(state.date)))}</h3>
     <p class="panel__sub">${esc(longDay(state.date))} · ${esc(t('panel.between', hours))}</p>
     <p class="panel__sub panel__where">📍 ${esc(locationLabel(DEFAULT_LOCATION))}</p>
 

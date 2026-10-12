@@ -13,7 +13,7 @@
   <meta property="og:image" content="https://coachnavid.com/assets/img/navid-portrait.jpg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/styles.css" />
   <script type="module" src="assets/js/app.js"></script>
 </head>
@@ -36,39 +36,47 @@
         <button type="button" data-lang="en" aria-pressed="true">EN</button>
         <button type="button" data-lang="lt" aria-pressed="false">LT</button>
       </div>
-      <a class="pill pill--lime" href="#book" data-i18n="nav.book">Book a lesson</a>
+      <a class="pill pill--white btn--arrow" href="#book"><span data-i18n="nav.book">Book a lesson</span><i aria-hidden="true">→</i></a>
     </nav>
   </header>
 
   <main id="top">
     <!-- HERO -->
-    <section class="hero wrap">
-      <div class="hero__copy">
-        <p class="kicker" data-i18n="hero.kicker">Coach Navid Fahandezh · Technical Director, Padel Beast</p>
-        <h1 class="display">
-          <span class="display__year" data-i18n="hero.year">abu dhabi · 2026</span>
-          <span data-i18n-html="hero.title">padel<br />lessons</span>
-        </h1>
-        <p class="hero__lede" data-i18n-html="hero.lede">
-          Private padel lessons at <strong>The Padel Project</strong> in Musaffah, Abu Dhabi.
-        </p>
-        <div class="hero__cta">
-          <a class="btn btn--lime" href="#book" data-i18n="hero.cta">See availability</a>
-          <a class="btn btn--ghost" href="#coach" data-i18n="hero.about">About Navid</a>
+    <section class="hero2 wrap">
+      <div class="hero2__panel">
+        <img class="hero2__photo" src="assets/img/navid-portrait.jpg" alt="Coach Navid Fahandezh on court" data-i18n-alt="hero.alt" width="933" height="1400" />
+        <div class="hero2__copy">
+          <p class="hero2__hey" data-i18n="hero.hey">Hey, I'm Coach Navid</p>
+          <h1 class="display" data-i18n-html="hero.title">Padel<br />Lessons</h1>
+          <p class="hero2__where" data-i18n="hero.year">ABU DHABI · 2026</p>
         </div>
+        <div class="hero2__side">
+          <p class="hero2__claim" data-i18n="hero.claim">Play smarter. Move better.</p>
+          <p class="hero2__lede" data-i18n-html="hero.lede"></p>
+          <div class="hero__cta">
+            <a class="btn btn--white btn--arrow" href="#book"><span data-i18n="hero.cta">See availability</span><i aria-hidden="true">→</i></a>
+          </div>
+        </div>
+        <ol class="hero2__nums" data-i18n-aria="stats.aria">
+          <li><span>#01</span><b>20+</b> <em data-i18n="stats.years">years of competitive padel</em></li>
+          <li><span>#02</span><b>15+</b> <em data-i18n="stats.coaching">years coaching</em></li>
+          <li><span>#03</span><b>WPT</b> <em data-i18n="stats.wpt">World Padel Tour competitor, 2023</em></li>
+          <li><span>#04</span><b data-i18n="stats.oman">Oman</b> <em data-i18n="stats.omanText">national team coach</em></li>
+        </ol>
       </div>
-      <figure class="hero__photo">
-        <img src="assets/img/navid-portrait.jpg" alt="Coach Navid Fahandezh on court" data-i18n-alt="hero.alt" width="933" height="1400" />
-        <figcaption class="tag" data-i18n="hero.tag">On court at The Padel Project · Abu Dhabi</figcaption>
-      </figure>
+      <div class="countries">
+        <p class="countries__label" data-i18n-html="countries.label">Lessons given in<br />7 countries</p>
+        <ul class="countries__list">
+          <li><span aria-hidden="true">🇪🇸</span><b data-i18n="country.es">SPAIN</b></li>
+          <li><span aria-hidden="true">🇦🇪</span><b data-i18n="country.ae">UAE</b></li>
+          <li><span aria-hidden="true">🇱🇹</span><b data-i18n="country.lt">LITHUANIA</b></li>
+          <li><span aria-hidden="true">🇴🇲</span><b data-i18n="country.om">OMAN</b></li>
+          <li><span aria-hidden="true">🇷🇺</span><b data-i18n="country.ru">RUSSIA</b></li>
+          <li><span aria-hidden="true">🇹🇷</span><b data-i18n="country.tr">TURKEY</b></li>
+          <li><span aria-hidden="true">🇵🇭</span><b data-i18n="country.ph">PHILIPPINES</b></li>
+        </ul>
+      </div>
     </section>
-
-    <ul class="stats wrap" data-i18n-aria="stats.aria">
-      <li><b>20+</b><span data-i18n="stats.years">years of competitive padel</span></li>
-      <li><b>10+</b><span data-i18n="stats.coaching">years coaching</span></li>
-      <li><b>WPT</b><span data-i18n="stats.wpt">World Padel Tour competitor, 2023</span></li>
-      <li><b data-i18n="stats.oman">Oman</b><span data-i18n="stats.omanText">national team coach</span></li>
-    </ul>
 
     <!-- BOOKING -->
     <section id="book" class="book wrap">
@@ -147,7 +155,12 @@
     <!-- WHERE -->
     <section id="where" class="where wrap">
       <p class="kicker" data-i18n="where.kicker">where we play</p>
-      <h2 class="section-title" data-i18n-html="where.title">the padel project,<br />musaffah.</h2>
+      <h2 class="section-title" data-i18n-html="where.title">The Padel Project,<br />Musaffah.</h2>
+      <div class="gallery">
+        <img src="assets/img/club-courts.jpg" alt="Courts at The Padel Project, Musaffah" width="1100" height="825" loading="lazy" />
+        <img src="assets/img/navid-portrait.jpg" alt="Coach Navid Fahandezh" width="933" height="1400" loading="lazy" />
+        <img src="assets/img/club-lounge.jpg" alt="Lounge at The Padel Project" width="825" height="1100" loading="lazy" />
+      </div>
       <div class="places">
         <article class="place">
           <span class="place__city" data-i18n="where.city">musaffah · abu dhabi</span>
