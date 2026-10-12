@@ -56,3 +56,5 @@
   .bk__who { grid-column: 1 / -1; grid-row: 2; }
   .bk__actions .btn { flex: 1; }
 }
+
+.bk__err { color: var(--danger) !important; word-break: break-word; }

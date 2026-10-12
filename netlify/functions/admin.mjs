@@ -23,6 +23,7 @@ const view = (b) => ({
   firstName: b.firstName, lastName: b.lastName, phone: b.phone,
   status: b.status === 'pending' && !isBlocking(b) ? 'expired' : b.status,
   createdAt: b.createdAt, decidedAt: b.decidedAt ?? null, notifyFailed: !!b.notifyFailed,
+  notifyError: b.notifyError ?? null,
   studentLink: b.status === 'confirmed' ? confirmLink(b) : null,
 });
 

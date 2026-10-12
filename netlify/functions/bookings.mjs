@@ -69,7 +69,7 @@ export default async (req, context) => {
     console.error(`WhatsApp notify failed: ${err.message}`);
     await updateDay(date, (bookings) => {
       const b = bookings.find((x) => x.id === booking.id);
-      if (b) b.notifyFailed = true;
+      if (b) Object.assign(b, { notifyFailed: true, notifyError: String(err.message).slice(0, 300) });
     });
   }
 

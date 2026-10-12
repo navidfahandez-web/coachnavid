@@ -60,6 +60,7 @@ function card(b) {
           · <a href="tel:${esc(b.phone)}">call</a>
         </span>
         <small>${esc(b.location)} · ref ${esc(b.code)} · requested ${esc(ago(b.createdAt))}${b.notifyFailed ? ' · <em>WhatsApp alert failed</em>' : ''}</small>
+        ${b.notifyError ? `<small class="bk__err">Meta said: ${esc(b.notifyError)}</small>` : ''}
       </div>
       <span class="bk__badge">${esc(badge)}</span>
       ${actions ? `<div class="bk__actions">${actions}</div>` : ''}
