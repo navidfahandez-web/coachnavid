@@ -48,7 +48,11 @@ export default async (req, context) => {
     return json({
       phone,
       wabaId: wabaId(),
-      subscribedApps: subscribed.error ? { error: subscribed.error } : (subscribed.data ?? []).map((a) => a.whatsapp_business_api_data?.name ?? a.name ?? a.id),
+      subscribedApps: subscribed.error ? { error: subscribed.error } : (subscribed.data ?? []).map((a) => ({
+        id: a.whatsapp_business_api_data?.id ?? a.id,
+        name: a.whatsapp_business_api_data?.name ?? a.name ?? '',
+      })),
+      appId: process.env.WHATSAPP_APP_ID || '909678558688772',
     });
   }
 

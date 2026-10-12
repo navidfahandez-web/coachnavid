@@ -159,17 +159,20 @@ async function connection(fix) {
   box.innerHTML = '<p class="note">Asking Meta…</p>';
   try {
     const r = backend.demo
-      ? { phone: { display_phone_number: '+1 555 0100', verified_name: 'Demo' }, wabaId: 'demo', subscribedApps: [] }
+      ? { phone: { display_phone_number: '+1 555 0100', verified_name: 'Demo' }, wabaId: 'demo', subscribedApps: [], appId: 'demo' }
       : await request('/api/admin/whatsapp', { method: fix ? 'POST' : 'GET', headers: { 'x-admin-key': password } });
     const p = r.phone ?? {};
     const apps = r.subscribedApps;
-    const ok = Array.isArray(apps) && apps.length > 0;
+    // Connected only if *this* site's Meta app is subscribed (Meta's own dashboard app doesn't count)
+    const ok = Array.isArray(apps) && apps.some((a) => a.id === r.appId);
+    const names = Array.isArray(apps) ? apps.map((a) => a.name || a.id).join(', ') : '';
     box.innerHTML = `
       <p>📱 Sending number: <b>${esc(p.display_phone_number ?? '—')}</b> ${p.verified_name ? `(${esc(p.verified_name)})` : ''}
          ${p.error ? `<em class="bk__err">— ${esc(p.error)}</em>` : ''}</p>
       <p>${ok ? '✅' : '⚠️'} Replies to this site: ${ok
-        ? `connected (app: ${esc(apps.join(', '))})`
-        : apps?.error ? `<em class="bk__err">couldn’t check — ${esc(apps.error)}</em>` : '<b>not connected</b> — your Yes/No taps can’t reach the site yet.'}</p>`;
+        ? `connected (${esc(names)})`
+        : apps?.error ? `<em class="bk__err">couldn’t check — ${esc(apps.error)}</em>`
+        : `<b>not connected</b> — your Yes/No taps can’t reach the site yet.${names ? ` <small>(currently linked: ${esc(names)})</small>` : ''}`}</p>`;
     $('[data-conn-fix]').hidden = ok;
   } catch (err) {
     box.innerHTML = `<p class="bk__err">${esc(err.message)}</p>`;
