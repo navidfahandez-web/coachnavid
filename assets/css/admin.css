@@ -63,3 +63,5 @@
 .adm-log time { color: var(--muted); margin-right: 6px; }
 .adm-log__failed, .adm-log__rejected { border-color: var(--danger) !important; color: var(--danger) !important; }
 .adm-log__reply, .adm-log__sent { border-color: var(--lime) !important; }
+.adm-conn p { margin: 0 0 8px; }
+.adm-conn b { color: var(--lime); }

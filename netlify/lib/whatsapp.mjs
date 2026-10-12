@@ -23,6 +23,20 @@ async function send(to, message) {
   return res.json();
 }
 
+// Read-only/setup calls used by the admin "WhatsApp connection" check.
+// Returns Meta's JSON (or its error) — never the token.
+export async function graph(path, init = {}) {
+  const res = await fetch(`${GRAPH}/${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${env('WHATSAPP_TOKEN')}`, 'Content-Type': 'application/json' },
+  });
+  const body = await res.json().catch(() => ({}));
+  return res.ok ? body : { error: body.error?.message ?? `HTTP ${res.status}`, code: body.error?.code };
+}
+export const phoneNumberId = () => env('WHATSAPP_PHONE_NUMBER_ID');
+// WhatsApp Business Account that owns the sending number (test number's account by default).
+export const wabaId = () => env('WHATSAPP_WABA_ID') || '1414125076742937';
+
 export const sendText = (to, body) => send(to, { type: 'text', text: { body, preview_url: false } });
 
 // "Wed 7 Oct, 16:00–17:00 (1h)"

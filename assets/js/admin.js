@@ -153,6 +153,31 @@ document.addEventListener('click', async (e) => {
   await load();
 });
 
+// ---------- WhatsApp connection ----------
+async function connection(fix) {
+  const box = $('[data-conn]');
+  box.innerHTML = '<p class="note">Asking Meta…</p>';
+  try {
+    const r = backend.demo
+      ? { phone: { display_phone_number: '+1 555 0100', verified_name: 'Demo' }, wabaId: 'demo', subscribedApps: [] }
+      : await request('/api/admin/whatsapp', { method: fix ? 'POST' : 'GET', headers: { 'x-admin-key': password } });
+    const p = r.phone ?? {};
+    const apps = r.subscribedApps;
+    const ok = Array.isArray(apps) && apps.length > 0;
+    box.innerHTML = `
+      <p>📱 Sending number: <b>${esc(p.display_phone_number ?? '—')}</b> ${p.verified_name ? `(${esc(p.verified_name)})` : ''}
+         ${p.error ? `<em class="bk__err">— ${esc(p.error)}</em>` : ''}</p>
+      <p>${ok ? '✅' : '⚠️'} Replies to this site: ${ok
+        ? `connected (app: ${esc(apps.join(', '))})`
+        : apps?.error ? `<em class="bk__err">couldn’t check — ${esc(apps.error)}</em>` : '<b>not connected</b> — your Yes/No taps can’t reach the site yet.'}</p>`;
+    $('[data-conn-fix]').hidden = ok;
+  } catch (err) {
+    box.innerHTML = `<p class="bk__err">${esc(err.message)}</p>`;
+  }
+}
+$('[data-conn-check]').addEventListener('click', () => connection(false));
+$('[data-conn-fix]').addEventListener('click', () => connection(true));
+
 // ---------- boot ----------
 async function boot() {
   // Local preview without the functions → demo data, so the page can be tried out.

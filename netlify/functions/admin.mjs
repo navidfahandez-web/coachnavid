@@ -4,7 +4,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { bookingsFrom, readActivity } from '../lib/store.mjs';
 import { applyAction } from '../lib/actions.mjs';
-import { confirmLink } from '../lib/whatsapp.mjs';
+import { confirmLink, graph, phoneNumberId, wabaId } from '../lib/whatsapp.mjs';
 import { addDays, isBlocking, nowLocal } from '../../shared/rules.js';
 import { locationLabel } from '../../shared/schedule.js';
 
@@ -34,6 +34,24 @@ export default async (req, context) => {
     return json({ error: 'Wrong password.' }, 401);
   }
 
+  // WhatsApp connection check: is the sending number OK, and is this app
+  // subscribed to the WhatsApp account (needed for replies to reach the site)?
+  if (new URL(req.url).pathname.endsWith('/whatsapp')) {
+    if (req.method === 'POST') {
+      const r = await graph(`${wabaId()}/subscribed_apps`, { method: 'POST' });
+      if (r.error) return json({ error: `Meta said: ${r.error}` }, 502);
+    }
+    const [phone, subscribed] = await Promise.all([
+      graph(`${phoneNumberId()}?fields=display_phone_number,verified_name,quality_rating,code_verification_status`),
+      graph(`${wabaId()}/subscribed_apps`),
+    ]);
+    return json({
+      phone,
+      wabaId: wabaId(),
+      subscribedApps: subscribed.error ? { error: subscribed.error } : (subscribed.data ?? []).map((a) => a.whatsapp_business_api_data?.name ?? a.name ?? a.id),
+    });
+  }
+
   if (req.method === 'GET') {
     const from = addDays(nowLocal().date, -30);
     const bookings = (await bookingsFrom(from)).filter((b) => b.status !== 'failed').map(view);
@@ -59,4 +77,4 @@ export default async (req, context) => {
   return json({ error: 'Method not allowed' }, 405);
 };
 
-export const config = { path: ['/api/admin/bookings', '/api/admin/bookings/:id'] };
+export const config = { path: ['/api/admin/bookings', '/api/admin/bookings/:id', '/api/admin/whatsapp'] };
