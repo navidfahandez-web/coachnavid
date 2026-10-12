@@ -42,6 +42,10 @@ export function describeSlot(b) {
 export const studentConfirmationText = (b) =>
   `Hi ${b.firstName}! ✅ Your padel lesson with Coach Navid is confirmed.\n\n📅 ${describeTime(b)}\n📍 ${locationLabel(b.location)}\n\nSee you on court!`;
 
+// One-tap link that opens WhatsApp with the confirmation already typed for the student.
+export const confirmLink = (b) =>
+  `https://wa.me/${b.phone.replace(/\D/g, '')}?text=${encodeURIComponent(studentConfirmationText(b))}`;
+
 // Template params can't contain newlines, tabs or 4+ spaces.
 const clean = (s) => String(s).replace(/\s+/g, ' ').trim().slice(0, 200);
 

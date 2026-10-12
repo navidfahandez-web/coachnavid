@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Bookings · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/admin.css" />
+  <script type="module" src="assets/js/admin.js"></script>
+</head>
+<body class="admin">
+  <header class="nav">
+    <a class="lockup" href="/">
+      <span class="lockup__pb"><img src="assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Bookings</b><small>Coach Navid · private</small></span>
+    </a>
+    <nav class="nav__links">
+      <button class="pill" type="button" data-refresh hidden>Refresh</button>
+      <button class="pill" type="button" data-logout hidden>Log out</button>
+    </nav>
+  </header>
+
+  <main class="wrap admin__main">
+    <!-- Login -->
+    <form class="panel login" data-login hidden>
+      <h3>bookings</h3>
+      <p class="panel__sub">Enter your admin password to see and answer lesson requests.</p>
+      <label class="field">Password<input name="password" type="password" autocomplete="current-password" required /></label>
+      <label class="check"><input name="remember" type="checkbox" checked /> Remember on this device</label>
+      <p class="form__error" data-login-error hidden></p>
+      <button class="btn btn--lime btn--block" type="submit">Open bookings</button>
+    </form>
+
+    <!-- Dashboard -->
+    <div data-dash hidden>
+      <p class="note note--warn" data-demo-note hidden>Demo mode — these are made-up bookings stored in this browser.</p>
+      <section class="adm-section">
+        <h2 class="adm-h">waiting for you <span data-count="pending"></span></h2>
+        <div class="adm-list" data-list="pending"></div>
+      </section>
+      <section class="adm-section">
+        <h2 class="adm-h">upcoming lessons <span data-count="upcoming"></span></h2>
+        <div class="adm-list" data-list="upcoming"></div>
+      </section>
+      <details class="adm-section adm-past">
+        <summary class="adm-h">past &amp; closed <span data-count="past"></span></summary>
+        <div class="adm-list" data-list="past"></div>
+      </details>
+    </div>
+  </main>
+
+  <div class="toast" data-toast role="status" hidden></div>
+</body>
+</html>

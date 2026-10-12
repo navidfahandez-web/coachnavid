@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Padel Lessons with Coach Navid · Lithuania</title>
-  <meta name="description" content="Book a private padel lesson in Klaipėda or Palanga with Coach Navid Fahandezh — World Padel Tour competitor, Oman national team coach and Technical Director of Padel Beast." />
+  <title>Padel Lessons with Coach Navid · Abu Dhabi</title>
+  <meta name="description" content="Book a private padel lesson at The Padel Project, Musaffah (Abu Dhabi) with Coach Navid Fahandezh — World Padel Tour competitor, Oman national team coach and Technical Director of Padel Beast." />
   <meta name="theme-color" content="#121212" />
   <link rel="canonical" href="https://coachnavid.com/" />
   <meta property="og:url" content="https://coachnavid.com/" />
-  <meta property="og:title" content="Padel lessons with Coach Navid · Lithuania" />
-  <meta property="og:description" content="See Navid's availability and request a 1–2 hour lesson. Confirmed on WhatsApp." />
+  <meta property="og:title" content="Padel lessons with Coach Navid · Abu Dhabi" />
+  <meta property="og:description" content="See Navid's availability at The Padel Project, Musaffah and request a 1–2 hour lesson. Confirmed on WhatsApp." />
   <meta property="og:image" content="https://coachnavid.com/assets/img/navid-portrait.jpg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,16 +23,20 @@
   </div>
 
   <header class="nav">
-    <a class="lockup" href="#top" aria-label="Coach Navid Fahandezh, Technical Director of Padel Beast — home">
+    <a class="lockup" href="#top" data-i18n-aria="lockup.aria">
       <span class="lockup__pb"><img src="assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
       <span class="lockup__rule" aria-hidden="true"></span>
-      <span class="lockup__text"><b>Coach Navid Fahandezh</b><small>Technical Director · Padel Beast</small></span>
+      <span class="lockup__text"><b>Coach Navid Fahandezh</b><small data-i18n="lockup.role">Technical Director · Padel Beast</small></span>
     </a>
     <nav class="nav__links">
-      <a href="#coach">Coach</a>
-      <a href="#where">Clubs</a>
-      <a href="#how">How it works</a>
-      <a class="pill pill--lime" href="#book">Book a lesson</a>
+      <a href="#coach" data-i18n="nav.coach">Coach</a>
+      <a href="#where" data-i18n="nav.where">Club</a>
+      <a href="#soon" data-i18n="nav.soon">Coming soon</a>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="lt" aria-pressed="false">LT</button>
+      </div>
+      <a class="pill pill--lime" href="#book" data-i18n="nav.book">Book a lesson</a>
     </nav>
   </header>
 
@@ -40,37 +44,36 @@
     <!-- HERO -->
     <section class="hero wrap">
       <div class="hero__copy">
-        <p class="kicker">Coach Navid Fahandezh · Technical Director, Padel Beast</p>
+        <p class="kicker" data-i18n="hero.kicker">Coach Navid Fahandezh · Technical Director, Padel Beast</p>
         <h1 class="display">
-          <span class="display__year">lietuva · 2026</span>
-          padel<br />lessons
+          <span class="display__year" data-i18n="hero.year">abu dhabi · 2026</span>
+          <span data-i18n-html="hero.title">padel<br />lessons</span>
         </h1>
-        <p class="hero__lede">
-          Private padel lessons in <strong>Klaipėda</strong> and <strong>Palanga</strong> with a World Padel Tour
-          competitor and coach of 10+ years. Pick a day, choose a time between 10:00 and 17:00, and Navid confirms on WhatsApp.
+        <p class="hero__lede" data-i18n-html="hero.lede">
+          Private padel lessons at <strong>The Padel Project</strong> in Musaffah, Abu Dhabi.
         </p>
         <div class="hero__cta">
-          <a class="btn btn--lime" href="#book">See availability</a>
-          <a class="btn btn--ghost" href="#coach">About Navid</a>
+          <a class="btn btn--lime" href="#book" data-i18n="hero.cta">See availability</a>
+          <a class="btn btn--ghost" href="#coach" data-i18n="hero.about">About Navid</a>
         </div>
       </div>
       <figure class="hero__photo">
-        <img src="assets/img/navid-portrait.jpg" alt="Coach Navid Fahandezh on court" width="933" height="1400" />
-        <figcaption class="tag">On court in Klaipėda &amp; Palanga · October</figcaption>
+        <img src="assets/img/navid-portrait.jpg" alt="Coach Navid Fahandezh on court" data-i18n-alt="hero.alt" width="933" height="1400" />
+        <figcaption class="tag" data-i18n="hero.tag">On court at The Padel Project · Abu Dhabi</figcaption>
       </figure>
     </section>
 
-    <ul class="stats wrap" aria-label="Experience highlights">
-      <li><b>20+</b><span>years of competitive padel</span></li>
-      <li><b>10+</b><span>years coaching</span></li>
-      <li><b>WPT</b><span>World Padel Tour competitor, 2023</span></li>
-      <li><b>Oman</b><span>national team coach</span></li>
+    <ul class="stats wrap" data-i18n-aria="stats.aria">
+      <li><b>20+</b><span data-i18n="stats.years">years of competitive padel</span></li>
+      <li><b>10+</b><span data-i18n="stats.coaching">years coaching</span></li>
+      <li><b>WPT</b><span data-i18n="stats.wpt">World Padel Tour competitor, 2023</span></li>
+      <li><b data-i18n="stats.oman">Oman</b><span data-i18n="stats.omanText">national team coach</span></li>
     </ul>
 
     <!-- BOOKING -->
     <section id="book" class="book wrap">
       <div class="book__head">
-        <p class="kicker kicker--tight">pick a day,<br />then pick your time</p>
+        <p class="kicker kicker--tight" data-i18n-html="book.kicker">pick a day,<br />then pick your time</p>
         <div class="month-title">
           <span class="month-title__year" data-year></span>
           <h2 class="month-title__name" data-month-name>…</h2>
@@ -81,19 +84,17 @@
         <div class="cal-col">
           <div class="cal" aria-live="polite">
             <div class="cal__bar">
-              <button class="icon-btn" type="button" data-prev aria-label="Previous month">‹</button>
-              <div class="cal__weekdays" aria-hidden="true">
-                <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
-              </div>
-              <button class="icon-btn" type="button" data-next aria-label="Next month">›</button>
+              <button class="icon-btn" type="button" data-prev data-i18n-aria="book.prev">‹</button>
+              <div class="cal__weekdays" aria-hidden="true" data-weekdays></div>
+              <button class="icon-btn" type="button" data-next data-i18n-aria="book.next">›</button>
             </div>
             <div class="cal__days" role="grid" data-days></div>
           </div>
-          <div class="date-pills" data-open-dates aria-label="Open lesson dates"></div>
+          <div class="date-pills" data-open-dates data-i18n-aria="book.nextFree"></div>
           <ul class="legend">
-            <li><i class="dot dot--open"></i>Open for lessons</li>
-            <li><i class="dot dot--full"></i>Fully booked</li>
-            <li><i class="dot dot--sel"></i>Your pick</li>
+            <li><i class="dot dot--open"></i><span data-i18n="legend.open">Open for lessons</span></li>
+            <li><i class="dot dot--full"></i><span data-i18n="legend.full">Fully booked</span></li>
+            <li><i class="dot dot--sel"></i><span data-i18n="legend.pick">Your pick</span></li>
           </ul>
           <p class="note" data-load-state></p>
         </div>
@@ -106,71 +107,84 @@
 
     <!-- COACH -->
     <section id="coach" class="coach wrap">
-      <p class="kicker">the coach</p>
-      <h2 class="section-title">train with someone<br />who has built the game.</h2>
+      <p class="kicker" data-i18n="coach.kicker">the coach</p>
+      <h2 class="section-title" data-i18n-html="coach.title">train with someone<br />who has built the game.</h2>
       <div class="coach__grid">
         <div class="coach__bio">
-          <p>
-            Navid has played padel competitively for over twenty years, including a run at
-            <strong>World Padel Tour</strong> qualifier level in Spain in 2023, and has coached for more than a decade.
-            He has coached the <strong>Oman</strong> national team, and teaches padel business
-            and coaching internationally as a PadelMBA instructor.
-          </p>
-          <p>
-            He is also the <strong>Technical Director of Padel Beast</strong> — the community-first club management
-            company behind The Padel Project, Abu Dhabi's highest-occupancy padel facility.
-            Lessons are built around your game: technique, tactics, positioning and match play.
-          </p>
-          <blockquote>“We don’t just fill courts. We build communities.”</blockquote>
+          <p data-i18n-html="coach.p1"></p>
+          <p data-i18n-html="coach.p2"></p>
+          <blockquote data-i18n="coach.quote">“We don’t just fill courts. We build communities.”</blockquote>
           <a class="beast" href="https://thepadelbeast.com" target="_blank" rel="noopener">
             <img src="assets/img/padel-beast-logo.png" alt="Padel Beast" width="815" height="1077" />
             <span>thepadelbeast.com ↗</span>
           </a>
         </div>
         <ol class="highlights">
-          <li><span>01</span>20+ years of competitive playing, 10+ years coaching</li>
-          <li><span>02</span>World Padel Tour competitor (2023), qualifier level in Spain</li>
-          <li><span>03</span>National team coach in Oman</li>
-          <li><span>04</span>Built The Padel Project into Abu Dhabi's highest-occupancy padel club</li>
-          <li><span>05</span>PadelMBA instructor — padel business &amp; coaching</li>
+          <li><span>01</span><i data-i18n="coach.h1"></i></li>
+          <li><span>02</span><i data-i18n="coach.h2"></i></li>
+          <li><span>03</span><i data-i18n="coach.h3"></i></li>
+          <li><span>04</span><i data-i18n="coach.h4"></i></li>
+          <li><span>05</span><i data-i18n="coach.h5"></i></li>
         </ol>
       </div>
     </section>
 
     <!-- WHERE -->
     <section id="where" class="where wrap">
-      <p class="kicker">where we play</p>
-      <h2 class="section-title">two clubs on<br />the baltic coast.</h2>
+      <p class="kicker" data-i18n="where.kicker">where we play</p>
+      <h2 class="section-title" data-i18n-html="where.title">the padel project,<br />musaffah.</h2>
       <div class="places">
         <article class="place">
-          <span class="place__city">klaipėda</span>
-          <h3>A1 Padel</h3>
-          <p>Lessons at A1 Padel in Klaipėda.</p>
+          <span class="place__city" data-i18n="where.city">musaffah · abu dhabi</span>
+          <h3>The Padel Project</h3>
+          <p data-i18n="where.text"></p>
+          <p><a class="place__link" href="https://www.google.com/maps/search/?api=1&amp;query=The+Padel+Project+Musaffah+Abu+Dhabi" target="_blank" rel="noopener" data-i18n="where.map">Open in Google Maps ↗</a></p>
         </article>
         <article class="place">
-          <span class="place__city">palanga</span>
-          <h3>Oshee <em>to be confirmed</em></h3>
-          <p>Lessons in Palanga, most likely at Oshee. Navid will confirm the club with you on WhatsApp.</p>
+          <span class="place__city" data-i18n="where.hoursCity">lesson hours</span>
+          <h3 data-i18n="where.hoursTitle">Every day</h3>
+          <dl class="hours">
+            <div><dt data-i18n="where.weekdays">Monday – Friday</dt><dd data-hours="weekday"></dd></div>
+            <div><dt data-i18n="where.weekends">Saturday &amp; Sunday</dt><dd data-hours="weekend"></dd></div>
+          </dl>
         </article>
       </div>
-      <p class="where__dates">October dates: <b>1</b>, <b>2</b>, <b>5</b>, <b>6</b> &amp; <b>7</b> · 10:00–17:00</p>
+    </section>
+
+    <!-- COMING SOON -->
+    <section id="soon" class="where wrap">
+      <p class="kicker" data-i18n="soon.kicker">coming soon</p>
+      <h2 class="section-title" data-i18n-html="soon.title">next stops<br />on tour.</h2>
+      <div class="places">
+        <article class="place place--soon">
+          <span class="place__city" data-i18n="soon.ltCity">lithuania · klaipėda &amp; palanga</span>
+          <h3 data-i18n="soon.ltTitle">Back for Christmas</h3>
+          <p data-i18n="soon.ltText"></p>
+        </article>
+        <article class="place place--soon">
+          <span class="place__city" data-i18n="soon.omCity">oman</span>
+          <h3 data-i18n="soon.omTitle">Padel Addicts</h3>
+          <p data-i18n="soon.omText"></p>
+        </article>
+      </div>
+      <p class="where__dates"><a class="place__link" data-soon-wa hidden target="_blank" rel="noopener" data-i18n="soon.cta">Get on the list on WhatsApp ↗</a></p>
     </section>
 
     <!-- HOW -->
     <section id="how" class="how wrap">
-      <p class="kicker">how it works</p>
+      <p class="kicker" data-i18n="how.kicker">how it works</p>
       <ol class="steps">
-        <li><b>1</b><h3>Pick a day</h3><p>Open days are bright on the calendar. Faded days are full or unavailable.</p></li>
-        <li><b>2</b><h3>Choose length &amp; time</h3><p>1h, 1h 30 or 2h, starting on the half hour between 10:00 and 17:00.</p></li>
-        <li><b>3</b><h3>Navid confirms</h3><p>Your request goes straight to Navid’s WhatsApp. Once he says yes, the slot is yours.</p></li>
+        <li><b>1</b><h3 data-i18n="how.t1"></h3><p data-i18n="how.p1"></p></li>
+        <li><b>2</b><h3 data-i18n="how.t2"></h3><p data-i18n="how.p2"></p></li>
+        <li><b>3</b><h3 data-i18n="how.t3"></h3><p data-i18n="how.p3"></p></li>
       </ol>
     </section>
   </main>
 
   <dialog class="thanks" data-thanks aria-labelledby="thanks-title">
     <div class="thanks__ball" aria-hidden="true"></div>
-    <h2 id="thanks-title">Ačiū labai!</h2>
-    <p>The lesson will be confirmed as soon as possible!</p>
+    <h2 id="thanks-title" data-i18n="thanks.title">Ačiū labai!</h2>
+    <p data-i18n="thanks.text">The lesson will be confirmed as soon as possible!</p>
     <form method="dialog"><button class="btn btn--lime" type="submit" autofocus>OK</button></form>
   </dialog>
 
@@ -178,13 +192,13 @@
     <a class="lockup" href="https://thepadelbeast.com" target="_blank" rel="noopener">
       <span class="lockup__pb"><img src="assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
       <span class="lockup__rule" aria-hidden="true"></span>
-      <span class="lockup__text"><b>Coach Navid Fahandezh</b><small>Technical Director · Padel Beast</small></span>
+      <span class="lockup__text"><b>Coach Navid Fahandezh</b><small data-i18n="lockup.role">Technical Director · Padel Beast</small></span>
     </a>
-    <p>Padel lessons in Klaipėda &amp; Palanga · Coach Navid Fahandezh · a <a href="https://thepadelbeast.com" target="_blank" rel="noopener">Padel Beast</a> coach</p>
+    <p data-i18n-html="foot.text"></p>
     <p class="foot__links">
       <a data-coach-wa hidden target="_blank" rel="noopener">WhatsApp</a>
       <a href="https://instagram.com/thepadelbeast" target="_blank" rel="noopener">@thepadelbeast</a>
-      <a href="privacy.html">Privacy</a>
+      <a href="privacy.html" data-i18n="foot.privacy">Privacy</a>
     </p>
   </footer>
 </body>

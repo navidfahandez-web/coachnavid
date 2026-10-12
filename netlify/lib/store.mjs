@@ -3,7 +3,7 @@
 // same slot at the same moment can't both get it.
 import { getStore } from '@netlify/blobs';
 import { randomBytes } from 'node:crypto';
-import { addDays, isBlocking, isValidDate, nowInLithuania } from '../../shared/rules.js';
+import { addDays, isBlocking, isValidDate, nowLocal } from '../../shared/rules.js';
 
 const store = () => getStore({ name: 'lesson-bookings', consistency: 'strong' });
 const dayKey = (date) => `days/${date}`;
@@ -49,15 +49,17 @@ export async function findById(id) {
   return bookings.find((b) => b.id === id) ?? null;
 }
 
-// Upcoming bookings (today onwards) — used for WhatsApp text commands.
-export async function upcoming() {
-  const today = nowInLithuania().date;
+// All bookings on or after `from` (YYYY-MM-DD), sorted by time.
+export async function bookingsFrom(from) {
   const { blobs } = await store().list({ prefix: 'days/' });
-  const dates = blobs.map((b) => b.key.slice(5)).filter((d) => d >= today).sort();
+  const dates = blobs.map((b) => b.key.slice(5)).filter((d) => d >= from).sort();
   const days = await Promise.all(dates.map(readDay));
   return days.flatMap((d) => d.bookings).sort((a, b) =>
     `${a.date} ${a.start}`.localeCompare(`${b.date} ${b.start}`));
 }
+
+// Upcoming bookings (today onwards) — used for WhatsApp text commands.
+export const upcoming = () => bookingsFrom(nowLocal().date);
 
 // id = "<date>_<random>", so the day document can be found from the id alone.
 // code = short, human-typable reference for WhatsApp replies ("YES K7Q2").

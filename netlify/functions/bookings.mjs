@@ -4,8 +4,9 @@ import { findById, newIds, updateDay } from '../lib/store.mjs';
 import { notifyCoach } from '../lib/whatsapp.mjs';
 import { blockedDates } from '../lib/settings.mjs';
 import { isBlocking, isValidDate, unavailableReason } from '../../shared/rules.js';
-import { locationById } from '../../shared/schedule.js';
+import { DEFAULT_LOCATION, locationById } from '../../shared/schedule.js';
 
+// `code` lets the page show the message in the visitor's language.
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
 const MESSAGES = {
@@ -36,13 +37,11 @@ export default async (req, context) => {
   const date = String(input.date ?? '');
   const start = String(input.start ?? '');
   const duration = Number(input.duration);
-  const location = String(input.location ?? '');
+  const location = locationById(input.location) ? String(input.location) : DEFAULT_LOCATION;
 
-  if (!firstName || !lastName) return json({ error: 'Please enter your first and last name.' }, 400);
-  if (!/^\+\d{8,15}$/.test(phone)) return json({ error: 'Please enter your phone number with country code, e.g. +370 612 34567.' }, 400);
-
-  if (!isValidDate(date)) return json({ error: 'Please pick a date.' }, 400);
-  if (!locationById(location)) return json({ error: 'Please choose Klaipėda or Palanga.' }, 400);
+  if (!firstName || !lastName) return json({ error: 'Please enter your first and last name.', code: 'name' }, 400);
+  if (!/^\+\d{8,15}$/.test(phone)) return json({ error: 'Please enter your phone number with country code, e.g. +971 50 123 4567.', code: 'phone' }, 400);
+  if (!isValidDate(date)) return json({ error: 'Please pick a date.', code: 'invalid-date' }, 400);
 
   const blocked = blockedDates();
   let booking;
@@ -50,7 +49,7 @@ export default async (req, context) => {
     booking = await updateDay(date, (bookings) => {
       const busy = bookings.filter((b) => isBlocking(b));
       const reason = unavailableReason({ date, start, duration, busy, blockedDates: blocked });
-      if (reason) throw Object.assign(new Error(MESSAGES[reason] ?? 'That slot can’t be booked.'), { status: 409 });
+      if (reason) throw Object.assign(new Error(MESSAGES[reason] ?? 'That slot can’t be booked.'), { status: 409, code: reason });
       const b = {
         ...newIds(date), date, start, duration, location, firstName, lastName, phone,
         status: 'pending', createdAt: new Date().toISOString(),
@@ -59,20 +58,19 @@ export default async (req, context) => {
       return b;
     });
   } catch (err) {
-    if (err.status) return json({ error: err.message }, err.status);
+    if (err.status) return json({ error: err.message, code: err.code }, err.status);
     throw err;
   }
 
   try {
     await notifyCoach(booking);
   } catch (err) {
+    // Keep the request anyway: it's on the admin page, so Navid can still answer it.
     console.error(`WhatsApp notify failed: ${err.message}`);
-    // Release the hold — Navid never heard about it.
     await updateDay(date, (bookings) => {
       const b = bookings.find((x) => x.id === booking.id);
-      if (b) b.status = 'failed';
+      if (b) b.notifyFailed = true;
     });
-    return json({ error: 'We couldn’t reach Navid right now. Please try again in a minute or message him on WhatsApp.' }, 502);
   }
 
   return json({ id: booking.id, code: booking.code, status: 'pending' }, 201);

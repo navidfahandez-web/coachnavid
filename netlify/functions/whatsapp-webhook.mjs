@@ -8,11 +8,10 @@
 //   YES K7Q2 / NO K7Q2  — answers a specific request by its ref
 //   CANCEL K7Q2         — cancels a lesson and frees the slot again
 //   LIST                — upcoming lessons and open requests
-import { updateDay, upcoming } from '../lib/store.mjs';
-import {
-  coachNumber, describeSlot, notifyStudent, sendText, studentConfirmationText, validSignature,
-} from '../lib/whatsapp.mjs';
-import { isBlocking, overlaps } from '../../shared/rules.js';
+import { upcoming } from '../lib/store.mjs';
+import { applyAction } from '../lib/actions.mjs';
+import { coachNumber, describeSlot, sendText, validSignature } from '../lib/whatsapp.mjs';
+import { isBlocking } from '../../shared/rules.js';
 
 const COMMANDS = {
   yes: 'confirm', y: 'confirm', ok: 'confirm', confirm: 'confirm', taip: 'confirm', si: 'confirm', sí: 'confirm',
@@ -22,57 +21,27 @@ const COMMANDS = {
 };
 
 const HELP =
-  'Commands:\n• YES / NO — answer the open request\n• YES K7Q2 / NO K7Q2 — answer a specific request\n• CANCEL K7Q2 — cancel a lesson and free the slot\n• LIST — upcoming lessons';
+  'Commands:\n• YES / NO — answer the open request\n• YES K7Q2 / NO K7Q2 — answer a specific request\n• CANCEL K7Q2 — cancel a lesson and free the slot\n• LIST — upcoming lessons\n\nYou can also manage everything at coachnavid.com/admin';
 
 const who = (b) => `${b.firstName} ${b.lastName}`;
 const line = (b) => `${b.code} · ${describeSlot(b)} · ${who(b)} (${b.phone})`;
 
-// One-tap link that opens WhatsApp with the confirmation already typed for the student.
-const confirmLink = (b) =>
-  `https://wa.me/${b.phone.replace(/\D/g, '')}?text=${encodeURIComponent(studentConfirmationText(b))}`;
-
-// After confirming, message the student automatically if the template is set up;
-// otherwise give Navid a link to send the confirmation himself.
-async function tellStudent(b) {
-  try {
-    if (await notifyStudent(b)) return `\n\n📩 ${b.firstName} got a WhatsApp confirmation.`;
-    return `\n\nSend ${b.firstName} the confirmation (one tap): ${confirmLink(b)}`;
-  } catch (err) {
-    console.error(`Student confirmation failed: ${err.message}`);
-    return `\n\n⚠️ Couldn’t message ${b.firstName} automatically. Send it yourself: ${confirmLink(b)}`;
-  }
-}
-
-// Apply an action to one booking inside the day's locked update. Returns the reply text.
+// Run an action and turn the result into Navid's WhatsApp reply.
 async function apply(action, id) {
-  let confirmed = null;
-  const reply = await updateDay(id.slice(0, 10), (bookings) => {
-    confirmed = null; // reset if updateDay retries after a write conflict
-    const b = bookings.find((x) => x.id === id);
-    if (!b) return 'I couldn’t find that request.';
-
-    if (action === 'confirm') {
-      if (b.status === 'confirmed') return `Already confirmed ✅\n${line(b)}`;
-      if (b.status !== 'pending') return `That request was already ${b.status}, so it can’t be confirmed.\n${line(b)}`;
-      const clash = bookings.find((x) => x.id !== b.id && isBlocking(x) && overlaps(b.start, b.duration, x.start, x.duration));
-      if (clash) return `Can’t confirm ${b.code} — it overlaps ${clash.status} lesson ${line(clash)}.`;
-      Object.assign(b, { status: 'confirmed', decidedAt: new Date().toISOString() });
-      confirmed = { ...b };
-      return `Confirmed ✅ The slot is now blocked.\n${line(b)}\nTo cancel later, reply: CANCEL ${b.code}`;
-    }
-    if (action === 'decline') {
-      if (b.status !== 'pending') return `That request is already ${b.status}.\n${line(b)}`;
-      Object.assign(b, { status: 'declined', decidedAt: new Date().toISOString() });
-      return `Declined ❌ The slot is open again.\n${line(b)}`;
-    }
-    if (action === 'cancel') {
-      if (!['pending', 'confirmed'].includes(b.status)) return `That lesson is already ${b.status}.\n${line(b)}`;
-      Object.assign(b, { status: 'cancelled', decidedAt: new Date().toISOString() });
-      return `Cancelled 🗓️ The slot is open again.\n${line(b)}`;
-    }
-    return HELP;
-  });
-  return confirmed ? reply + (await tellStudent(confirmed)) : reply;
+  const r = await applyAction(action, id);
+  if (r.error === 'not-found') return 'I couldn’t find that request.';
+  if (r.error === 'wrong-status') return `That booking is already ${r.booking.status}.\n${line(r.booking)}`;
+  if (r.error === 'clash') return `Can’t confirm ${r.booking.code} — it overlaps ${r.clash.status} lesson ${line(r.clash)}.`;
+  if (!r.ok) return HELP;
+  const b = r.booking;
+  if (action === 'confirm') {
+    const student = r.studentNotified
+      ? `📩 ${b.firstName} got a WhatsApp confirmation.`
+      : `Send ${b.firstName} the confirmation (one tap): ${r.studentLink}`;
+    return `Confirmed ✅ The slot is now blocked.\n${line(b)}\n\n${student}\n\nTo cancel later, reply: CANCEL ${b.code}`;
+  }
+  if (action === 'decline') return `Declined ❌ The slot is open again.\n${line(b)}`;
+  return `Cancelled 🗓️ The slot is open again.\n${line(b)}`;
 }
 
 async function handle(command) {

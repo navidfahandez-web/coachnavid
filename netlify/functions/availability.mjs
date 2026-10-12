@@ -2,12 +2,12 @@
 // Busy blocks per day for the calendar. Never includes student details.
 import { busyBetween } from '../lib/store.mjs';
 import { blockedDates } from '../lib/settings.mjs';
-import { LOCATIONS, OPEN_DATES } from '../../shared/schedule.js';
-import { addDays, isValidDate, lastBookableDate, nowInLithuania, RULES } from '../../shared/rules.js';
+import { LOCATIONS, WEEKLY_HOURS } from '../../shared/schedule.js';
+import { addDays, isValidDate, lastBookableDate, nowLocal, RULES } from '../../shared/rules.js';
 
 export default async (req) => {
   const url = new URL(req.url);
-  const now = nowInLithuania();
+  const now = nowLocal();
   const last = lastBookableDate(now);
   let from = url.searchParams.get('from');
   let to = url.searchParams.get('to');
@@ -17,7 +17,7 @@ export default async (req) => {
 
   const days = from <= to ? await busyBetween(from, to) : {};
   return Response.json(
-    { rules: RULES, now, from, to, openDates: OPEN_DATES, locations: LOCATIONS, blockedDates: blockedDates(), days },
+    { rules: RULES, now, from, to, weeklyHours: WEEKLY_HOURS, locations: LOCATIONS, blockedDates: blockedDates(), days },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 };

@@ -1,12 +1,10 @@
 // Booking rules shared by the browser and the Netlify Functions, so the page
 // and the server always agree on what a valid lesson is.
-// All dates/times are wall-clock time in Lithuania (Europe/Vilnius).
-import { OPEN_DATES } from './schedule.js';
+// All dates/times are local wall-clock time at the club (see shared/schedule.js).
+import { TIME_ZONE, hoursOn } from './schedule.js';
 
 export const RULES = {
-  timeZone: 'Europe/Vilnius',
-  open: '10:00',          // first lesson can start at 10:00
-  close: '17:00',         // last lesson must end by 17:00
+  timeZone: TIME_ZONE,
   step: 30,               // start times and durations move in 30-minute steps
   minDuration: 60,
   maxDuration: 120,
@@ -25,8 +23,8 @@ export const toHHMM = (min) =>
 export const formatDuration = (min) =>
   min % 60 === 0 ? `${min / 60}h` : `${Math.floor(min / 60)}h ${min % 60}min`;
 
-// "Now" as Lithuanian wall-clock time: { date: 'YYYY-MM-DD', minutes: 0..1439 }
-export function nowInLithuania(at = new Date()) {
+// "Now" as the club's wall-clock time: { date: 'YYYY-MM-DD', minutes: 0..1439 }
+export function nowLocal(at = new Date()) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat('en-GB', {
       timeZone: RULES.timeZone,
@@ -50,14 +48,16 @@ export function addDays(date, n) {
 export const isValidDate = (s) =>
   /^\d{4}-\d{2}-\d{2}$/.test(s) && new Date(`${s}T00:00:00Z`).toISOString().slice(0, 10) === s;
 
-export function lastBookableDate(now = nowInLithuania()) {
+export function lastBookableDate(now = nowLocal()) {
   return addDays(now.date, RULES.bookAheadDays);
 }
 
-// Every start time that fits a lesson of `duration` inside opening hours.
-export function startTimes(duration) {
+// Every start time that fits a lesson of `duration` inside that day's hours.
+export function startTimes(duration, date) {
+  const hours = hoursOn(date);
   const out = [];
-  for (let m = toMin(RULES.open); m + duration <= toMin(RULES.close); m += RULES.step) out.push(toHHMM(m));
+  if (!hours) return out;
+  for (let m = toMin(hours.open); m + duration <= toMin(hours.close); m += RULES.step) out.push(toHHMM(m));
   return out;
 }
 
@@ -68,21 +68,21 @@ export function overlaps(aStart, aDuration, bStart, bDuration) {
 
 // Why a given start/duration can't be booked, or null if it can.
 // `busy` = [{ start, duration }] of lessons that are confirmed or held.
-export function unavailableReason({ date, start, duration, busy = [], blockedDates = [], openDates = OPEN_DATES, now = nowInLithuania() }) {
+export function unavailableReason({ date, start, duration, busy = [], blockedDates = [], now = nowLocal() }) {
   if (!isValidDate(date)) return 'invalid-date';
   if (!DURATIONS.includes(duration)) return 'invalid-duration';
-  if (!startTimes(duration).includes(start)) return 'outside-hours';
   if (date < now.date || date > lastBookableDate(now)) return 'out-of-range';
-  if (!openDates.includes(date) || blockedDates.includes(date)) return 'day-off';
+  if (!hoursOn(date) || blockedDates.includes(date)) return 'day-off';
+  if (!startTimes(duration, date).includes(start)) return 'outside-hours';
   if (date === now.date && toMin(start) < now.minutes + RULES.minNoticeMinutes) return 'too-soon';
   if (busy.some((b) => overlaps(start, duration, b.start, b.duration))) return 'taken';
   return null;
 }
 
 // Does this day still have at least one bookable 1-hour lesson?
-export function dayHasOpening({ date, busy, blockedDates, openDates, now }) {
-  return startTimes(RULES.minDuration).some(
-    (start) => !unavailableReason({ date, start, duration: RULES.minDuration, busy, blockedDates, openDates, now }),
+export function dayHasOpening({ date, busy, blockedDates, now }) {
+  return startTimes(RULES.minDuration, date).some(
+    (start) => !unavailableReason({ date, start, duration: RULES.minDuration, busy, blockedDates, now }),
   );
 }
 

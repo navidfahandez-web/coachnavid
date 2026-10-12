@@ -1,0 +1,58 @@
+/* Private bookings dashboard (admin.html) — builds on styles.css */
+.admin .orbs { display: none; }
+.admin__main { padding: 20px 0 80px; }
+.login { max-width: 420px; margin: 60px auto; display: grid; gap: 14px; min-height: 0; }
+.check { display: flex; gap: 10px; align-items: center; font-size: 14px; color: var(--ink-2); }
+.check input { accent-color: var(--lime); width: 18px; height: 18px; }
+.nav__links button.pill { background: transparent; color: var(--ink); cursor: pointer; }
+
+.adm-section { margin-top: 36px; }
+.adm-h {
+  font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 800; letter-spacing: -.04em; line-height: 1;
+  text-transform: lowercase; margin: 0 0 16px;
+}
+.adm-h span { color: var(--lime); font-size: .55em; vertical-align: middle; letter-spacing: 0; }
+.adm-past summary { cursor: pointer; list-style: none; }
+.adm-past summary::-webkit-details-marker { display: none; }
+.adm-past summary::after { content: ' +'; color: var(--muted); }
+.adm-past[open] summary::after { content: ' −'; }
+.adm-list { display: grid; gap: 10px; }
+
+.bk {
+  display: grid; grid-template-columns: 170px 1fr auto; gap: 8px 20px; align-items: center;
+  border: 1.5px solid var(--line-soft); border-radius: var(--radius-sm); padding: 16px 18px;
+  background: var(--surface);
+}
+.bk--pending { border-color: var(--lime); }
+.bk__when b { display: block; font-size: 17px; }
+.bk__when span { color: var(--lime); font-size: 14px; }
+.bk__who { display: grid; gap: 2px; min-width: 0; }
+.bk__who b { font-size: 16px; }
+.bk__who span { font-size: 14px; }
+.bk__who a { color: var(--ink); }
+.bk__who small { color: var(--muted); font-size: 12px; }
+.bk__who em { color: var(--danger); font-style: normal; }
+.bk__badge {
+  justify-self: end; align-self: start; font-size: 12px; border-radius: 999px; padding: 3px 10px;
+  border: 1.5px solid var(--line-soft); color: var(--ink-2); text-transform: lowercase;
+}
+.bk--pending .bk__badge { border-color: var(--lime); color: var(--lime); }
+.bk--confirmed .bk__badge { background: var(--lime); border-color: var(--lime); color: #111; }
+.bk--declined, .bk--cancelled, .bk--expired { opacity: .6; }
+.bk__actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.bk__actions .btn { padding: 10px 18px; font-size: 14px; }
+.btn--danger:hover { border-color: var(--danger); color: var(--danger); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 20;
+  width: min(520px, calc(100% - 32px)); padding: 14px 18px; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1.5px solid var(--lime); box-shadow: 0 10px 40px rgba(0, 0, 0, .5);
+  font-size: 14px;
+}
+.toast a { color: var(--lime); font-weight: 600; }
+
+@media (max-width: 640px) {
+  .bk { grid-template-columns: 1fr auto; }
+  .bk__who { grid-column: 1 / -1; grid-row: 2; }
+  .bk__actions .btn { flex: 1; }
+}
