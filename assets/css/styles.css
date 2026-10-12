@@ -399,3 +399,18 @@ blockquote { margin: 30px 0; font-size: clamp(1.4rem, 2.6vw, 1.9rem); font-weigh
 #soon { padding-top: clamp(60px, 8vw, 100px); }
 
 [hidden] { display: none !important; }
+
+/* coach profile card */
+.profile { display: flex; align-items: center; gap: 18px; margin-bottom: 26px; }
+.profile__photo {
+  width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--lime); box-shadow: 0 0 0 5px rgba(195, 234, 91, .12);
+}
+.profile__text { display: grid; gap: 3px; }
+.profile__text b { font-size: 19px; letter-spacing: -.01em; }
+.profile__text span { color: var(--lime); font-size: 13px; }
+.profile__ig {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 6px; width: fit-content;
+  padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--line); font-size: 13px; text-decoration: none;
+}
+.profile__ig:hover { border-color: var(--lime); color: var(--lime); }
