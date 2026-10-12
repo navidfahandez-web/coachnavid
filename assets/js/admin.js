@@ -74,6 +74,10 @@ function render() {
     upcoming: data.bookings.filter((b) => b.status === 'confirmed' && b.date >= today),
   };
   groups.past = data.bookings.filter((b) => !groups.pending.includes(b) && !groups.upcoming.includes(b)).reverse();
+  const log = data.activity ?? [];
+  $('[data-activity]').innerHTML = log.length
+    ? log.map((a) => `<li class="adm-log__${esc(a.kind)}"><time>${esc(new Date(a.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</time> ${esc(a.text)}</li>`).join('')
+    : '<li>Nothing yet.</li>';
   const empty = { pending: 'No requests waiting. 🎾', upcoming: 'No confirmed lessons coming up.', past: 'Nothing here yet.' };
   for (const [k, list] of Object.entries(groups)) {
     $(`[data-list="${k}"]`).innerHTML = list.length ? list.map(card).join('') : `<p class="note">${empty[k]}</p>`;

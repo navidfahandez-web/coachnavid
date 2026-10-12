@@ -2,7 +2,7 @@
 //   GET  /api/admin/bookings        → recent + upcoming bookings, with student details
 //   POST /api/admin/bookings/:id    → { action: 'confirm' | 'decline' | 'cancel' }
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { bookingsFrom } from '../lib/store.mjs';
+import { bookingsFrom, readActivity } from '../lib/store.mjs';
 import { applyAction } from '../lib/actions.mjs';
 import { confirmLink } from '../lib/whatsapp.mjs';
 import { addDays, isBlocking, nowLocal } from '../../shared/rules.js';
@@ -37,7 +37,7 @@ export default async (req, context) => {
   if (req.method === 'GET') {
     const from = addDays(nowLocal().date, -30);
     const bookings = (await bookingsFrom(from)).filter((b) => b.status !== 'failed').map(view);
-    return json({ now: nowLocal(), bookings });
+    return json({ now: nowLocal(), bookings, activity: await readActivity() });
   }
 
   if (req.method === 'POST' && context.params?.id) {

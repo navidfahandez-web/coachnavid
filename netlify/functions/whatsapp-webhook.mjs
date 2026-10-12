@@ -8,7 +8,7 @@
 //   YES K7Q2 / NO K7Q2  — answers a specific request by its ref
 //   CANCEL K7Q2         — cancels a lesson and frees the slot again
 //   LIST                — upcoming lessons and open requests
-import { upcoming } from '../lib/store.mjs';
+import { logActivity, upcoming } from '../lib/store.mjs';
 import { applyAction } from '../lib/actions.mjs';
 import { coachNumber, describeSlot, sendText, validSignature } from '../lib/whatsapp.mjs';
 import { isBlocking } from '../../shared/rules.js';
@@ -87,17 +87,37 @@ export default async (req) => {
   }
 
   const raw = await req.text();
-  if (!validSignature(raw, req.headers.get('x-hub-signature-256'))) return new Response('Bad signature', { status: 401 });
+  if (!validSignature(raw, req.headers.get('x-hub-signature-256'))) {
+    await logActivity({ kind: 'rejected', text: 'Rejected a webhook call: signature didn’t match WHATSAPP_APP_SECRET (check the App secret in Netlify).' });
+    return new Response('Bad signature', { status: 401 });
+  }
 
-  const messages = JSON.parse(raw).entry?.flatMap((e) => e.changes?.flatMap((c) => c.value?.messages ?? []) ?? []) ?? [];
+  const values = JSON.parse(raw).entry?.flatMap((e) => e.changes?.map((c) => c.value ?? {}) ?? []) ?? [];
+
+  // Delivery reports for messages the site sent (sent / delivered / read / failed)
+  for (const s of values.flatMap((v) => v.statuses ?? [])) {
+    const err = s.errors?.[0];
+    await logActivity({
+      kind: s.status === 'failed' ? 'failed' : 'status',
+      text: `Message to …${String(s.recipient_id).slice(-4)}: ${s.status}` +
+        (err ? ` — code ${err.code}: ${err.title}${err.error_data?.details ? ` (${err.error_data.details})` : ''}` : ''),
+    });
+  }
+
+  const messages = values.flatMap((v) => v.messages ?? []);
   for (const m of messages) {
-    if (m.from !== coachNumber()) continue; // ignore everyone except Navid
+    if (m.from !== coachNumber()) { // ignore everyone except Navid
+      await logActivity({ kind: 'ignored', text: `Ignored a message from …${String(m.from).slice(-4)} (not COACH_WHATSAPP).` });
+      continue;
+    }
     const command =
       m.button?.payload ?? m.interactive?.button_reply?.id ?? m.text?.body ?? '';
+    await logActivity({ kind: 'reply', text: `Navid replied: ${String(command).slice(0, 60)}` });
     try {
       await sendText(m.from, await handle(command));
     } catch (err) {
       console.error('Webhook command failed', command, err);
+      await logActivity({ kind: 'failed', text: `Couldn’t handle “${String(command).slice(0, 40)}”: ${err.message}` });
       await sendText(m.from, 'Something went wrong handling that — please try again.').catch(() => {});
     }
   }

@@ -69,3 +69,18 @@ export function newIds(date) {
   const rand = [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
   return { id: `${date}_${rand}`, code: rand.slice(0, 4) };
 }
+
+// Small rolling log of WhatsApp events (deliveries, failures, replies) shown on
+// the admin page, so problems are visible without digging through Netlify logs.
+// Best-effort: a lost entry under concurrent writes doesn't matter.
+const LOG_KEY = 'log/whatsapp';
+export async function logActivity(entry) {
+  try {
+    const list = (await store().get(LOG_KEY, { type: 'json' })) ?? [];
+    list.unshift({ at: new Date().toISOString(), ...entry });
+    await store().setJSON(LOG_KEY, list.slice(0, 40));
+  } catch (err) {
+    console.error(`Activity log failed: ${err.message}`);
+  }
+}
+export const readActivity = async () => (await store().get(LOG_KEY, { type: 'json' })) ?? [];

@@ -1,6 +1,6 @@
 // POST /api/bookings      → student requests a lesson (held as "pending")
 // GET  /api/bookings/:id  → student's page polls the status of their request
-import { findById, newIds, updateDay } from '../lib/store.mjs';
+import { findById, logActivity, newIds, updateDay } from '../lib/store.mjs';
 import { notifyCoach } from '../lib/whatsapp.mjs';
 import { blockedDates } from '../lib/settings.mjs';
 import { isBlocking, isValidDate, unavailableReason } from '../../shared/rules.js';
@@ -64,7 +64,9 @@ export default async (req, context) => {
 
   try {
     await notifyCoach(booking);
+    await logActivity({ kind: 'sent', text: `Request ${booking.code} sent to Navid’s WhatsApp (accepted by Meta).` });
   } catch (err) {
+    await logActivity({ kind: 'failed', text: `Request ${booking.code}: Meta refused the alert — ${err.message}` });
     // Keep the request anyway: it's on the admin page, so Navid can still answer it.
     console.error(`WhatsApp notify failed: ${err.message}`);
     await updateDay(date, (bookings) => {
