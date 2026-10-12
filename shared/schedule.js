@@ -26,7 +26,11 @@ export const DEFAULT_LOCATION = LOCATIONS[0].id;
 // Pre-filled in the phone field of the booking form
 export const DEFAULT_PHONE_PREFIX = '+971 ';
 
-export const hoursOn = (date) => WEEKLY_HOURS[new Date(`${date}T12:00:00Z`).getUTCDay()] ?? null;
+// No lessons before this date (YYYY-MM-DD). Set to '' to remove the limit.
+export const FIRST_DAY = '2026-10-14';
+
+export const hoursOn = (date) =>
+  (FIRST_DAY && date < FIRST_DAY ? null : WEEKLY_HOURS[new Date(`${date}T12:00:00Z`).getUTCDay()] ?? null);
 
 export const locationById = (id) => LOCATIONS.find((l) => l.id === id);
 export const locationLabel = (id) => {
