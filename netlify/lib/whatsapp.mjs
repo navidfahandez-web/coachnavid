@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { formatDuration, toHHMM, toMin } from '../../shared/rules.js';
 import { locationLabel } from '../../shared/schedule.js';
 
-const env = (k) => process.env[k] ?? '';
+const env = (k) => (process.env[k] ?? '').trim(); // ignore stray spaces/newlines pasted into Netlify
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
 export const coachNumber = () => env('COACH_WHATSAPP').replace(/\D/g, '');
