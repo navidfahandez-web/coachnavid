@@ -59,6 +59,7 @@ function card(b) {
           <a href="https://wa.me/${digits(b.phone)}" target="_blank" rel="noopener">${esc(b.phone)}</a>
           · <a href="tel:${esc(b.phone)}">call</a>
         </span>
+        ${b.notes ? `<span class="bk__notes">📝 ${esc(b.notes)}</span>` : ''}
         <small>${esc(b.location)} · ref ${esc(b.code)} · requested ${esc(ago(b.createdAt))}${b.notifyFailed ? ' · <em>WhatsApp alert failed</em>' : ''}</small>
         ${b.notifyError ? `<small class="bk__err">Meta said: ${esc(b.notifyError)}</small>` : ''}
       </div>

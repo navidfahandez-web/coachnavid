@@ -567,3 +567,11 @@ body::before { opacity: .12; }
 @media (max-width: 760px) {
   .nav__links a[href="#soon"], .nav__links a[href="#where"] { display: none; }
 }
+
+.field textarea {
+  width: 100%; font: inherit; font-size: 15px; color: var(--ink); resize: vertical; min-height: 78px;
+  background: #111; border: 1.5px solid var(--line-soft); border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.field textarea:focus { outline: none; border-color: var(--accent); }
+.field textarea::placeholder { color: var(--muted); }
+.field__opt { color: var(--muted); font-size: 12px; }

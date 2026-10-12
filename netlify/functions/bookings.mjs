@@ -38,6 +38,7 @@ export default async (req, context) => {
   const start = String(input.start ?? '');
   const duration = Number(input.duration);
   const location = locationById(input.location) ? String(input.location) : DEFAULT_LOCATION;
+  const notes = String(input.notes ?? '').replace(/\s+/g, ' ').trim().slice(0, 300); // what they want to train
   const updates = input.updates === true; // opted in to "tell me when Navid is back"
 
   if (!firstName || !lastName) return json({ error: 'Please enter your first and last name.', code: 'name' }, 400);
@@ -54,7 +55,7 @@ export default async (req, context) => {
       if (reason) throw Object.assign(new Error(MESSAGES[reason] ?? 'That slot can’t be booked.'), { status: 409, code: reason });
       ref ??= await nextLessonRef();
       const b = {
-        ...newIds(date), code: ref, date, start, duration, location, firstName, lastName, phone, updates,
+        ...newIds(date), code: ref, date, start, duration, location, firstName, lastName, phone, notes, updates,
         status: 'pending', createdAt: new Date().toISOString(),
       };
       bookings.push(b);

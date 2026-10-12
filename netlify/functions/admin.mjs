@@ -21,7 +21,7 @@ function authorised(req) {
 const view = (b, all = []) => ({
   id: b.id, code: b.code, date: b.date, start: b.start, duration: b.duration,
   location: locationLabel(b.location) || b.location,
-  firstName: b.firstName, lastName: b.lastName, phone: b.phone,
+  firstName: b.firstName, lastName: b.lastName, phone: b.phone, notes: b.notes ?? '',
   status: b.status === 'pending' && !isBlocking(b) ? 'expired' : b.status,
   createdAt: b.createdAt, decidedAt: b.decidedAt ?? null, notifyFailed: !!b.notifyFailed,
   notifyError: b.notifyError ?? null,

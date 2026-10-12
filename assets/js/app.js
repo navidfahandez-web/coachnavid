@@ -23,7 +23,7 @@ const state = {
   date: null,
   duration: 60,
   start: null,
-  form: { firstName: '', lastName: '', phone: DEFAULT_PHONE_PREFIX, updates: false },
+  form: { firstName: '', lastName: '', phone: DEFAULT_PHONE_PREFIX, notes: '', updates: false },
   error: '',             // i18n key, or a raw server message
   submitting: false,
   request: loadRequest(), // { id, code, date, start, duration, location, status }
@@ -187,6 +187,8 @@ function renderPanel() {
       <label class="field">${esc(t('form.first'))}<input name="firstName" autocomplete="given-name" required value="${esc(f.firstName)}" /></label>
       <label class="field">${esc(t('form.last'))}<input name="lastName" autocomplete="family-name" required value="${esc(f.lastName)}" /></label>
       <label class="field field--full">${esc(t('form.phone'))}<input name="phone" type="tel" inputmode="tel" autocomplete="tel" required value="${esc(f.phone)}" placeholder="+971 50 123 4567" /></label>
+      <label class="field field--full">${esc(t('form.notes'))} <small class="field__opt">${esc(t('form.optional'))}</small>
+        <textarea name="notes" rows="3" maxlength="300" placeholder="${esc(t('form.notesHint'))}">${esc(f.notes)}</textarea></label>
       <label class="optin field--full"><input type="checkbox" name="updates" ${f.updates ? 'checked' : ''} /> <span>${esc(t('form.updates'))}</span></label>
       <label class="hp" aria-hidden="true">Company<input name="company" tabindex="-1" autocomplete="off" /></label>
       <div class="summary">
@@ -338,7 +340,7 @@ document.addEventListener('submit', async (e) => {
   renderPanel();
   const lesson = { date: state.date, start: state.start, duration: state.duration, location: DEFAULT_LOCATION };
   try {
-    const res = await state.backend.book({ ...lesson, firstName, lastName, phone, updates: state.form.updates, company: data.company });
+    const res = await state.backend.book({ ...lesson, firstName, lastName, phone, notes: state.form.notes, updates: state.form.updates, company: data.company });
     saveRequest({ id: res.id, code: res.code, ...lesson, status: 'pending' });
     showThanks();
     state.date = null;

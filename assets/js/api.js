@@ -58,7 +58,7 @@ const demo = {
     }
     return { rules: RULES, now, from, to: to > lastBookableDate(now) ? lastBookableDate(now) : to, blockedDates: [], days };
   },
-  async book({ date, start, duration, location, firstName, lastName, phone }) {
+  async book({ date, start, duration, location, firstName, lastName, phone, notes }) {
     await new Promise((r) => setTimeout(r, 600));
     const list = bookings();
     const reason = unavailableReason({ date, start, duration, busy: list.filter((b) => b.date === date && isBlocking(b)) });
@@ -66,7 +66,7 @@ const demo = {
     let n = 0;
     try { n = Number(localStorage.getItem('navid-lessons-demo-ref') || 0) + 1; localStorage.setItem('navid-lessons-demo-ref', String(n)); } catch { n = Date.now() % 10000; }
     const code = `SMASH${String(n).padStart(4, '0')}`;
-    const b = { id: `${date}_${code}DEMO`, code, date, start, duration, location, firstName, lastName, phone, status: 'pending', createdAt: new Date().toISOString() };
+    const b = { id: `${date}_${code}DEMO`, code, date, start, duration, location, firstName, lastName, phone, notes, status: 'pending', createdAt: new Date().toISOString() };
     write([...list, b]);
     return { id: b.id, code, status: 'pending' };
   },

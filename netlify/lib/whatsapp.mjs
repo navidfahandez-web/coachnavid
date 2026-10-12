@@ -121,7 +121,7 @@ export async function notifyCoach(b) {
     interactive: {
       type: 'button',
       body: {
-        text: `🎾 New lesson request\n\nStudent: ${b.firstName} ${b.lastName}\nPhone: ${b.phone}\nWhen: ${describeSlot(b)}\nRef: ${b.code}\n\nConfirm this lesson?`,
+        text: `🎾 New lesson request\n\nStudent: ${b.firstName} ${b.lastName}\nPhone: ${b.phone}\nWhen: ${describeSlot(b)}\nRef: ${b.code}${b.notes ? `\n\n📝 Wants to work on: ${b.notes}` : ''}\n\nConfirm this lesson?`,
       },
       action: {
         buttons: [
