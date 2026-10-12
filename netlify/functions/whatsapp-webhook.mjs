@@ -37,7 +37,7 @@ async function apply(action, id) {
   if (action === 'confirm') {
     const student = r.studentNotified
       ? `📩 ${b.firstName} got a WhatsApp confirmation.`
-      : `Send ${b.firstName} the confirmation (one tap): ${r.studentLink}`;
+      : `Send ${b.firstName} the confirmation${r.firstTime ? ' (first lesson — includes your intro)' : ''} (one tap): ${r.studentLink}`;
     return `Confirmed ✅ The slot is now blocked.\n${line(b)}\n\n${student}\n\nTo cancel later, reply: CANCEL ${b.code}`;
   }
   if (action === 'decline') return `Declined ❌ The slot is open again.\n${line(b)}`;

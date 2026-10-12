@@ -1,7 +1,7 @@
 // Confirm / decline / cancel a booking. Shared by the WhatsApp webhook and the
 // private admin page so both behave exactly the same.
-import { updateDay } from './store.mjs';
-import { confirmLink, notifyStudent } from './whatsapp.mjs';
+import { bookingsFrom, updateDay } from './store.mjs';
+import { confirmLink, isFirstLesson, notifyStudent } from './whatsapp.mjs';
 import { isBlocking, overlaps } from '../../shared/rules.js';
 
 const ALLOWED_FROM = {
@@ -31,7 +31,9 @@ export async function applyAction(action, id) {
 
   // Tell the student, or hand Navid a one-tap link to do it himself.
   if (result.ok && action === 'confirm') {
-    result.studentLink = confirmLink(result.booking);
+    const firstTime = isFirstLesson(result.booking, await bookingsFrom('0000-00-00'));
+    result.firstTime = firstTime;
+    result.studentLink = confirmLink(result.booking, { firstTime });
     try {
       result.studentNotified = await notifyStudent(result.booking);
     } catch (err) {

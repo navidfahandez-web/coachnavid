@@ -4,7 +4,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { bookingsFrom, readActivity } from '../lib/store.mjs';
 import { applyAction } from '../lib/actions.mjs';
-import { confirmLink, graph, phoneNumberId, wabaId } from '../lib/whatsapp.mjs';
+import { confirmLink, graph, isFirstLesson, phoneNumberId, wabaId } from '../lib/whatsapp.mjs';
 import { addDays, isBlocking, nowLocal } from '../../shared/rules.js';
 import { locationLabel } from '../../shared/schedule.js';
 
@@ -17,14 +17,14 @@ function authorised(req) {
   return password !== '' && timingSafeEqual(digest(given), digest(password));
 }
 
-const view = (b) => ({
+const view = (b, all = []) => ({
   id: b.id, code: b.code, date: b.date, start: b.start, duration: b.duration,
   location: locationLabel(b.location) || b.location,
   firstName: b.firstName, lastName: b.lastName, phone: b.phone,
   status: b.status === 'pending' && !isBlocking(b) ? 'expired' : b.status,
   createdAt: b.createdAt, decidedAt: b.decidedAt ?? null, notifyFailed: !!b.notifyFailed,
   notifyError: b.notifyError ?? null,
-  studentLink: b.status === 'confirmed' ? confirmLink(b) : null,
+  studentLink: b.status === 'confirmed' ? confirmLink(b, { firstTime: isFirstLesson(b, all) }) : null,
 });
 
 export default async (req, context) => {
@@ -58,7 +58,8 @@ export default async (req, context) => {
 
   if (req.method === 'GET') {
     const from = addDays(nowLocal().date, -30);
-    const bookings = (await bookingsFrom(from)).filter((b) => b.status !== 'failed').map(view);
+    const all = await bookingsFrom('0000-00-00');
+    const bookings = all.filter((b) => b.date >= from && b.status !== 'failed').map((b) => view(b, all));
     return json({ now: nowLocal(), bookings, activity: await readActivity() });
   }
 

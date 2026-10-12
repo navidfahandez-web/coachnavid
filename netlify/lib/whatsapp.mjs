@@ -53,12 +53,20 @@ export function describeSlot(b) {
 }
 
 // The confirmation text a student gets — also used for Navid's one-tap backup link.
-export function studentConfirmationText(b) {
+// First lesson ever for this phone number → Navid introduces himself.
+export function studentConfirmationText(b, { firstTime = false } = {}) {
   const loc = locationById(b.location);
   const club = loc ? `🎾 ${loc.club} – ${loc.city.toUpperCase()}` : '';
   const map = loc?.mapsUrl ? `📍 Location: ${loc.mapsUrl}` : '';
+  const opening = firstTime
+    ? [
+      `Hi ${b.firstName}! 👋 I'm Navid Fahandezh – padel coach with 15+ years of experience and Technical Director of Padel Beast. Thanks for booking your first lesson with me!`,
+      '',
+      '✅ Your lesson is confirmed:',
+    ]
+    : [`Hi ${b.firstName}! ✅ Your padel lesson with Coach Navid is confirmed.`];
   return [
-    `Hi ${b.firstName}! ✅ Your padel lesson with Coach Navid is confirmed.`,
+    ...opening,
     '',
     `📅 ${describeTime(b)}`,
     club,
@@ -69,8 +77,14 @@ export function studentConfirmationText(b) {
 }
 
 // One-tap link that opens WhatsApp with the confirmation already typed for the student.
-export const confirmLink = (b) =>
-  `https://wa.me/${b.phone.replace(/\D/g, '')}?text=${encodeURIComponent(studentConfirmationText(b))}`;
+export const confirmLink = (b, opts) =>
+  `https://wa.me/${b.phone.replace(/\D/g, '')}?text=${encodeURIComponent(studentConfirmationText(b, opts))}`;
+
+// True if this phone number has no earlier confirmed lesson.
+const digits = (p) => String(p ?? '').replace(/\D/g, '');
+export const isFirstLesson = (b, all) => !all.some((x) =>
+  x.id !== b.id && digits(x.phone) === digits(b.phone) && x.status === 'confirmed' &&
+  Date.parse(x.createdAt) < Date.parse(b.createdAt));
 
 // Template params can't contain newlines, tabs or 4+ spaces.
 const clean = (s) => String(s).replace(/\s+/g, ' ').trim().slice(0, 200);
