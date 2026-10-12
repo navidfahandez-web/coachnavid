@@ -1,6 +1,6 @@
 // POST /api/bookings      → student requests a lesson (held as "pending")
 // GET  /api/bookings/:id  → student's page polls the status of their request
-import { findById, logActivity, newIds, updateDay } from '../lib/store.mjs';
+import { findById, logActivity, newIds, nextLessonRef, updateDay } from '../lib/store.mjs';
 import { notifyCoach } from '../lib/whatsapp.mjs';
 import { blockedDates } from '../lib/settings.mjs';
 import { isBlocking, isValidDate, unavailableReason } from '../../shared/rules.js';
@@ -46,13 +46,15 @@ export default async (req, context) => {
 
   const blocked = blockedDates();
   let booking;
+  let ref; // allocated once the slot is known to be free; reused if the write is retried
   try {
-    booking = await updateDay(date, (bookings) => {
+    booking = await updateDay(date, async (bookings) => {
       const busy = bookings.filter((b) => isBlocking(b));
       const reason = unavailableReason({ date, start, duration, busy, blockedDates: blocked });
       if (reason) throw Object.assign(new Error(MESSAGES[reason] ?? 'That slot can’t be booked.'), { status: 409, code: reason });
+      ref ??= await nextLessonRef();
       const b = {
-        ...newIds(date), date, start, duration, location, firstName, lastName, phone, updates,
+        ...newIds(date), code: ref, date, start, duration, location, firstName, lastName, phone, updates,
         status: 'pending', createdAt: new Date().toISOString(),
       };
       bookings.push(b);

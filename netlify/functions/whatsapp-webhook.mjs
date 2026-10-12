@@ -5,8 +5,8 @@
 // What Navid can send:
 //   tap "Yes, confirm" / "No, decline" on a request
 //   YES / NO            — answers the only open request (asks which one if several)
-//   YES K7Q2 / NO K7Q2  — answers a specific request by its ref
-//   CANCEL K7Q2         — cancels a lesson and frees the slot again
+//   YES SMASH0001 / NO SMASH0001  — answers a specific request by its ref
+//   CANCEL SMASH0001         — cancels a lesson and frees the slot again
 //   LIST                — upcoming lessons and open requests
 import { logActivity, upcoming } from '../lib/store.mjs';
 import { applyAction } from '../lib/actions.mjs';
@@ -21,7 +21,7 @@ const COMMANDS = {
 };
 
 const HELP =
-  'Commands:\n• YES / NO — answer the open request\n• YES K7Q2 / NO K7Q2 — answer a specific request\n• CANCEL K7Q2 — cancel a lesson and free the slot\n• LIST — upcoming lessons\n\nYou can also manage everything at coachnavid.com/admin';
+  'Commands:\n• YES / NO — answer the open request\n• YES SMASH0001 / NO SMASH0001 — answer a specific request\n• CANCEL SMASH0001 — cancel a lesson and free the slot\n• LIST — upcoming lessons\n\nYou can also manage everything at coachnavid.com/admin';
 
 const who = (b) => `${b.firstName} ${b.lastName}`;
 const line = (b) => `${b.code} · ${describeSlot(b)} · ${who(b)} (${b.phone})`;

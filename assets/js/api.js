@@ -63,7 +63,9 @@ const demo = {
     const list = bookings();
     const reason = unavailableReason({ date, start, duration, busy: list.filter((b) => b.date === date && isBlocking(b)) });
     if (reason) throw Object.assign(new Error('That slot can’t be booked.'), { status: 409, code: reason });
-    const code = Math.random().toString(36).slice(2, 6).toUpperCase();
+    let n = 0;
+    try { n = Number(localStorage.getItem('navid-lessons-demo-ref') || 0) + 1; localStorage.setItem('navid-lessons-demo-ref', String(n)); } catch { n = Date.now() % 10000; }
+    const code = `SMASH${String(n).padStart(4, '0')}`;
     const b = { id: `${date}_${code}DEMO`, code, date, start, duration, location, firstName, lastName, phone, status: 'pending', createdAt: new Date().toISOString() };
     write([...list, b]);
     return { id: b.id, code, status: 'pending' };

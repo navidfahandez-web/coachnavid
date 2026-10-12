@@ -31,8 +31,8 @@ netlify/lib/                 storage (Netlify Blobs) + WhatsApp Cloud API helper
 |---|---|
 | tap **Yes, confirm** / **No, decline** | answers that request |
 | `YES` / `NO` | answers the only open request (asks which one if there are several) |
-| `YES K7Q2` / `NO K7Q2` | answers a specific request by its ref |
-| `CANCEL K7Q2` | cancels a lesson and frees the slot |
+| `YES SMASH0001` / `NO SMASH0001` | answers a specific request by its ref |
+| `CANCEL SMASH0001` | cancels a lesson and frees the slot |
 | `LIST` | upcoming lessons and open requests |
 
 Only messages from `COACH_WHATSAPP` are acted on. Everyone else is ignored.

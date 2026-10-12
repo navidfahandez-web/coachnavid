@@ -90,3 +90,16 @@ export const readActivity = async () => (await store().get(LOG_KEY, { type: 'jso
 const STUDENTS_KEY = 'students/manual';
 export const readManualStudents = async () => (await store().get(STUDENTS_KEY, { type: 'json' })) ?? [];
 export const writeManualStudents = (list) => store().setJSON(STUDENTS_KEY, list);
+
+// Sequential, human-friendly lesson references: SMASH0001, SMASH0002, …
+// Uses a conditional write so two bookings at the same moment never share a number.
+const REF_KEY = 'counter/lesson-ref';
+export async function nextLessonRef() {
+  for (let i = 0; i < 8; i++) {
+    const res = await store().getWithMetadata(REF_KEY, { type: 'json' });
+    const n = (res?.data?.n ?? 0) + 1;
+    const write = await store().setJSON(REF_KEY, { n }, res?.etag ? { onlyIfMatch: res.etag } : { onlyIfNew: true });
+    if (write?.modified !== false) return `SMASH${String(n).padStart(4, '0')}`;
+  }
+  throw new Error('Could not allocate a lesson reference, try again');
+}
