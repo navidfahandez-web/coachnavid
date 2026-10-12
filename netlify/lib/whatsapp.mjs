@@ -25,13 +25,22 @@ async function send(to, message) {
 
 export const sendText = (to, body) => send(to, { type: 'text', text: { body, preview_url: false } });
 
-export function describeSlot(b) {
+// "Wed 7 Oct, 16:00–17:00 (1h)"
+export function describeTime(b) {
   const day = new Date(`${b.date}T12:00:00Z`).toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
   });
-  const where = locationLabel(b.location);
-  return `${day}, ${b.start}–${toHHMM(toMin(b.start) + b.duration)} (${formatDuration(b.duration)})${where ? ` · ${where}` : ''}`;
+  return `${day}, ${b.start}–${toHHMM(toMin(b.start) + b.duration)} (${formatDuration(b.duration)})`;
 }
+
+export function describeSlot(b) {
+  const where = locationLabel(b.location);
+  return `${describeTime(b)}${where ? ` · ${where}` : ''}`;
+}
+
+// The confirmation text a student gets — also used for Navid's one-tap backup link.
+export const studentConfirmationText = (b) =>
+  `Hi ${b.firstName}! ✅ Your padel lesson with Coach Navid is confirmed.\n\n📅 ${describeTime(b)}\n📍 ${locationLabel(b.location)}\n\nSee you on court!`;
 
 // Template params can't contain newlines, tabs or 4+ spaces.
 const clean = (s) => String(s).replace(/\s+/g, ' ').trim().slice(0, 200);
@@ -78,6 +87,27 @@ export async function notifyCoach(b) {
       },
     },
   });
+}
+
+// Tell the student their lesson is confirmed, from the business number.
+// Needs an approved template (WHATSAPP_STUDENT_TEMPLATE, see README) because
+// the student hasn't messaged the business first. Returns false when not set up.
+export async function notifyStudent(b) {
+  const template = env('WHATSAPP_STUDENT_TEMPLATE');
+  if (!template) return false;
+  await send(b.phone.replace(/\D/g, ''), {
+    type: 'template',
+    template: {
+      name: template,
+      language: { code: env('WHATSAPP_STUDENT_TEMPLATE_LANG') || 'en' },
+      components: [{
+        type: 'body',
+        parameters: [b.firstName, describeTime(b), locationLabel(b.location)]
+          .map((text) => ({ type: 'text', text: clean(text) })),
+      }],
+    },
+  });
+  return true;
 }
 
 // Meta signs webhook calls with the app secret: X-Hub-Signature-256: sha256=<hex>

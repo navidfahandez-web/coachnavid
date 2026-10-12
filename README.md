@@ -114,6 +114,22 @@ The real values are in the local, gitignored `.env` file. Copy them into Netlify
    - Verify token: any random string. Put the same value in `WHATSAPP_VERIFY_TOKEN` and redeploy **before** clicking Verify.
    - After it verifies, **subscribe to the `messages` field**.
 
+8. **Student confirmation template** (so students get a WhatsApp when you tap Yes). Create a second template:
+   - Category **Utility**, name **`lesson_confirmed`**, language **English**
+   - Body:
+     ```
+     Hi {{1}}! ✅ Your padel lesson with Coach Navid is confirmed.
+
+     📅 {{2}}
+     📍 {{3}}
+
+     See you on court! If you need to change anything, just reply to this message.
+     ```
+   - Sample values for review: `Rūta`, `Wed 7 Oct, 16:00–17:00 (1h)`, `Klaipėda · A1 Padel`
+   - Once approved, set `WHATSAPP_STUDENT_TEMPLATE=lesson_confirmed` in Netlify and redeploy.
+   - This only works once the **business number** is the sender, because the test number can only message verified numbers.
+     Until then, your "Confirmed ✅" reply includes a one-tap link that opens WhatsApp with the confirmation already typed.
+
 Why the template matters: WhatsApp only allows free-form business messages within 24h of your
 last message to the business number. The approved template can be sent anytime. After you tap a
 button the 24h window opens, so the "Confirmed ✅" replies go through normally.

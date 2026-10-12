@@ -181,7 +181,7 @@ function renderPanel() {
       <button class="btn btn--lime btn--block" type="submit" ${!state.start || !state.location || state.submitting ? 'disabled' : ''}>
         ${state.submitting ? 'Sending…' : !state.location ? 'Choose Klaipėda or Palanga' : !state.start ? 'Pick a start time' : 'Request this lesson'}
       </button>
-      <p class="form__fine">Navid gets your request on WhatsApp and confirms it there. The slot is held for you while he replies.</p>
+      <p class="form__fine">Navid gets your request and confirms it — you’ll receive the confirmation on WhatsApp. The slot is held for you while he replies.</p>
     </form>`;
 }
 
@@ -191,7 +191,7 @@ function renderStatus(panel) {
   const where = r.location ? `<p class="panel__sub">${esc(locationLabel(r.location))}</p>` : '';
   const views = {
     pending: ['⏳', 'request sent', 'Navid has your request on WhatsApp. This page updates by itself as soon as he confirms — you can also come back later.'],
-    confirmed: ['✓', 'you’re booked!', 'Navid confirmed your lesson. He’ll message you on WhatsApp with the court details. See you on court!'],
+    confirmed: ['✓', 'you’re booked!', 'Navid confirmed your lesson — you’ll also get the confirmation on WhatsApp. See you on court!'],
     declined: ['✕', 'not available', 'Navid can’t make this one. Please pick another time — or message him to find a slot that works.'],
     cancelled: ['✕', 'lesson cancelled', 'This lesson was cancelled and the slot is free again. Feel free to book another time.'],
     expired: ['…', 'no answer yet', 'Navid didn’t get to your request in time, so the slot was released. Please request again.'],
