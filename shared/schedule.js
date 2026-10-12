@@ -22,7 +22,7 @@ export const LOCATIONS = [
   {
     id: 'tpp', city: 'Musaffah, Abu Dhabi', club: 'The Padel Project', note: '',
     // Location link sent to students — swap for the club's exact Google Maps share link if you prefer
-    mapsUrl: 'https://www.google.com/maps/search/?api=1&query=The+Padel+Project+Musaffah+Abu+Dhabi',
+    mapsUrl: 'https://maps.google.com/?cid=13575638450780959700', // exact Google Maps pin of The Padel Project
   },
 ];
 export const DEFAULT_LOCATION = LOCATIONS[0].id;
