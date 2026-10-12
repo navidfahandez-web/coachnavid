@@ -220,11 +220,13 @@ function renderAnnounce() {
   const r = studentsData.regions.find((x) => x.id === region);
   const sent = sentSet();
   const list = studentsData.students.filter((s) => s.region === region && s.canContact);
+  // Always include Navid himself first, to check the message and the WhatsApp link work.
+  if (studentsData.testRecipient) list.unshift({ firstName: 'Navid', lastName: '(test – you)', phone: studentsData.testRecipient, test: true });
   $('[data-ann-list]').innerHTML = list.length ? list.map((s) => {
     const text = annText(r, s);
     const key = `${region}|${digits(s.phone)}|${text.length}`;
     return `<div class="ann">
-      <span>${sent.has(key) ? '✅' : '•'} <b>${esc(s.firstName)} ${esc(s.lastName)}</b> <small>${esc(s.phone)}</small></span>
+      <span>${sent.has(key) ? '✅' : s.test ? '🧪' : '•'} <b>${esc(s.firstName)} ${esc(s.lastName)}</b> <small>${esc(s.phone)}</small></span>
       <a class="btn ${sent.has(key) ? 'btn--ghost' : 'btn--lime'}" data-sent-key="${esc(key)}" href="https://wa.me/${digits(s.phone)}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">${sent.has(key) ? 'Sent · send again' : 'Send ↗'}</a>
     </div>`;
   }).join('') : '<p class="note">Nobody in this location can be messaged yet.</p>';

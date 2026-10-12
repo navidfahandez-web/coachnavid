@@ -89,7 +89,9 @@ export default async (req, context) => {
       }
       await writeManualStudents(list);
     }
-    return json({ regions: REGIONS, students: await studentDatabase() });
+    // Navid's own number (private env var) is added to every announcement as a test recipient.
+    const coach = digits(process.env.COACH_WHATSAPP);
+    return json({ regions: REGIONS, students: await studentDatabase(), testRecipient: coach ? `+${coach}` : null });
   }
 
   // WhatsApp connection check: is the sending number OK, and is this app
