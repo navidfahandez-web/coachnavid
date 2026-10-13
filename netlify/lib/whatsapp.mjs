@@ -1,7 +1,8 @@
 // WhatsApp Cloud API (Meta) helpers.
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { formatDuration, toHHMM, toMin } from '../../shared/rules.js';
+import { formatDuration, nowLocal, toHHMM, toMin } from '../../shared/rules.js';
 import { locationById, locationLabel } from '../../shared/schedule.js';
+import { CANCELLATION_HOURS, paymentFor } from '../../shared/pricing.js';
 
 const env = (k) => (process.env[k] ?? '').trim(); // ignore stray spaces/newlines pasted into Netlify
 const GRAPH = 'https://graph.facebook.com/v21.0';
@@ -65,12 +66,16 @@ export function studentConfirmationText(b, { firstTime = false } = {}) {
       '✅ Your lesson is confirmed:',
     ]
     : [`Hi ${b.firstName}! ✅ Your padel lesson with Coach Navid is confirmed.`];
+  const pay = paymentFor(b.duration);
   return [
     ...opening,
     '',
     `📅 ${describeTime(b)}`,
     club,
     map,
+    pay ? `💳 Payment${pay.price ? ` (${pay.price})` : ''}: ${pay.url}` : '',
+    '',
+    `Please note: cancellations less than ${CANCELLATION_HOURS} hours before the lesson are not refunded.`,
     '',
     'See you on court!',
   ].filter((line, i, all) => line !== '' || all[i - 1] !== '').join('\n');
@@ -79,6 +84,24 @@ export function studentConfirmationText(b, { firstTime = false } = {}) {
 // One-tap link that opens WhatsApp with the confirmation already typed for the student.
 export const confirmLink = (b, opts) =>
   `https://wa.me/${b.phone.replace(/\D/g, '')}?text=${encodeURIComponent(studentConfirmationText(b, opts))}`;
+
+// Reminder sent ~24h before the lesson.
+export function reminderText(b) {
+  const loc = locationById(b.location);
+  return [
+    `Hi ${b.firstName}! 👋 Just a reminder of your padel lesson with Coach Navid ${b.date === nowLocal().date ? 'today' : 'tomorrow'}:`,
+    '',
+    `📅 ${describeTime(b)}`,
+    loc ? `🎾 ${loc.club} – ${loc.city.toUpperCase()}` : '',
+    loc?.mapsUrl ? `📍 Location: ${loc.mapsUrl}` : '',
+    '',
+    `If you can’t make it, please let me know as soon as possible — cancellations less than ${CANCELLATION_HOURS} hours before the lesson are not refunded.`,
+    '',
+    'See you on court! 🎾',
+  ].filter((line, i, all) => line !== '' || all[i - 1] !== '').join('\n');
+}
+export const reminderLink = (b) =>
+  `https://wa.me/${b.phone.replace(/\D/g, '')}?text=${encodeURIComponent(reminderText(b))}`;
 
 // True if this phone number has no earlier confirmed lesson.
 const digits = (p) => String(p ?? '').replace(/\D/g, '');

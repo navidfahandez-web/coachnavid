@@ -44,7 +44,9 @@ function card(b) {
   const actions = {
     pending: `<button class="btn btn--lime" data-act="confirm" data-id="${esc(b.id)}">Confirm</button>
               <button class="btn btn--ghost" data-act="decline" data-id="${esc(b.id)}">Decline</button>`,
-    confirmed: `${b.studentLink ? `<a class="btn btn--ghost" href="${esc(b.studentLink)}" target="_blank" rel="noopener">WhatsApp confirmation ↗</a>` : ''}
+    confirmed: `${b.reminderLink ? `<a class="btn btn--lime" data-remind="${esc(b.id)}" href="${esc(b.reminderLink)}" target="_blank" rel="noopener">⏰ Send reminder ↗</a>` : ''}
+                ${b.remindedAt ? '<span class="bk__sent">⏰ Reminder sent</span>' : ''}
+                ${b.studentLink ? `<a class="btn btn--ghost" href="${esc(b.studentLink)}" target="_blank" rel="noopener">WhatsApp confirmation ↗</a>` : ''}
                 <button class="btn btn--ghost btn--danger" data-act="cancel" data-id="${esc(b.id)}">Cancel lesson</button>`,
   }[b.status] ?? '';
   const badge = { pending: 'waiting', confirmed: 'confirmed', declined: 'declined', cancelled: 'cancelled', expired: 'expired' }[b.status] ?? b.status;
@@ -128,6 +130,12 @@ function renderWeek() {
 }
 
 document.addEventListener('click', (e) => {
+  const remind = e.target.closest('[data-remind]');
+  if (remind && !backend.demo) { // the link opens WhatsApp; also record that it was sent
+    request(`/api/admin/bookings/${encodeURIComponent(remind.dataset.remind)}`, {
+      method: 'POST', headers: { 'x-admin-key': password }, body: JSON.stringify({ action: 'reminded' }),
+    }).then(load).catch(() => {});
+  }
   const nav = e.target.closest('[data-week]');
   if (nav) { const v = Number(nav.dataset.week); weekOffset = v === 0 ? 0 : weekOffset + v; return renderWeek(); }
   const go = e.target.closest('[data-goto]');

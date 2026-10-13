@@ -2,11 +2,11 @@
 //   GET  /api/admin/bookings        → recent + upcoming bookings, with student details
 //   POST /api/admin/bookings/:id    → { action: 'confirm' | 'decline' | 'cancel' }
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { bookingsFrom, readActivity, readManualStudents, writeManualStudents } from '../lib/store.mjs';
+import { bookingsFrom, readActivity, readManualStudents, updateDay, writeManualStudents } from '../lib/store.mjs';
 import { REGIONS, regionById, regionOfLocation } from '../../shared/regions.js';
 import { applyAction } from '../lib/actions.mjs';
-import { confirmLink, graph, isFirstLesson, phoneNumberId, wabaId } from '../lib/whatsapp.mjs';
-import { addDays, isBlocking, nowLocal } from '../../shared/rules.js';
+import { confirmLink, graph, isFirstLesson, phoneNumberId, reminderLink, wabaId } from '../lib/whatsapp.mjs';
+import { addDays, isBlocking, lessonStartMs, nowLocal, RULES } from '../../shared/rules.js';
 import { locationLabel } from '../../shared/schedule.js';
 
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -26,6 +26,12 @@ const view = (b, all = []) => ({
   createdAt: b.createdAt, decidedAt: b.decidedAt ?? null, notifyFailed: !!b.notifyFailed,
   notifyError: b.notifyError ?? null,
   studentLink: b.status === 'confirmed' ? confirmLink(b, { firstTime: isFirstLesson(b, all) }) : null,
+  // Reminder: confirmed, starts within the next 24h, not yet marked as sent
+  reminderLink: b.status === 'confirmed' && !b.remindedAt && (() => {
+    const until = lessonStartMs(b.date, b.start) - Date.now();
+    return until > 0 && until <= RULES.reminderHours * 3600 * 1000;
+  })() ? reminderLink(b) : null,
+  remindedAt: b.remindedAt ?? null,
 });
 
 const digits = (p) => String(p ?? '').replace(/\D/g, '');
@@ -126,6 +132,14 @@ export default async (req, context) => {
   if (req.method === 'POST' && context.params?.id) {
     let action;
     try { ({ action } = await req.json()); } catch { return json({ error: 'Invalid request' }, 400); }
+    if (action === 'reminded') { // Navid tapped "Send reminder"
+      const id = context.params.id;
+      await updateDay(id.slice(0, 10), (bookings) => {
+        const b = bookings.find((x) => x.id === id);
+        if (b) b.remindedAt = new Date().toISOString();
+      });
+      return json({ ok: true });
+    }
     const r = await applyAction(action, context.params.id);
     if (!r.ok) {
       const error = {

@@ -11,6 +11,7 @@ export const RULES = {
   bookAheadDays: 60,      // how far into the future students can book
   minNoticeMinutes: 120,  // no requests for lessons starting within 2 hours
   pendingHoldHours: 24,   // an unanswered request holds its slot this long
+  reminderHours: 24,      // remind students this long before the lesson
 };
 
 export const DURATIONS = [];
@@ -93,4 +94,12 @@ export function isBlocking(booking, nowMs = Date.now()) {
     return nowMs - Date.parse(booking.createdAt) < RULES.pendingHoldHours * 3600 * 1000;
   }
   return false;
+}
+
+// Absolute time (ms) of a local club date + time, e.g. ('2026-10-14', '12:00') in Asia/Dubai.
+export function lessonStartMs(date, start) {
+  const guess = Date.parse(`${date}T${start}:00Z`);
+  const local = nowLocal(new Date(guess));
+  const localMs = Date.parse(`${local.date}T${toHHMM(local.minutes)}:00Z`);
+  return guess - (localMs - guess);
 }

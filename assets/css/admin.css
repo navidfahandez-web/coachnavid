@@ -132,3 +132,4 @@
   .week__grid { display: none; }
   .week__agenda { display: block; }
 }
+.bk__sent { align-self: center; font-size: 13px; color: var(--accent); font-weight: 600; }
