@@ -40,6 +40,19 @@
     <!-- Dashboard -->
     <div data-dash hidden>
       <p class="note note--warn" data-demo-note hidden>Demo mode — these are made-up bookings stored in this browser.</p>
+      <section class="adm-section week">
+        <div class="week__head">
+          <h2 class="adm-h" data-week-title>this week</h2>
+          <div class="week__nav">
+            <button class="pill" type="button" data-week="-1" aria-label="Previous week">‹</button>
+            <button class="pill" type="button" data-week="0">This week</button>
+            <button class="pill" type="button" data-week="1" aria-label="Next week">›</button>
+          </div>
+        </div>
+        <p class="week__legend"><i class="lg lg--confirmed"></i>Confirmed <i class="lg lg--pending"></i>Waiting for you <span data-week-count></span></p>
+        <div class="week__grid" data-week-grid></div>
+        <div class="week__agenda" data-week-agenda></div>
+      </section>
       <section class="adm-section">
         <h2 class="adm-h">waiting for you <span data-count="pending"></span></h2>
         <div class="adm-list" data-list="pending"></div>

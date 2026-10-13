@@ -1,6 +1,7 @@
 // Private bookings dashboard: coachnavid.com/admin
 import { demoAdmin, demoAllowed, request } from './api.js';
-import { toHHMM, toMin } from '../../shared/rules.js';
+import { addDays, toHHMM, toMin } from '../../shared/rules.js';
+import { WEEKLY_HOURS, hoursOn } from '../../shared/schedule.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -48,7 +49,7 @@ function card(b) {
   }[b.status] ?? '';
   const badge = { pending: 'waiting', confirmed: 'confirmed', declined: 'declined', cancelled: 'cancelled', expired: 'expired' }[b.status] ?? b.status;
   return `
-    <article class="bk bk--${esc(b.status)}">
+    <article class="bk bk--${esc(b.status)}" id="bk-${esc(b.id)}">
       <div class="bk__when">
         <b>${esc(day(b.date))}</b>
         <span>${esc(b.start)}–${esc(end)} · ${esc(dur(b.duration))}</span>
@@ -68,6 +69,78 @@ function card(b) {
     </article>`;
 }
 
+// ---------- weekly calendar ----------
+const HOUR_PX = 54;
+const allHours = Object.values(WEEKLY_HOURS);
+const GRID_START = Math.min(...allHours.map((h) => toMin(h.open)));
+const GRID_END = Math.max(...allHours.map((h) => toMin(h.close)));
+const mondayOf = (d) => addDays(d, -((new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7));
+let weekOffset = 0;
+const clubOf = (b) => String(b.location || '').split(' · ')[0];
+
+function renderWeek() {
+  const today = data.now?.date ?? new Date().toISOString().slice(0, 10);
+  const start = addDays(mondayOf(today), weekOffset * 7);
+  const days = [...Array(7)].map((_, i) => addDays(start, i));
+  const fmt = (d, o) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', ...o });
+  $('[data-week-title]').textContent = weekOffset === 0 ? 'this week'
+    : `${fmt(days[0], { day: 'numeric', month: 'short' })} – ${fmt(days[6], { day: 'numeric', month: 'short' })}`;
+  const lessons = data.bookings.filter((b) => ['pending', 'confirmed'].includes(b.status) && b.date >= days[0] && b.date <= days[6]);
+  const nConf = lessons.filter((b) => b.status === 'confirmed').length;
+  $('[data-week-count]').textContent = `· ${nConf} confirmed, ${lessons.length - nConf} waiting`;
+
+  const block = (b) => {
+    const top = ((toMin(b.start) - GRID_START) / 60) * HOUR_PX;
+    const h = (b.duration / 60) * HOUR_PX - 4;
+    return `<button type="button" class="ev ev--${esc(b.status)}" data-goto="${esc(b.id)}" style="top:${top}px;height:${h}px"
+      title="${esc(`${b.start}–${toHHMM(toMin(b.start) + b.duration)} · ${b.firstName} ${b.lastName} · ${clubOf(b)}`)}">
+      <b>${esc(b.start)}–${esc(toHHMM(toMin(b.start) + b.duration))}</b>
+      <span>${esc(b.firstName)} ${esc(b.lastName)}</span>
+      <small>${esc(clubOf(b))}</small></button>`;
+  };
+
+  // Desktop / tablet: time grid
+  const hours = [];
+  for (let m = GRID_START; m < GRID_END; m += 60) hours.push(m);
+  const height = ((GRID_END - GRID_START) / 60) * HOUR_PX;
+  $('[data-week-grid]').innerHTML = `
+    <div class="wk__corner"></div>
+    ${days.map((d) => `<div class="wk__day ${d === today ? 'is-today' : ''}"><b>${esc(fmt(d, { weekday: 'short' }))}</b> ${esc(fmt(d, { day: 'numeric' }))}</div>`).join('')}
+    <div class="wk__times" style="height:${height}px">${hours.map((m) => `<span style="top:${((m - GRID_START) / 60) * HOUR_PX}px">${toHHMM(m)}</span>`).join('')}</div>
+    ${days.map((d) => {
+      const open = hoursOn(d);
+      const shade = open
+        ? `<i class="wk__open" style="top:${((toMin(open.open) - GRID_START) / 60) * HOUR_PX}px;height:${((toMin(open.close) - toMin(open.open)) / 60) * HOUR_PX}px"></i>`
+        : '';
+      return `<div class="wk__col ${d === today ? 'is-today' : ''}" style="height:${height}px;background-size:100% ${HOUR_PX}px">${shade}${lessons.filter((b) => b.date === d).map(block).join('')}</div>`;
+    }).join('')}`;
+
+  // Phone: agenda list
+  $('[data-week-agenda]').innerHTML = days.map((d) => {
+    const list = lessons.filter((b) => b.date === d).sort((a, b) => a.start.localeCompare(b.start));
+    return `<div class="ag ${d === today ? 'is-today' : ''}">
+      <h4>${esc(fmt(d, { weekday: 'long', day: 'numeric', month: 'short' }))}</h4>
+      ${list.length ? list.map((b) => `<button type="button" class="ag__ev ev--${esc(b.status)}" data-goto="${esc(b.id)}">
+        <b>${esc(b.start)}–${esc(toHHMM(toMin(b.start) + b.duration))}</b><span>${esc(b.firstName)} ${esc(b.lastName)}</span><small>${esc(clubOf(b))}</small></button>`).join('')
+        : `<p class="note">${hoursOn(d) ? 'No lessons' : 'Not available'}</p>`}
+    </div>`;
+  }).join('');
+}
+
+document.addEventListener('click', (e) => {
+  const nav = e.target.closest('[data-week]');
+  if (nav) { const v = Number(nav.dataset.week); weekOffset = v === 0 ? 0 : weekOffset + v; return renderWeek(); }
+  const go = e.target.closest('[data-goto]');
+  if (go) {
+    const el = document.getElementById(`bk-${go.dataset.goto}`);
+    if (el) {
+      el.closest('details')?.setAttribute('open', '');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    }
+  }
+});
+
 function render() {
   const today = data.now?.date ?? new Date().toISOString().slice(0, 10);
   const groups = {
@@ -79,6 +152,7 @@ function render() {
   $('[data-activity]').innerHTML = log.length
     ? log.map((a) => `<li class="adm-log__${esc(a.kind)}"><time>${esc(new Date(a.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</time> ${esc(a.text)}</li>`).join('')
     : '<li>Nothing yet.</li>';
+  renderWeek();
   const empty = { pending: 'No requests waiting. 🎾', upcoming: 'No confirmed lessons coming up.', past: 'Nothing here yet.' };
   for (const [k, list] of Object.entries(groups)) {
     $(`[data-list="${k}"]`).innerHTML = list.length ? list.map(card).join('') : `<p class="note">${empty[k]}</p>`;
