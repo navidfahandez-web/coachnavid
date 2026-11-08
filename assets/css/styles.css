@@ -575,3 +575,37 @@ body::before { opacity: .12; }
 .field textarea:focus { outline: none; border-color: var(--accent); }
 .field textarea::placeholder { color: var(--muted); }
 .field__opt { color: var(--muted); font-size: 12px; }
+
+/* ================= video analysis page ================= */
+.va-hero {
+  display: grid; grid-template-columns: 1.4fr 1fr; gap: clamp(28px, 5vw, 64px);
+  align-items: center; padding: clamp(28px, 6vw, 72px) 0 20px;
+}
+.va-hero__title { font-size: clamp(2.6rem, 7vw, 5.2rem); }
+.va-hero__lede { color: var(--ink-2); max-width: 34em; font-size: 17px; font-weight: 300; margin: 26px 0 30px; }
+.va-hero__photo {
+  width: 100%; height: auto; max-height: min(70vh, 560px); aspect-ratio: 4 / 5; object-fit: cover;
+  border-radius: 28px; border: 1px solid rgba(255,255,255,.12);
+}
+.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 40px; align-items: stretch; }
+.plan { display: flex; flex-direction: column; gap: 14px; }
+.plan--featured { border-color: var(--accent) !important; box-shadow: 0 0 0 4px rgba(255, 91, 31, .12); }
+.plan__tag {
+  font-style: normal; margin-left: 8px; padding: 3px 9px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; vertical-align: 1px;
+}
+.place .plan__price { margin: 0; color: var(--ink); font-size: 15px; font-weight: 600; }
+.plan__price b { font-size: clamp(2.6rem, 5vw, 3.4rem); font-weight: 800; letter-spacing: -.04em; line-height: 1; margin-right: 4px; }
+.place .plan__send { color: var(--ink); font-weight: 500; }
+.plan__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; flex: 1; }
+.plan__list li { position: relative; padding-left: 22px; color: var(--ink-2); font-weight: 300; font-size: 15px; line-height: 1.45; }
+.plan__list li::before { content: ''; position: absolute; left: 2px; top: .5em; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.place .plan__time { color: var(--muted); font-size: 13px; }
+.va-tips { margin-top: 32px; }
+.promo { display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; flex-wrap: wrap; }
+.promo__text { color: var(--ink-2); font-weight: 300; max-width: 34em; margin: 20px 0 0; }
+@media (max-width: 960px) {
+  .va-hero { grid-template-columns: 1fr; }
+  .va-hero__photo { max-width: 420px; aspect-ratio: 16 / 10; max-height: none; }
+  .plans { grid-template-columns: 1fr; }
+}

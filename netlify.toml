@@ -12,6 +12,12 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+# Video analysis page
+[[redirects]]
+  from = "/analysis"
+  to = "/analysis.html"
+  status = 200
+
 # Private bookings dashboard
 [[redirects]]
   from = "/admin"
