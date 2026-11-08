@@ -370,10 +370,12 @@ async function loadDrive() {
           ${u.notes ? `<span class="bk__notes">📝 ${esc(u.notes)}</span>` : ''}
           <small>${u.status === 'uploaded' ? `${u.fileCount} file${u.fileCount > 1 ? 's' : ''} · ${gbs(u.totalBytes)}` : 'upload not finished'} · Ziina: ${esc(u.paymentRef || 'not given')} · ${esc(ago(u.createdAt))}</small>
         </div>
-        <span class="bk__badge">${u.sharedAt ? 'delivered' : u.status === 'uploaded' ? 'to analyse' : 'incomplete'}</span>
+        <span class="bk__badge">${u.reportToken ? 'report sent' : u.sharedAt ? 'delivered' : u.status === 'uploaded' ? 'to analyse' : 'incomplete'}</span>
         <div class="bk__actions">
           <a class="btn btn--ghost" href="${esc(u.folderUrl)}" target="_blank" rel="noopener">Open folder ↗</a>
-          ${u.status === 'uploaded' ? `<button class="btn ${u.sharedAt ? 'btn--ghost' : 'btn--lime'}" data-share-upload="${esc(u.id)}">${u.sharedAt ? 'Send folder link again' : 'Share folder with student'}</button>` : ''}
+          ${u.status === 'uploaded' ? `<a class="btn ${u.reportToken ? 'btn--ghost' : 'btn--lime'}" href="/admin/report?ref=${encodeURIComponent(u.ref)}">${u.reportToken ? '✏️ Edit report' : '✏️ Write report'}</a>` : ''}
+          ${u.reportToken ? `<a class="btn btn--ghost" href="/report/${esc(u.reportToken)}" target="_blank" rel="noopener">View report ↗</a>` : ''}
+          ${u.status === 'uploaded' && !u.reportToken ? `<button class="btn btn--ghost" data-share-upload="${esc(u.id)}">${u.sharedAt ? 'Send folder link again' : 'Just share the folder'}</button>` : ''}
         </div>
       </article>`).join('') : '<p class="note">No videos uploaded yet. Students upload at coachnavid.com/upload.</p>';
   } catch (err) {

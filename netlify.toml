@@ -24,6 +24,23 @@
   to = "/analysis.html"
   status = 200
 
+# Student's video analysis report (private link)
+[[redirects]]
+  from = "/report/*"
+  to = "/report.html"
+  status = 200
+
+[[headers]]
+  for = "/report*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+# Report builder (admin)
+[[redirects]]
+  from = "/admin/report"
+  to = "/report-edit.html"
+  status = 200
+
 # Private bookings dashboard
 [[redirects]]
   from = "/admin"

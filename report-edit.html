@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Write report · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+  <link rel="stylesheet" href="/assets/css/report.css" />
+  <script type="module" src="/assets/js/report-edit.js"></script>
+</head>
+<body class="admin">
+  <header class="nav">
+    <a class="lockup" href="/admin">
+      <span class="lockup__pb"><img src="/assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Report builder</b><small>Coach Navid · private</small></span>
+    </a>
+    <nav class="nav__links"><a class="pill" href="/admin">← Admin</a></nav>
+  </header>
+
+  <main class="wrap admin__main">
+    <p class="note" data-status>Loading…</p>
+    <form class="rb" data-rb hidden>
+      <section class="adm-box rb__head">
+        <h2 class="adm-h"><span data-ref></span> <b data-student></b></h2>
+        <p class="note" data-meta></p>
+        <p class="bk__notes" data-student-notes hidden></p>
+        <div class="rb__row">
+          <label class="field">Report type
+            <select name="kind"><option value="quick">Quick Fix — 3 errors, fixes &amp; drills, voice note</option><option value="match">Match Report — scorecard, top 3 fixes, voice-over, 3-week plan</option></select>
+          </label>
+          <label class="field">Language
+            <select name="lang"><option value="en">English</option><option value="lt">Lietuvių</option></select>
+          </label>
+          <label class="field">Student’s video (for timestamp links)
+            <select name="videoFileId" data-files="video"></select>
+          </label>
+        </div>
+      </section>
+
+      <section class="adm-box">
+        <h3>Overview</h3>
+        <label class="field">Headline <input name="headline" maxlength="140" placeholder="e.g. Great hands at the net — now let’s fix the bandeja" /></label>
+        <label class="field">Summary <textarea name="summary" rows="4" placeholder="What you saw overall, in 3–5 sentences."></textarea></label>
+        <label class="field">What they do well <textarea name="strengths" rows="3" placeholder="Start positive: 2–3 strengths."></textarea></label>
+      </section>
+
+      <section class="adm-box" data-scores-box>
+        <h3>Scorecard <small class="note">1–10 per area</small></h3>
+        <div class="rb__scores" data-scores></div>
+      </section>
+
+      <section class="adm-box">
+        <h3 data-items-title>Key errors</h3>
+        <p class="note">Timestamp like <code>3:12</code>. Pick a drill from your library to fill it in, then adjust.</p>
+        <div data-items></div>
+      </section>
+
+      <section class="adm-box" data-weeks-box>
+        <h3>3-week practice plan</h3>
+        <div data-weeks></div>
+      </section>
+
+      <section class="adm-box">
+        <h3 data-media-title>Voice note</h3>
+        <p class="note">Record it on your phone, drop it in the student’s Drive folder (<a data-folder target="_blank" rel="noopener">open folder ↗</a>), then press Reload files.</p>
+        <div class="rb__row">
+          <label class="field">File <select name="mediaFileId" data-files="media"></select></label>
+          <button class="btn btn--ghost" type="button" data-reload>Reload files</button>
+        </div>
+        <label class="field">Final word <textarea name="closing" rows="3" placeholder="Motivating close + next step (e.g. book a lesson to work on it together)."></textarea></label>
+      </section>
+
+      <div class="rb__bar">
+        <span class="note" data-saved></span>
+        <button class="btn btn--ghost" type="submit">Save draft</button>
+        <a class="btn btn--ghost" data-preview target="_blank" rel="noopener">Preview ↗</a>
+        <button class="btn btn--lime" type="button" data-publish>Publish &amp; send ↗</button>
+      </div>
+    </form>
+  </main>
+  <div class="toast" data-toast hidden role="status"></div>
+</body>
+</html>
