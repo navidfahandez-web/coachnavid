@@ -93,6 +93,7 @@ function render(r) {
     ${media}
     ${weeks}
     ${r.closing ? `<section class="rp__sec rp__closing"><h2 class="rp__h">${L.closing}</h2>${para(r.closing)}<p class="rp__sign">— Coach Navid</p></section>` : ''}
+    ${r.playerToken ? `<div class="rp__progress rp__noprint"><p>📈 ${L.progress}</p><a class="btn btn--lime" href="/player/${esc(r.playerToken)}">${L.progressCta}</a></div>` : ''}
     <div class="rp__cta rp__noprint">
       <button class="btn btn--lime" type="button" data-pdf>${L.pdf}</button>
       <a class="btn btn--ghost" href="/#book">${L.book}</a>

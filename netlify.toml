@@ -35,6 +35,17 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 
+# Player progress page (private link)
+[[redirects]]
+  from = "/player/*"
+  to = "/player.html"
+  status = 200
+
+[[headers]]
+  for = "/player*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
 # Report builder (admin)
 [[redirects]]
   from = "/admin/report"

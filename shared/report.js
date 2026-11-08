@@ -48,6 +48,7 @@ export const REPORT_LABELS = {
     plan: '3-week practice plan', week: 'Week', voice: 'Voice note from Navid', voiceover: 'Navid’s voice-over on your key moments',
     video: 'Your video', closing: 'Final word', pdf: 'Download PDF', history: 'Your earlier reports',
     book: 'Book a lesson with Navid', draft: 'Draft preview — the student can’t see this yet.',
+    progress: 'Track your progress across all your reports', progressCta: 'See your progress →',
   },
   lt: {
     report: 'Video analizė', for: '', by: 'treneris Navid Fahandezh · Padel Beast techninis direktorius',
@@ -56,6 +57,7 @@ export const REPORT_LABELS = {
     plan: '3 savaičių treniruočių planas', week: 'Savaitė', voice: 'Navid balso žinutė', voiceover: 'Navid komentarai apie svarbiausius momentus',
     video: 'Jūsų video', closing: 'Paskutinis žodis', pdf: 'Atsisiųsti PDF', history: 'Ankstesnės ataskaitos',
     book: 'Užsisakyti treniruotę su Navid', draft: 'Juodraštis — mokinys jo dar nemato.',
+    progress: 'Stebėkite savo pažangą per visas ataskaitas', progressCta: 'Mano pažanga →',
   },
 };
 

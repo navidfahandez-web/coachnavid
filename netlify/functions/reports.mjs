@@ -3,6 +3,8 @@
 //   PUT  /api/admin/reports/:ref          (admin) save the draft
 //   POST /api/admin/reports/:ref/publish  (admin) publish: share the folder, return the WhatsApp text for the student
 //   GET  /api/report/:token               the student's report (drafts only with the admin key, for preview)
+//   GET  /api/player/:token               a player's progress: every published report, scores over time
+//   GET  /api/admin/players               (admin) all players with reports
 import { randomBytes } from 'node:crypto';
 import { isAdmin, json, requireAdmin } from '../lib/auth.mjs';
 import { logActivity, readJSON, updateJSON } from '../lib/store.mjs';
@@ -20,6 +22,38 @@ const line = (s, n = 120) => str(s, n).replace(/\s+/g, ' ');
 
 const findUpload = async (ref) => (await readJSON(UPLOADS, [])).find((u) => u.ref === ref);
 const reportUrl = (token) => `${SITE_URL}/report/${token}`;
+const playerKey = (phone) => `players/by-phone/${phone}`;
+const playerTokenKey = (token) => `players/by-token/${token}`;
+
+// Average of the scorecard (Match Reports only); null when there are no scores.
+function scoreAverage(scores) {
+  const v = AREAS.map((a) => scores?.[a.id]?.score).filter((n) => Number.isFinite(n));
+  return v.length ? Math.round((v.reduce((s, n) => s + n, 0) / v.length) * 10) / 10 : null;
+}
+
+// Every player (by phone number) gets one private progress link.
+async function ensurePlayer(r) {
+  const phone = digits(r.student.phone);
+  const p = await updateJSON(playerKey(phone), (x) => {
+    if (!x.token) x.token = randomBytes(16).toString('hex');
+    Object.assign(x, { phone, firstName: r.student.firstName, lastName: r.student.lastName });
+    return { ...x };
+  }, {});
+  await updateJSON(playerTokenKey(p.token), (x) => { x.phone = phone; }, {});
+  return p.token;
+}
+
+// Published reports of one player, oldest first.
+async function playerReports(phone) {
+  const index = (await readJSON(INDEX, [])).filter((x) => x.status === 'published' && x.phone === phone)
+    .sort((a, b) => a.publishedAt.localeCompare(b.publishedAt));
+  const out = [];
+  for (const x of index) {
+    const r = await readJSON(reportKey(x.ref));
+    if (r) out.push(r);
+  }
+  return out;
+}
 
 function blankReport(u) {
   const kind = kindForPlan(u.plan);
@@ -76,7 +110,8 @@ async function publicView(r) {
     if (e) history.push({ token: e.token, kind: e.kind, headline: e.headline, publishedAt: e.publishedAt, scores: e.scores });
   }
   const { student, folderId, studentNotes, ...rest } = r;
-  return { ...rest, student: { firstName: student.firstName, lastName: student.lastName }, history };
+  const player = await readJSON(playerKey(digits(student.phone)));
+  return { ...rest, student: { firstName: student.firstName, lastName: student.lastName }, history, playerToken: player?.token ?? null };
 }
 
 export default async (req, context) => {
@@ -92,9 +127,44 @@ export default async (req, context) => {
     return json(await publicView(r));
   }
 
+  if (pathname.startsWith('/api/player/')) {
+    const token = String(context.params.token ?? '');
+    const pointer = /^[a-f0-9]{32}$/.test(token) && await readJSON(playerTokenKey(token));
+    if (!pointer) return json({ error: 'Player not found.' }, 404);
+    const player = await readJSON(playerKey(pointer.phone));
+    const reports = await playerReports(pointer.phone);
+    return json({
+      firstName: player.firstName, lastName: player.lastName,
+      reports: reports.map((r) => ({
+        token: r.token, ref: r.ref, kind: r.kind, lang: r.lang, headline: r.headline, publishedAt: r.publishedAt,
+        scores: r.kind === 'match' ? r.scores : null, average: r.kind === 'match' ? scoreAverage(r.scores) : null,
+        fixes: r.items.filter((i) => i.title).map((i) => i.title),
+      })),
+    });
+  }
+
   // ---------- admin ----------
   const denied = await requireAdmin(req);
   if (denied) return denied;
+
+  if (pathname === '/api/admin/players') {
+    const index = (await readJSON(INDEX, [])).filter((x) => x.status === 'published');
+    const phones = [...new Set(index.map((x) => x.phone))];
+    const players = [];
+    for (const phone of phones) {
+      const p = await readJSON(playerKey(phone));
+      if (!p) continue;
+      const reports = await playerReports(phone);
+      const avgs = reports.map((r) => (r.kind === 'match' ? scoreAverage(r.scores) : null)).filter((n) => n !== null);
+      players.push({
+        token: p.token, firstName: p.firstName, lastName: p.lastName, phone: `+${phone}`,
+        reports: reports.length, lastAt: reports.at(-1)?.publishedAt ?? null,
+        firstAverage: avgs[0] ?? null, lastAverage: avgs.at(-1) ?? null,
+      });
+    }
+    players.sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)));
+    return json({ players });
+  }
   const ref = String(context.params.ref ?? '').toUpperCase();
   const u = await findUpload(ref);
   if (!u) return json({ error: `Upload ${ref} not found.` }, 404);
@@ -125,6 +195,7 @@ export default async (req, context) => {
     const first = !r.publishedAt;
     r = { ...r, status: 'published', publishedAt: r.publishedAt ?? new Date().toISOString() };
     await saveReport(r);
+    await ensurePlayer(r);
     await updateJSON(INDEX, (list) => {
       const x = list.find((y) => y.ref === r.ref);
       const entry = { ref: r.ref, token: r.token, phone: digits(r.student.phone), kind: r.kind, status: 'published', publishedAt: r.publishedAt };
@@ -145,4 +216,6 @@ export default async (req, context) => {
   return json({ error: 'Not found' }, 404);
 };
 
-export const config = { path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/report/:token'] };
+export const config = {
+  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
+};

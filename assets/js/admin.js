@@ -187,7 +187,7 @@ async function load() {
     $('[data-logout]').hidden = backend.demo;
     $('[data-demo-note]').hidden = !backend.demo;
     render();
-    if (!studentsData.regions.length) { loadStudents(); loadDrive(); }
+    if (!studentsData.regions.length) { loadStudents(); loadDrive(); loadPlayers(); }
   } catch (err) {
     if (err.status === 401 || err.status === 503) return showLogin(err.message);
     toast(`Couldn’t load bookings: ${esc(err.message)}`);
@@ -406,6 +406,31 @@ document.addEventListener('click', async (e) => {
     } catch (err) { win?.close(); toast(esc(err.message)); }
   }
 });
+
+// ---------- players (progress from published reports) ----------
+async function loadPlayers() {
+  if (backend.demo) return;
+  try {
+    const { players } = await request('/api/admin/players', { headers: { 'x-admin-key': password } });
+    $('[data-count="players"]').textContent = players.length ? `(${players.length})` : '';
+    const f = (n) => (n === null ? '—' : n.toFixed(1));
+    $('[data-players]').innerHTML = players.length ? players.map((p) => {
+      const change = p.firstAverage !== null && p.lastAverage !== null ? p.lastAverage - p.firstAverage : null;
+      return `<article class="bk stu">
+        <div class="bk__who">
+          <b>${esc(p.firstName)} ${esc(p.lastName)}</b>
+          <span><a href="https://wa.me/${digits(p.phone)}" target="_blank" rel="noopener">${esc(p.phone)}</a></span>
+          <small>${p.reports} report${p.reports === 1 ? '' : 's'} · average ${f(p.lastAverage)}/10${change ? ` · ${change > 0 ? '▲ +' : '▼ '}${f(change)} since first` : ''} · last ${esc(ago(p.lastAt))}</small>
+        </div>
+        <div class="bk__actions" style="grid-column:auto">
+          <a class="btn btn--ghost" href="/player/${esc(p.token)}" target="_blank" rel="noopener">📈 Progress ↗</a>
+        </div>
+      </article>`;
+    }).join('') : '<p class="note">No published reports yet.</p>';
+  } catch (err) {
+    $('[data-players]').innerHTML = `<p class="bk__err">${esc(err.message)}</p>`;
+  }
+}
 
 // After coming back from Google's consent screen
 {
