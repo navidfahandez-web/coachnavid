@@ -8,7 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { json, requireAdmin } from '../lib/auth.mjs';
 import { logActivity, nextUploadRef, readJSON, updateJSON } from '../lib/store.mjs';
 import { createFolder, folderUrl, listFolder, rootFolder, shareFolder, startResumableUpload } from '../lib/google.mjs';
-import { coachNumber, sendText } from '../lib/whatsapp.mjs';
+import { alertCoach } from '../lib/whatsapp.mjs';
 
 const KEY = 'uploads/list';
 const PLANS = { quick: 'Quick Fix', match: 'Match Report', progress: 'Progress Plan' };
@@ -108,7 +108,7 @@ export default async (req) => {
       `Open folder: ${folderUrl(u.folderId)}`,
     ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n');
     try {
-      await sendText(coachNumber(), msg);
+      await alertCoach(`New video for analysis ${u.ref} from ${u.firstName} ${u.lastName} (${u.planName}, ${files.length} file${files.length === 1 ? '' : 's'}, ${gb(total)})`, msg);
       await logActivity({ kind: 'sent', text: `Video upload ${u.ref} from ${u.firstName} — Navid notified.` });
     } catch (err) {
       await logActivity({ kind: 'failed', text: `Video upload ${u.ref}: couldn’t notify Navid — ${err.message}` });

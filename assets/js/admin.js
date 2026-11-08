@@ -442,6 +442,29 @@ async function connection(fix) {
 $('[data-conn-check]').addEventListener('click', () => connection(false));
 $('[data-conn-fix]').addEventListener('click', () => connection(true));
 
+// ---------- WhatsApp alert templates ----------
+const TPL_LABEL = {
+  APPROVED: '✅ approved', PENDING: '⏳ waiting for Meta’s review', IN_APPEAL: '⏳ in appeal',
+  REJECTED: '❌ rejected', PAUSED: '⏸️ paused', DISABLED: '❌ disabled', MISSING: '⚠️ not created yet',
+};
+async function templates(create) {
+  const box = $('[data-tpl]');
+  box.innerHTML = `<p class="note">${create ? 'Creating templates in Meta…' : 'Asking Meta…'}</p>`;
+  try {
+    const r = backend.demo
+      ? { templates: [{ name: 'lesson_request', status: 'MISSING' }, { name: 'coach_alert', status: 'MISSING' }], errors: [] }
+      : await request('/api/admin/whatsapp/templates', { method: create ? 'POST' : 'GET', headers: { 'x-admin-key': password } });
+    box.innerHTML = r.templates.map((t) => `<p>${esc(t.name)}: <b>${TPL_LABEL[t.status] ?? esc(t.status)}</b>${t.reason ? ` <small>(${esc(t.reason)})</small>` : ''}</p>`).join('') +
+      r.errors.map((e) => `<p class="bk__err">${esc(e)}</p>`).join('') +
+      (r.templates.every((t) => t.status === 'APPROVED') ? '<p class="note">All set — alerts reach you anytime.</p>' : '');
+    $('[data-tpl-create]').hidden = !r.templates.some((t) => t.status === 'MISSING');
+  } catch (err) {
+    box.innerHTML = `<p class="bk__err">${esc(err.message)}</p>`;
+  }
+}
+$('[data-tpl-check]').addEventListener('click', () => templates(false));
+$('[data-tpl-create]').addEventListener('click', () => templates(true));
+
 // ---------- boot ----------
 async function boot() {
   // Local preview without the functions → demo data, so the page can be tried out.

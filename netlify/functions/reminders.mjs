@@ -2,7 +2,7 @@
 // within the next 24h and haven't had a reminder yet, marks them as due, and sends
 // Navid one WhatsApp with a one-tap link per student (he sends it from WhatsApp Business).
 import { logActivity, upcoming, updateDay } from '../lib/store.mjs';
-import { coachNumber, describeSlot, reminderLink, sendText } from '../lib/whatsapp.mjs';
+import { alertCoach, describeSlot, reminderLink } from '../lib/whatsapp.mjs';
 import { lessonStartMs, RULES } from '../../shared/rules.js';
 
 export default async () => {
@@ -25,7 +25,9 @@ export default async () => {
 
   const lines = due.map((b) => `• ${b.firstName} ${b.lastName} — ${describeSlot(b)} (${b.code})\n  Send reminder: ${reminderLink(b)}`);
   try {
-    await sendText(coachNumber(), `⏰ Lesson reminders to send\n\n${lines.join('\n\n')}\n\nAlso on coachnavid.com/admin`);
+    const who = due.map((b) => `${b.firstName} ${b.lastName} (${b.code})`).join(', ');
+    await alertCoach(`${due.length} lesson reminder${due.length === 1 ? '' : 's'} to send: ${who}`,
+      `⏰ Lesson reminders to send\n\n${lines.join('\n\n')}\n\nAlso on coachnavid.com/admin`);
     await logActivity({ kind: 'sent', text: `Reminder digest sent to Navid for ${due.map((b) => b.code).join(', ')}.` });
   } catch (err) {
     console.error(`Reminder digest failed: ${err.message}`);

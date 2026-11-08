@@ -119,21 +119,11 @@ The real values are in the local, gitignored `.env` file. Copy them into Netlify
    generate a token with the `whatsapp_business_messaging` and `whatsapp_business_management` permissions.
    Put it in `WHATSAPP_TOKEN`. The temporary token on the API Setup page expires after 24h.
 5. Get the app secret from **App settings → Basic → App secret** and put it in `WHATSAPP_APP_SECRET`.
-6. Create the message template under **WhatsApp Manager → Message templates → Create**:
-   - Category **Utility**, name **`lesson_request`**, language **English**
-   - Body:
-     ```
-     🎾 New padel lesson request
-
-     Student: {{1}}
-     Phone: {{2}}
-     When: {{3}}
-     Ref: {{4}}
-
-     Confirm this lesson?
-     ```
-   - Buttons: **Quick reply** `Yes, confirm`, then **Quick reply** `No, decline`. Keep this order.
-   - Submit it. Approval usually takes minutes. Then set `WHATSAPP_TEMPLATE=lesson_request`.
+6. **Alert templates** (so alerts reach you anytime, not only within 24h of your last message):
+   open coachnavid.com/admin → *whatsapp connection* → **Check templates** → **Create alert templates**.
+   This creates `lesson_request` (new requests, with Yes/No buttons) and `coach_alert` (video uploads,
+   reminder digests, with a *Show details* button) in Meta. Approval usually takes minutes; until then
+   the site falls back to plain messages. Template text lives in `COACH_TEMPLATES` in `netlify/lib/whatsapp.mjs`.
 7. Set up the webhook under **WhatsApp → Configuration → Webhook → Edit**:
    - Callback URL: `https://coachnavid.com/api/whatsapp`
    - Verify token: any random string. Put the same value in `WHATSAPP_VERIFY_TOKEN` and redeploy **before** clicking Verify.

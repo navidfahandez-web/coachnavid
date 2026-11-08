@@ -8,9 +8,10 @@
 //   YES SMASH0001 / NO SMASH0001  — answers a specific request by its ref
 //   CANCEL SMASH0001         — cancels a lesson and frees the slot again
 //   LIST                — upcoming lessons and open requests
+//   tap "Show details" on an alert — the full text of that alert
 import { logActivity, upcoming } from '../lib/store.mjs';
 import { applyAction } from '../lib/actions.mjs';
-import { coachNumber, describeSlot, sendText, validSignature } from '../lib/whatsapp.mjs';
+import { coachNumber, describeSlot, sendText, takePendingDetails, validSignature } from '../lib/whatsapp.mjs';
 import { isBlocking } from '../../shared/rules.js';
 
 const COMMANDS = {
@@ -48,6 +49,10 @@ async function handle(command) {
   // Button taps carry "YES:<id>" / "NO:<id>"
   const button = /^(YES|NO):(\d{4}-\d{2}-\d{2}_[A-Z0-9]+)$/.exec(command);
   if (button) return apply(button[1] === 'YES' ? 'confirm' : 'decline', button[2]);
+  if (/^(DETAILS|show details)$/i.test(command.trim())) {
+    const texts = await takePendingDetails();
+    return texts.length ? texts.join('\n\n———\n\n') : 'Nothing new — everything is on coachnavid.com/admin.';
+  }
 
   const [word = '', ref = ''] = command.trim().toLowerCase().split(/\s+/);
   const action = COMMANDS[word.replace(/[^\p{L}]/gu, '')];

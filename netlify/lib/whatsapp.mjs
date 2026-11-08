@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { formatDuration, nowLocal, toHHMM, toMin } from '../../shared/rules.js';
 import { locationById, locationLabel } from '../../shared/schedule.js';
 import { CANCELLATION_HOURS, paymentFor } from '../../shared/pricing.js';
+import { readJSON, updateJSON } from './store.mjs';
 
 const env = (k) => (process.env[k] ?? '').trim(); // ignore stray spaces/newlines pasted into Netlify
 const GRAPH = 'https://graph.facebook.com/v21.0';
@@ -32,7 +33,8 @@ export async function graph(path, init = {}) {
     headers: { Authorization: `Bearer ${env('WHATSAPP_TOKEN')}`, 'Content-Type': 'application/json' },
   });
   const body = await res.json().catch(() => ({}));
-  return res.ok ? body : { error: body.error?.message ?? `HTTP ${res.status}`, code: body.error?.code };
+  const e = body.error;
+  return res.ok ? body : { error: [e?.message, e?.error_user_msg].filter(Boolean).join(' — ') || `HTTP ${res.status}`, code: e?.code };
 }
 export const phoneNumberId = () => env('WHATSAPP_PHONE_NUMBER_ID');
 // WhatsApp Business Account that owns the sending number (test number's account by default).
@@ -110,35 +112,69 @@ export const isFirstLesson = (b, all) => !all.some((x) =>
   Date.parse(x.createdAt) < Date.parse(b.createdAt));
 
 // Template params can't contain newlines, tabs or 4+ spaces.
-const clean = (s) => String(s).replace(/\s+/g, ' ').trim().slice(0, 200);
+const clean = (s, max = 200) => String(s).replace(/\s+/g, ' ').trim().slice(0, max);
 
-// Tell the coach about a new request. Business-initiated messages need an
-// approved template (see README); its two quick-reply buttons carry the
-// booking id so a single tap confirms or declines.
+// Approved templates are the only messages Meta delivers outside the 24h window
+// (i.e. when Navid hasn't written to the business number lately). The admin page
+// creates these in Meta with one tap; until they're approved we fall back to plain messages.
+export const COACH_TEMPLATES = [
+  {
+    name: 'lesson_request',
+    category: 'UTILITY',
+    language: 'en',
+    components: [
+      {
+        type: 'BODY',
+        text: '🎾 New padel lesson request\n\nStudent: {{1}}\nPhone: {{2}}\nWhen: {{3}}\nRef: {{4}}\nWants to work on: {{5}}\n\nConfirm this lesson?',
+        example: { body_text: [['Ana Diaz', '+971 50 123 4567', 'Wed 14 Oct, 12:00–13:00 (1h) · MUSAFFAH · The Padel Project', 'SMASH0001', 'My bandeja and positioning']] },
+      },
+      { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY', text: 'Yes, confirm' }, { type: 'QUICK_REPLY', text: 'No, decline' }] },
+    ],
+  },
+  {
+    name: 'coach_alert',
+    category: 'UTILITY',
+    language: 'en',
+    components: [
+      {
+        type: 'BODY',
+        text: '🔔 Coach Navid website update: {{1}}\n\nTap Show details for the full message, or open coachnavid.com/admin.',
+        example: { body_text: [['New video for analysis VA0002 from Ana Diaz (Match Report, 1 file, 1.2 GB)']] },
+      },
+      { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY', text: 'Show details' }] },
+    ],
+  },
+];
+
+function sendTemplate(to, name, params, buttonPayloads = []) {
+  return send(to, {
+    type: 'template',
+    template: {
+      name,
+      language: { code: 'en' },
+      components: [
+        { type: 'body', parameters: params.map((text) => ({ type: 'text', text: clean(text, 900) || '—' })) },
+        ...buttonPayloads.map((payload, index) => ({
+          type: 'button', sub_type: 'quick_reply', index: String(index), parameters: [{ type: 'payload', payload }],
+        })),
+      ],
+    },
+  });
+}
+
+// Tell the coach about a new request. The template's two quick-reply buttons
+// carry the booking id so a single tap confirms or declines.
 export async function notifyCoach(b) {
   const to = coachNumber();
-  const template = env('WHATSAPP_TEMPLATE');
-  if (template) {
-    return send(to, {
-      type: 'template',
-      template: {
-        name: template,
-        language: { code: env('WHATSAPP_TEMPLATE_LANG') || 'en' },
-        components: [
-          {
-            type: 'body',
-            parameters: [
-              `${b.firstName} ${b.lastName}`, b.phone, describeSlot(b), b.code,
-            ].map((text) => ({ type: 'text', text: clean(text) })),
-          },
-          { type: 'button', sub_type: 'quick_reply', index: '0', parameters: [{ type: 'payload', payload: `YES:${b.id}` }] },
-          { type: 'button', sub_type: 'quick_reply', index: '1', parameters: [{ type: 'payload', payload: `NO:${b.id}` }] },
-        ],
-      },
-    });
+  try {
+    return await sendTemplate(to, env('WHATSAPP_TEMPLATE') || 'lesson_request',
+      [`${b.firstName} ${b.lastName}`, b.phone, describeSlot(b), b.code, clean(b.notes || '—')],
+      [`YES:${b.id}`, `NO:${b.id}`]);
+  } catch (err) {
+    console.warn(`lesson_request template not usable, sending a plain message: ${err.message}`);
   }
-  // No template configured: plain text + reply buttons. Only delivered if the
-  // coach has messaged the business number in the last 24h — fine for testing.
+  // Template not approved yet: plain text + reply buttons. Only delivered if the
+  // coach has messaged the business number in the last 24h.
   return send(to, {
     type: 'interactive',
     interactive: {
@@ -154,6 +190,27 @@ export async function notifyCoach(b) {
       },
     },
   });
+}
+
+// Any other alert for Navid (video uploads, reminder digests). The template carries a
+// one-line summary; the full text waits until he taps "Show details" (which opens the
+// 24h window, so it can then be sent as a normal message).
+const PENDING = 'coach/pending-details';
+export async function alertCoach(summary, fullText) {
+  try {
+    await sendTemplate(coachNumber(), 'coach_alert', [summary], ['DETAILS']);
+    await updateJSON(PENDING, (list) => { list.push({ at: new Date().toISOString(), text: fullText }); list.splice(0, list.length - 10); }, []);
+  } catch (err) {
+    console.warn(`coach_alert template not usable, sending a plain message: ${err.message}`);
+    await sendText(coachNumber(), fullText);
+  }
+}
+
+// Navid tapped "Show details": hand over everything waiting, oldest first.
+export async function takePendingDetails() {
+  const list = await readJSON(PENDING, []);
+  if (list.length) await updateJSON(PENDING, (l) => { l.splice(0, l.length); }, []);
+  return list.map((x) => x.text);
 }
 
 // Tell the student their lesson is confirmed, from the business number.

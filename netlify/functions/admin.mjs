@@ -5,7 +5,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { bookingsFrom, readActivity, readManualStudents, updateDay, writeManualStudents } from '../lib/store.mjs';
 import { REGIONS, regionById, regionOfLocation } from '../../shared/regions.js';
 import { applyAction } from '../lib/actions.mjs';
-import { confirmLink, graph, isFirstLesson, phoneNumberId, reminderLink, wabaId } from '../lib/whatsapp.mjs';
+import { COACH_TEMPLATES, confirmLink, graph, isFirstLesson, phoneNumberId, reminderLink, wabaId } from '../lib/whatsapp.mjs';
 import { addDays, isBlocking, lessonStartMs, nowLocal, RULES } from '../../shared/rules.js';
 import { locationLabel } from '../../shared/schedule.js';
 
@@ -100,6 +100,33 @@ export default async (req, context) => {
     return json({ regions: REGIONS, students: await studentDatabase(), testRecipient: coach ? `+${coach}` : null });
   }
 
+  // Message templates (so alerts reach Navid even outside WhatsApp's 24h window).
+  // GET lists their status in Meta; POST creates the missing ones.
+  if (new URL(req.url).pathname.endsWith('/whatsapp/templates')) {
+    const list = async () => {
+      const r = await graph(`${wabaId()}/message_templates?fields=name,status,rejected_reason,category&limit=100`);
+      if (r.error) return { error: r.error };
+      return COACH_TEMPLATES.map(({ name }) => {
+        const t = (r.data ?? []).find((x) => x.name === name);
+        return { name, status: t?.status ?? 'MISSING', reason: t?.rejected_reason && t.rejected_reason !== 'NONE' ? t.rejected_reason : null };
+      });
+    };
+    if (req.method === 'POST') {
+      const current = await list();
+      if (current.error) return json({ error: `Meta said: ${current.error}` }, 502);
+      const errors = [];
+      for (const t of COACH_TEMPLATES) {
+        if (current.find((x) => x.name === t.name)?.status !== 'MISSING') continue;
+        const r = await graph(`${wabaId()}/message_templates`, { method: 'POST', body: JSON.stringify(t) });
+        if (r.error) errors.push(`${t.name}: ${r.error}`);
+      }
+      const templates = await list();
+      return json({ templates, errors });
+    }
+    const templates = await list();
+    return templates.error ? json({ error: `Meta said: ${templates.error}` }, 502) : json({ templates, errors: [] });
+  }
+
   // WhatsApp connection check: is the sending number OK, and is this app
   // subscribed to the WhatsApp account (needed for replies to reach the site)?
   if (new URL(req.url).pathname.endsWith('/whatsapp')) {
@@ -156,4 +183,4 @@ export default async (req, context) => {
   return json({ error: 'Method not allowed' }, 405);
 };
 
-export const config = { path: ['/api/admin/bookings', '/api/admin/bookings/:id', '/api/admin/whatsapp', '/api/admin/students'] };
+export const config = { path: ['/api/admin/bookings', '/api/admin/bookings/:id', '/api/admin/whatsapp', '/api/admin/whatsapp/templates', '/api/admin/students'] };
