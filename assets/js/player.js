@@ -1,5 +1,6 @@
 // Player progress: coachnavid.com/player/<token> — every report, averages and charts.
 import { AREAS, KINDS } from '../../shared/report.js';
+import { demoPlayer } from '../../shared/demo.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -127,6 +128,7 @@ function render(d) {
     </section>`;
 
   $('[data-player]').innerHTML = `
+    ${d.example ? '<p class="rp__draft">📋 Example — this is what a player’s progress page looks like after 10 reports. <a href="/analysis#plans">Get your own analysis →</a></p>' : ''}
     <section class="rp__hero">
       <p class="kicker">${L.title}</p>
       <h1 class="rp__title">${esc(d.firstName)} ${esc(d.lastName)}</h1>
@@ -148,7 +150,7 @@ document.addEventListener('pointerover', (e) => {
 });
 document.addEventListener('pointerout', (e) => { if (e.target.closest('[data-tip]')) tip.hidden = true; });
 
-fetch(`/api/player/${encodeURIComponent(token)}`)
-  .then(async (res) => { if (!res.ok) throw new Error(); return res.json(); })
+(token === 'demo' ? Promise.resolve(demoPlayer()) : fetch(`/api/player/${encodeURIComponent(token)}`)
+  .then(async (res) => { if (!res.ok) throw new Error(); return res.json(); }))
   .then(render)
   .catch(() => { $('[data-player]').innerHTML = '<p class="note">This page isn’t available. Please check the link Coach Navid sent you.</p>'; });

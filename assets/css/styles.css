@@ -636,3 +636,4 @@ body::before { opacity: .12; }
 .upload__done { min-height: 0; }
 .form__fine a { color: var(--accent); }
 .va-upload-cta { margin-top: 26px; align-items: center; gap: 22px; }
+.va-examples { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; margin-top: 26px; }

@@ -1,5 +1,6 @@
 // Student's video analysis report: coachnavid.com/report/<token>
 import { AREAS, KINDS, REPORT_LABELS, toSeconds } from '../../shared/report.js';
+import { demoReport } from '../../shared/demo.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -79,6 +80,7 @@ function render(r) {
 
   $('[data-report]').innerHTML = `
     ${r.status !== 'published' ? `<p class="rp__draft">${L.draft}</p>` : ''}
+    ${r.example ? '<p class="rp__draft">📋 Example report — this is what you receive. <a href="/analysis#plans">Get your own analysis →</a></p>' : ''}
     <section class="rp__hero">
       <p class="kicker">${L.report} · ${esc(kindName)} · ${esc(r.ref)}</p>
       <h1 class="rp__title">${esc(r.headline || kindName)}</h1>
@@ -104,7 +106,7 @@ function render(r) {
 
 document.addEventListener('click', (e) => { if (e.target.closest('[data-pdf]')) window.print(); });
 
-fetch(`/api/report/${encodeURIComponent(token)}`, { headers: adminKey ? { 'x-admin-key': adminKey } : {} })
-  .then(async (res) => { if (!res.ok) throw new Error(); return res.json(); })
+(token.startsWith('demo-') ? Promise.resolve(demoReport(token)).then((r) => { if (!r) throw new Error(); return r; }) : fetch(`/api/report/${encodeURIComponent(token)}`, { headers: adminKey ? { 'x-admin-key': adminKey } : {} })
+  .then(async (res) => { if (!res.ok) throw new Error(); return res.json(); }))
   .then(render)
   .catch(() => { $('[data-report]').innerHTML = '<p class="note">This report isn’t available. Please check the link Coach Navid sent you.</p>'; });
