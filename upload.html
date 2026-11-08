@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Upload your video · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script type="module" src="assets/js/upload.js"></script>
+</head>
+<body>
+  <div class="orbs" aria-hidden="true">
+    <span class="orb orb--a"></span><span class="orb orb--b"></span><span class="orb orb--c"></span>
+  </div>
+
+  <header class="nav">
+    <a class="lockup" href="/" data-i18n-aria="lockup.aria">
+      <span class="lockup__pb"><img src="assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Coach Navid Fahandezh</b><small data-i18n="lockup.role">Technical Director · Padel Beast</small></span>
+    </a>
+    <nav class="nav__links">
+      <a href="/analysis" data-i18n="up.back">← Video analysis</a>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="lt" aria-pressed="false">LT</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="wrap upload">
+    <p class="kicker" data-i18n="up.kicker">Video analysis</p>
+    <h1 class="section-title" data-i18n-html="up.title">Upload your<br />video.</h1>
+    <p class="upload__lede" data-i18n="up.lede"></p>
+
+    <form class="panel form upload__form" data-upload-form novalidate>
+      <label class="field">
+        <span data-i18n="form.first">First name</span><input name="firstName" autocomplete="given-name" required />
+      </label>
+      <label class="field">
+        <span data-i18n="form.last">Last name</span><input name="lastName" autocomplete="family-name" required />
+      </label>
+      <label class="field field--full">
+        <span data-i18n="form.phone">Phone (WhatsApp)</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" value="+971 " required />
+      </label>
+      <label class="field">
+        <span data-i18n="up.plan">Your analysis</span>
+        <select name="plan" required>
+          <option value="quick">Quick Fix · AED 149</option>
+          <option value="match" selected>Match Report · AED 349</option>
+          <option value="progress">Progress Plan · AED 599</option>
+        </select>
+      </label>
+      <label class="field">
+        <span data-i18n="up.payref">Ziina payment reference</span>
+        <input name="paymentRef" data-i18n-placeholder="up.payrefHint" placeholder="e.g. the name or reference on your Ziina receipt" />
+      </label>
+      <label class="field field--full">
+        <span data-i18n="up.notes">What should Navid look at?</span>
+        <textarea name="notes" rows="3" maxlength="400" data-i18n-placeholder="up.notesHint" placeholder="e.g. My bandeja and my positioning at the net. I'm the player in the red shirt, on the revés side."></textarea>
+      </label>
+      <label class="field field--full upload__drop">
+        <span data-i18n="up.files">Your video(s)</span>
+        <input name="files" type="file" accept="video/*" multiple required />
+        <small data-i18n="up.filesHint">Up to 10 files, max 8 GB each. Keep this page open while it uploads.</small>
+      </label>
+      <ul class="upload__files" data-file-list></ul>
+      <label class="hp" aria-hidden="true">Company<input name="company" tabindex="-1" autocomplete="off" /></label>
+
+      <div class="upload__progress" data-progress hidden><i></i></div>
+      <p class="upload__status" data-progress-label></p>
+      <p class="form__error" data-upload-error role="alert" hidden></p>
+      <button class="btn btn--lime btn--block" type="submit" data-i18n="up.submit">Upload video</button>
+      <p class="form__fine"><span data-i18n="up.fallback">Trouble uploading?</span> <a data-wa-fallback hidden target="_blank" rel="noopener" data-i18n="up.fallbackLink">Send it on WhatsApp instead ↗</a></p>
+    </form>
+
+    <div class="panel status status--confirmed upload__done" data-upload-done hidden role="status">
+      <div class="status__icon" aria-hidden="true">✓</div>
+      <h3 data-i18n="up.doneTitle">Video received!</h3>
+      <p data-i18n="up.doneText">Navid has been notified and will send your analysis on WhatsApp.</p>
+      <p class="panel__sub"><span data-i18n="up.ref">Reference</span> <b data-done-ref></b></p>
+      <a class="btn btn--ghost" href="/" data-i18n="va.back">← Lessons</a>
+    </div>
+  </main>
+
+  <footer class="foot wrap">
+    <p data-i18n-html="foot.text"></p>
+    <p class="foot__links"><a href="privacy.html" data-i18n="foot.privacy">Privacy</a> <a href="terms.html">Terms</a></p>
+  </footer>
+</body>
+</html>

@@ -51,6 +51,22 @@ Everyone with a confirmed lesson appears automatically; add others by hand. Stud
 “Let me know when Navid is coaching in my area again” when booking, or if you added them yourself.
 **Announce new dates** writes one message and gives a one-tap WhatsApp link per student (`{name}`, `{dates}`, `{place}` are filled in).
 
+### Video analysis uploads (coachnavid.com/upload)
+
+Students upload match videos (up to 10 files, 8 GB each). Each upload gets its own folder, `VA0001 · Name (+phone)`,
+inside **Coach Navid – Video analysis** in Navid's Google Drive (navid.fahandez@gmail.com). Files go **straight from the
+browser to Google**, not through our server. Navid gets a WhatsApp alert with the folder link. On the admin page he can open
+the folder and **share it with the student**, which creates a view-only link and a ready-to-send WhatsApp message.
+The site only has `drive.file` access, so it can only see files and folders it created itself.
+
+One-time setup:
+1. Go to <https://console.cloud.google.com>, create a project called "coachnavid", then under **APIs & Services → Library** enable **Google Drive API**.
+2. In **OAuth consent screen / Google Auth Platform**, choose External, app name "Coach Navid", and add the `.../auth/drive.file` scope.
+   Then **Publish app**. Leaving it in Testing makes the connection expire every 7 days.
+3. Under **Credentials → Create credentials → OAuth client ID**, choose **Web application** with redirect URI `https://coachnavid.com/api/google/callback`.
+4. In Netlify, add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, then redeploy.
+5. On the admin page, click **Connect Google Drive**, choose navid.fahandez@gmail.com, and click **Allow**.
+
 ### Admin page: coachnavid.com/admin
 
 A private dashboard listing every request, with **Confirm / Decline / Cancel** buttons and a one-tap WhatsApp confirmation

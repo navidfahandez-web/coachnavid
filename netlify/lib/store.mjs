@@ -103,3 +103,20 @@ export async function nextLessonRef() {
   }
   throw new Error('Could not allocate a lesson reference, try again');
 }
+
+// Generic read-modify-write of a JSON value with optimistic locking.
+export async function updateJSON(key, mutate, fallback = null, attempts = 6) {
+  for (let i = 0; i < attempts; i++) {
+    const res = await store().getWithMetadata(key, { type: 'json' });
+    const value = res?.data ?? structuredClone(fallback);
+    const result = await mutate(value);
+    const write = await store().setJSON(key, value, res?.etag ? { onlyIfMatch: res.etag } : { onlyIfNew: true });
+    if (write?.modified !== false) return result;
+  }
+  throw new Error('Too much contention, try again');
+}
+export const readJSON = async (key, fallback = null) => (await store().get(key, { type: 'json' })) ?? fallback;
+
+// Video analysis upload numbers: VA0001, VA0002, …
+export const nextUploadRef = () =>
+  updateJSON('counter/video-ref', (c) => { c.n += 1; return `VA${String(c.n).padStart(4, '0')}`; }, { n: 0 });

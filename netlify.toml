@@ -12,6 +12,12 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+# Video upload page
+[[redirects]]
+  from = "/upload"
+  to = "/upload.html"
+  status = 200
+
 # Video analysis page
 [[redirects]]
   from = "/analysis"

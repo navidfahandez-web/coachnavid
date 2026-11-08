@@ -133,3 +133,6 @@
   .week__agenda { display: block; }
 }
 .bk__sent { align-self: center; font-size: 13px; color: var(--accent); font-weight: 600; }
+.adm-drive p { margin: 0 0 8px; }
+.adm-drive code { color: var(--accent); }
+.adm-drive + .adm-list { margin-top: 14px; }

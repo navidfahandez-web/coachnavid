@@ -187,7 +187,7 @@ async function load() {
     $('[data-logout]').hidden = backend.demo;
     $('[data-demo-note]').hidden = !backend.demo;
     render();
-    if (!studentsData.regions.length) loadStudents();
+    if (!studentsData.regions.length) { loadStudents(); loadDrive(); }
   } catch (err) {
     if (err.status === 401 || err.status === 503) return showLogin(err.message);
     toast(`Couldn’t load bookings: ${esc(err.message)}`);
@@ -339,6 +339,80 @@ $('[data-add-student]').addEventListener('submit', async (e) => {
     toast(`${esc(f.firstName)} added ✅`);
   } catch (err) { toast(esc(err.message)); }
 });
+
+// ---------- Google Drive & video uploads ----------
+const gbs = (b) => (b ? `${(Number(b) / 1024 ** 3).toFixed(1)} GB` : '—');
+async function loadDrive() {
+  if (backend.demo) { $('[data-drive]').innerHTML = '<p class="note">Google Drive isn’t available in demo mode.</p>'; return; }
+  try {
+    const [st, up] = await Promise.all([
+      request('/api/admin/google/status', { headers: { 'x-admin-key': password } }),
+      request('/api/admin/uploads', { headers: { 'x-admin-key': password } }),
+    ]);
+    const q = st.quota || {};
+    const pct = q.limit ? Math.round((Number(q.usage) / Number(q.limit)) * 100) : null;
+    $('[data-drive]').innerHTML = !st.configured
+      ? '<p>⚠️ Google Drive isn’t set up yet — add <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> in Netlify (see README).</p>'
+      : st.connected
+        ? `<p>✅ Uploads go to <b>${esc(st.email)}</b> → <i>Coach Navid – Video analysis</i></p>
+           <p class="note">Storage: ${gbs(q.usage)} of ${gbs(q.limit)} used${pct !== null ? ` (${pct}%)` : ''}${pct > 80 ? ' — <b>time to upgrade storage</b>' : ''}</p>
+           <button class="pill" type="button" data-drive-disconnect>Disconnect</button>`
+        : `<p>Google Drive isn’t connected${st.error ? ` (${esc(st.error)})` : ''}.</p>
+           <button class="btn btn--lime" type="button" data-drive-connect>Connect Google Drive</button>`;
+    const list = up.uploads ?? [];
+    $('[data-count="uploads"]').textContent = list.length ? `(${list.length})` : '';
+    $('[data-uploads]').innerHTML = list.length ? list.map((u) => `
+      <article class="bk bk--${u.status === 'uploaded' ? 'pending' : 'expired'}">
+        <div class="bk__when"><b>${esc(u.ref)}</b><span>${esc(u.planName)}</span></div>
+        <div class="bk__who">
+          <b>${esc(u.firstName)} ${esc(u.lastName)}</b>
+          <span><a href="https://wa.me/${digits(u.phone)}" target="_blank" rel="noopener">${esc(u.phone)}</a></span>
+          ${u.notes ? `<span class="bk__notes">📝 ${esc(u.notes)}</span>` : ''}
+          <small>${u.status === 'uploaded' ? `${u.fileCount} file${u.fileCount > 1 ? 's' : ''} · ${gbs(u.totalBytes)}` : 'upload not finished'} · Ziina: ${esc(u.paymentRef || 'not given')} · ${esc(ago(u.createdAt))}</small>
+        </div>
+        <span class="bk__badge">${u.sharedAt ? 'delivered' : u.status === 'uploaded' ? 'to analyse' : 'incomplete'}</span>
+        <div class="bk__actions">
+          <a class="btn btn--ghost" href="${esc(u.folderUrl)}" target="_blank" rel="noopener">Open folder ↗</a>
+          ${u.status === 'uploaded' ? `<button class="btn ${u.sharedAt ? 'btn--ghost' : 'btn--lime'}" data-share-upload="${esc(u.id)}">${u.sharedAt ? 'Send folder link again' : 'Share folder with student'}</button>` : ''}
+        </div>
+      </article>`).join('') : '<p class="note">No videos uploaded yet. Students upload at coachnavid.com/upload.</p>';
+  } catch (err) {
+    $('[data-drive]').innerHTML = `<p class="bk__err">${esc(err.message)}</p>`;
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  if (e.target.closest('[data-drive-connect]')) {
+    try {
+      const { url } = await request('/api/admin/google/start', { method: 'POST', headers: { 'x-admin-key': password } });
+      location.href = url;
+    } catch (err) { toast(esc(err.message)); }
+  }
+  if (e.target.closest('[data-drive-disconnect]') && confirm('Disconnect Google Drive? Students won’t be able to upload until you connect again.')) {
+    await request('/api/admin/google/disconnect', { method: 'POST', headers: { 'x-admin-key': password } }).catch(() => {});
+    loadDrive();
+  }
+  const share = e.target.closest('[data-share-upload]');
+  if (share) {
+    // Open the WhatsApp tab right away (pop-up blockers), then point it at the message once ready
+    const win = window.open('about:blank', '_blank');
+    try {
+      const r = await request('/api/admin/uploads', { method: 'POST', headers: { 'x-admin-key': password }, body: JSON.stringify({ id: share.dataset.shareUpload, action: 'share' }) });
+      if (win) win.location.href = r.whatsapp; else location.href = r.whatsapp;
+      toast('Folder shared ✅ — the WhatsApp message to the student is ready to send.');
+      loadDrive();
+    } catch (err) { win?.close(); toast(esc(err.message)); }
+  }
+});
+
+// After coming back from Google's consent screen
+{
+  const d = new URLSearchParams(location.search).get('drive');
+  if (d) {
+    history.replaceState(null, '', location.pathname);
+    setTimeout(() => toast(d === 'connected' ? 'Google Drive connected ✅' : `Google Drive: ${esc(d)}`, 10000), 500);
+  }
+}
 
 // ---------- WhatsApp connection ----------
 async function connection(fix) {
