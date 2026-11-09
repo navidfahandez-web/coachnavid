@@ -44,10 +44,10 @@ export function lessonHtml(lesson, player) {
   const shotName = (id) => { const x = SHOTS.find((y) => y.id === id); return x ? (x[lesson.lang] ?? x.en) : id; };
   return `<!doctype html><html><head><meta charset="utf-8"></head>
   <body style="font-family:Arial,sans-serif;font-size:10.5pt;color:#111111">
-    <table style="border-collapse:collapse;width:100%"><tr>
-      <td style="width:60pt"><img src="${SITE_URL}/assets/img/padel-beast-logo-sm.png" width="45" height="60"></td>
-      <td><b style="font-size:12pt">Coach Navid Fahandezh</b><br><span style="color:${ORANGE};font-size:9pt">Technical Director · Padel Beast</span></td>
-      <td style="text-align:right;color:#666666;font-size:9pt">${esc(date)}</td>
+    <table border="0" style="border-collapse:collapse;width:100%;border:0 solid #ffffff"><tr>
+      <td style="width:60pt;border:0 solid #ffffff"><img src="${SITE_URL}/assets/img/padel-beast-logo-sm.png" width="45" height="60"></td>
+      <td style="border:0 solid #ffffff"><b style="font-size:12pt">Coach Navid Fahandezh</b><br><span style="color:${ORANGE};font-size:9pt">Technical Director · Padel Beast</span></td>
+      <td style="text-align:right;color:#666666;font-size:9pt;border:0 solid #ffffff">${esc(date)}</td>
     </tr></table>
     <p style="color:${ORANGE};font-size:10pt;font-weight:bold;margin:18pt 0 2pt">${esc(t.kicker.toUpperCase())}</p>
     <p style="font-size:22pt;font-weight:bold;margin:0 0 4pt">${esc(s.title)}</p>
