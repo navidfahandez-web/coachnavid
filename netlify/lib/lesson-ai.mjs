@@ -140,5 +140,6 @@ export async function summarizeLesson(context) {
   if (res.stop_reason === 'refusal') throw new Error('Claude declined to write this summary.');
   if (res.stop_reason === 'max_tokens') throw new Error('The summary was cut off — try a shorter voice note.');
   const text = res.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  return JSON.parse(text);
+  const debug = { stop: res.stop_reason, model: res.model, blocks: res.content.map((b) => b.type), usage: res.usage, raw: text.slice(0, 3000) };
+  return { summary: JSON.parse(text), debug };
 }

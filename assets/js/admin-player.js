@@ -89,6 +89,7 @@ function lessonCard(l) {
       <label class="field">Focus until next lesson <textarea data-k="next_focus" rows="2">${esc(s.next_focus)}</textarea></label>
       <label class="field">Language <select data-k="lang"><option value="en" ${l.lang === 'en' ? 'selected' : ''}>English</option><option value="lt" ${l.lang === 'lt' ? 'selected' : ''}>Lietuvių</option></select></label>
       <button class="btn btn--lime" data-act="save">Save &amp; update PDF</button>
+      <button class="btn btn--ghost" data-act="redo">Rewrite summary from the voice note</button>
     </details>` : ''}
     ${l.transcript || l.notes ? `<details class="ap__edit"><summary>What you said</summary><p class="note">${esc([l.transcript, l.notes].filter(Boolean).join('\n\n'))}</p></details>` : ''}
     <button class="pill ap__del" data-act="delete">Delete lesson</button>
@@ -219,6 +220,10 @@ document.addEventListener('click', async (e) => {
       await post({ action: 'delete' });
     }
     if (act === 'retry') await post({ action: 'retry' });
+    if (act === 'redo') {
+      if (!confirm('Write the summary again from your voice note? Your edits will be replaced.')) return;
+      await post({ action: 'redo' });
+    }
     if (act === 'save') {
       const v = (k) => card.querySelector(`[data-k=${k}]`).value;
       const lines = (k) => v(k).split('\n').map((s) => s.trim()).filter(Boolean);

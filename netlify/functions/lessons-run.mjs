@@ -57,13 +57,13 @@ export default async (req) => {
       if (!canSummarize()) throw new Error('Summaries need ANTHROPIC_API_KEY in Netlify.');
       const earlier = lessons.filter((l) => l.id !== id && l.summary && l.date <= lesson.date).slice(-5);
       const ext = (await readJSON(externalKey(phone), [])).slice(-2);
-      const summary = await summarizeLesson({
+      const { summary, debug } = await summarizeLesson({
         player, lang: lesson.lang, date: lesson.date, notes,
         previousLessons: earlier.map((l) => ({ date: l.date, title: l.summary.title, worked_on: l.summary.worked_on, to_improve: l.summary.to_improve, next_focus: l.summary.next_focus, shots: l.summary.shots })),
         reports: await reportContext(phone),
         glasswall: ext.map((e) => ({ date: e.date, focus: e.focus.map((f) => `${f.category}: ${f.title}`), stats: e.metrics.map((m) => `${m.name}: ${m.value}${m.unit === '%' ? '%' : ` ${m.unit}`}`) })),
       });
-      lesson = await updateLesson(phone, id, { summary, status: 'pdf' });
+      lesson = await updateLesson(phone, id, { summary, debug, status: 'pdf' });
     }
 
     const pdfFileId = await lessonPdf(lesson, player, await playerFolder(player));

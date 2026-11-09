@@ -67,6 +67,12 @@ export default async (req) => {
       await run(req, { phone, id, pdfOnly: true });
       return json({ lesson });
     }
+    if (b.action === 'redo') { // write the summary again from the same voice note
+      const lesson = await updateLesson(phone, id, { summary: null, status: 'processing', error: null });
+      if (!lesson) return json({ error: 'Lesson not found.' }, 404);
+      await run(req, { phone, id });
+      return json({ lesson });
+    }
     if (b.action === 'retry') {
       const lesson = await updateLesson(phone, id, (x) => ({ status: x.summary ? 'pdf' : 'processing', error: null }));
       if (!lesson) return json({ error: 'Lesson not found.' }, 404);
