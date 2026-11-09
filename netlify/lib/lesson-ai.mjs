@@ -32,8 +32,8 @@ async function transcribeOpenAI(audio, type) {
 
 async function transcribeGemini(audio, type) {
   const base = env('GOOGLE_GEMINI_BASE_URL').replace(/\/+$/, '');
-  const call = async (mime) => {
-    const res = await fetch(`${base}/v1beta/models/gemini-flash-latest:generateContent`, {
+  const call = async (mime, model = 'gemini-3.8-flash') => {
+    const res = await fetch(`${base}/v1beta/models/${model}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env('GEMINI_API_KEY') },
       body: JSON.stringify({
@@ -48,6 +48,7 @@ async function transcribeGemini(audio, type) {
     return (body.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('').trim();
   };
   try { return await call(type); } catch (err) {
+    if (/not found|does not have access|model/i.test(err.message)) return call(type, 'gemini-3.5-flash');
     if (type === 'audio/mp4' || type === 'audio/x-m4a' || type === 'audio/m4a') return call('audio/aac'); // m4a is AAC audio
     throw err;
   }
