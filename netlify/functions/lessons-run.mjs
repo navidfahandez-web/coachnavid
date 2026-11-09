@@ -41,7 +41,7 @@ export default async (req) => {
       if (lesson.hasAudio && !lesson.transcript) {
         const audio = await audioStore().get(id, { type: 'arrayBuffer' });
         if (!audio) throw new Error('The recording is missing — please record it again.');
-        if (!canTranscribe()) throw new Error('Voice notes need OPENAI_API_KEY in Netlify.');
+        if (!canTranscribe()) throw new Error('Voice notes need speech-to-text (Netlify AI Gateway or OPENAI_API_KEY).');
         const transcript = await transcribe(Buffer.from(audio), lesson.mimeType);
         lesson = await updateLesson(phone, id, { transcript });
         try { // keep the original recording in the player's Drive folder

@@ -86,7 +86,7 @@ export default async (req) => {
   const audio = b.audioBase64 ? Buffer.from(String(b.audioBase64), 'base64') : null;
   if (!audio && !notes) return json({ error: 'Record a voice note or type your notes.' }, 400);
   if (audio && audio.length > MAX_AUDIO) return json({ error: 'That recording is too long (max ~15 minutes). Split it in two, or type the rest.' }, 400);
-  if (audio && !canTranscribe() && !notes) return json({ error: 'Voice notes need OPENAI_API_KEY in Netlify — for now, type your notes instead.' }, 503);
+  if (audio && !canTranscribe() && !notes) return json({ error: 'Voice notes need speech-to-text (Netlify AI Gateway or OPENAI_API_KEY) — for now, type your notes instead.' }, 503);
   if (!canSummarize()) return json({ error: 'Summaries need ANTHROPIC_API_KEY in Netlify.' }, 503);
 
   const lesson = {

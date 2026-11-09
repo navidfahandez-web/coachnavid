@@ -114,7 +114,7 @@ async function loadPlayer() {
     <a class="btn btn--ghost" href="/admin/glasswall?phone=${encodeURIComponent(player.phone)}">＋ GlassWall</a>
     <a class="btn btn--ghost" href="https://wa.me/${digits(player.phone)}" target="_blank" rel="noopener">WhatsApp ↗</a>`;
   $('[data-ai-info]').textContent = !r.ai.summarize ? '⚠️ Add ANTHROPIC_API_KEY in Netlify to create summaries.'
-    : !r.ai.transcribe ? '⚠️ Voice needs OPENAI_API_KEY in Netlify — typed notes work already.' : '';
+    : !r.ai.transcribe ? '⚠️ Voice notes need speech-to-text (Netlify AI Gateway or OPENAI_API_KEY) — typed notes work already.' : '';
   if (!$('[data-new-lesson]').elements.lang.dataset.set) {
     $('[data-new-lesson]').elements.lang.value = digits(player.phone).startsWith('370') ? 'lt' : 'en';
     $('[data-new-lesson]').elements.lang.dataset.set = '1';

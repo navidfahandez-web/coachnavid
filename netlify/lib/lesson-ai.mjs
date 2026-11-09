@@ -1,29 +1,63 @@
-// Lesson voice notes → text (OpenAI speech-to-text) → lesson summary (Claude).
+// Lesson voice notes → text (speech-to-text) → lesson summary (Claude).
 // Keys: Netlify's AI Gateway injects ANTHROPIC_/OPENAI_ API keys + base URLs automatically (billed in
 // Netlify credits). Setting your own OPENAI_API_KEY / ANTHROPIC_API_KEY in Netlify overrides the gateway.
 import Anthropic from '@anthropic-ai/sdk';
 import { SHOTS } from '../../shared/report.js';
 
 const env = (k) => (process.env[k] ?? '').trim();
-export const canTranscribe = () => Boolean(env('OPENAI_API_KEY'));
+
+// Speech-to-text: OpenAI with our own key; otherwise Gemini through the Netlify AI Gateway
+// (the gateway only relays JSON, so OpenAI's file-upload endpoint doesn't work through it).
+const ownOpenAI = () => Boolean(env('OPENAI_API_KEY')) && (!env('OPENAI_BASE_URL') || env('OPENAI_BASE_URL').includes('api.openai.com'));
+const gemini = () => Boolean(env('GEMINI_API_KEY') && env('GOOGLE_GEMINI_BASE_URL'));
+export const canTranscribe = () => ownOpenAI() || gemini();
 export const canSummarize = () => Boolean(env('ANTHROPIC_API_KEY'));
 
 const EXT = { 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/m4a': 'm4a', 'audio/aac': 'm4a', 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/opus': 'ogg', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/x-wav': 'wav' };
+// Padel words a recogniser would otherwise get wrong
+const PADEL_TERMS = 'bandeja, víbora, chiquita, globo, por 3, por 4, contrapared, bajada de pared, bote pronto, dejada, gancho, remate, revés, drive, split step, salida de pared';
 
-export async function transcribe(audio, mimeType) {
-  const type = String(mimeType || 'audio/mp4').split(';')[0];
+async function transcribeOpenAI(audio, type) {
   const form = new FormData();
   form.append('file', new Blob([audio], { type }), `voice.${EXT[type] ?? 'm4a'}`);
   form.append('model', 'gpt-4o-transcribe');
-  // Padel words the recogniser would otherwise get wrong
-  form.append('prompt', 'Padel coaching voice note after a lesson. Terms: bandeja, víbora, chiquita, globo, por 3, por 4, contrapared, bajada de pared, bote pronto, dejada, gancho, remate, revés, drive, split step, salida de pared.');
-  const base = (env('OPENAI_BASE_URL') || 'https://api.openai.com').replace(/\/+$/, '').replace(/\/v1$/, '');
-  const res = await fetch(`${base}/v1/audio/transcriptions`, {
+  form.append('prompt', `Padel coaching voice note after a lesson. Terms: ${PADEL_TERMS}.`);
+  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST', headers: { Authorization: `Bearer ${env('OPENAI_API_KEY')}` }, body: form,
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`Transcription: ${body.error?.message || res.status}`);
   return String(body.text ?? '').trim();
+}
+
+async function transcribeGemini(audio, type) {
+  const base = env('GOOGLE_GEMINI_BASE_URL').replace(/\/+$/, '');
+  const call = async (mime) => {
+    const res = await fetch(`${base}/v1beta/models/gemini-flash-latest:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env('GEMINI_API_KEY') },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { inline_data: { mime_type: mime, data: Buffer.from(audio).toString('base64') } },
+          { text: `Transcribe this padel coach's voice note word for word, in the language it is spoken (English, Spanish or Lithuanian). Padel terms you may hear: ${PADEL_TERMS}. Return only the transcript.` },
+        ] }],
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`Transcription: ${body.error?.message || res.status}`);
+    return (body.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('').trim();
+  };
+  try { return await call(type); } catch (err) {
+    if (type === 'audio/mp4' || type === 'audio/x-m4a' || type === 'audio/m4a') return call('audio/aac'); // m4a is AAC audio
+    throw err;
+  }
+}
+
+export async function transcribe(audio, mimeType) {
+  const type = String(mimeType || 'audio/mp4').split(';')[0];
+  const text = ownOpenAI() ? await transcribeOpenAI(audio, type) : await transcribeGemini(audio, type);
+  if (!text) throw new Error('The recording came back empty — was the microphone on?');
+  return text;
 }
 
 const list = { type: 'array', items: { type: 'string' } };
