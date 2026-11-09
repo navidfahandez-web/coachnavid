@@ -193,8 +193,7 @@ $('[data-publish]').addEventListener('click', async () => {
     report = r.report;
     dirty = false;
     if (win) win.location.href = r.whatsapp; else location.href = r.whatsapp;
-    const pdf = r.report.pdfFileId ? `https://drive.google.com/uc?export=download&id=${r.report.pdfFileId}` : null;
-    toast(`Published ✅ <a href="${esc(r.url)}" target="_blank" rel="noopener">Open report ↗</a>${pdf ? ` · <a href="${esc(pdf)}">Download PDF ↓</a> (attach it in WhatsApp if they prefer a file)` : r.pdfError ? ` · PDF not created: ${esc(r.pdfError)}` : ''}`, 20000);
+    toast(`Published ✅ <a href="${esc(r.url)}" target="_blank" rel="noopener">Open report ↗</a> · The PDF is being made — in about a minute it’s on the report page and in admin (PDF ↓ / Send PDF on WhatsApp).`, 20000);
     $('[data-publish]').textContent = 'Update & send again ↗';
   } catch (err) { win?.close(); toast(esc(err.message)); }
 });

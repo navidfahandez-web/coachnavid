@@ -4,6 +4,8 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  # headless Chromium for the PDFs must not be bundled
+  external_node_modules = ["@sparticuz/chromium-min", "puppeteer-core"]
 
 [[headers]]
   for = "/*"
