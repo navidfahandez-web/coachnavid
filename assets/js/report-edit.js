@@ -163,7 +163,8 @@ $('[data-publish]').addEventListener('click', async () => {
     report = r.report;
     dirty = false;
     if (win) win.location.href = r.whatsapp; else location.href = r.whatsapp;
-    toast(`Published ✅ <a href="${esc(r.url)}" target="_blank" rel="noopener">Open report ↗</a> — the WhatsApp message is ready to send.`, 12000);
+    const pdf = r.report.pdfFileId ? `https://drive.google.com/uc?export=download&id=${r.report.pdfFileId}` : null;
+    toast(`Published ✅ <a href="${esc(r.url)}" target="_blank" rel="noopener">Open report ↗</a>${pdf ? ` · <a href="${esc(pdf)}">Download PDF ↓</a> (attach it in WhatsApp if they prefer a file)` : r.pdfError ? ` · PDF not created: ${esc(r.pdfError)}` : ''}`, 20000);
     $('[data-publish]').textContent = 'Update & send again ↗';
   } catch (err) { win?.close(); toast(esc(err.message)); }
 });

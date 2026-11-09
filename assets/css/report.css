@@ -141,3 +141,9 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 @media (max-width: 560px) { .pl__timeline li { grid-template-columns: 1fr; gap: 4px; } }
 .rp__progress { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 24px; padding: 14px 18px; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); }
 .rp__progress p { margin: 0; color: var(--ink); }
+.pl__timeline a.pl__pdf { margin-left: 10px; font-size: 13px; font-weight: 700; color: var(--accent); }
+
+/* ---------- players' login (me.html) ---------- */
+.me { max-width: 520px; padding: 48px 0 80px; }
+.me__box { margin-top: 22px; display: grid; gap: 12px; }
+.me__box .pill { justify-self: start; background: transparent; color: var(--ink); cursor: pointer; }

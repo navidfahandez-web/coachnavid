@@ -101,10 +101,16 @@ function render(r) {
       <a class="btn btn--ghost" href="/#book">${L.book}</a>
     </div>
     ${history}`;
+  pdfUrl = r.pdfFileId ? `https://drive.google.com/uc?export=download&id=${encodeURIComponent(r.pdfFileId)}` : null;
   document.querySelectorAll('[data-pdf]').forEach((b) => { b.hidden = false; b.textContent = b.closest('nav') ? 'PDF' : L.pdf; });
 }
 
-document.addEventListener('click', (e) => { if (e.target.closest('[data-pdf]')) window.print(); });
+// Real PDF file when the site made one (published reports); otherwise the browser's Save as PDF.
+let pdfUrl = null;
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('[data-pdf]')) return;
+  if (pdfUrl) location.href = pdfUrl; else window.print();
+});
 
 (token.startsWith('demo-') ? Promise.resolve(demoReport(token)).then((r) => { if (!r) throw new Error(); return r; }) : fetch(`/api/report/${encodeURIComponent(token)}`, { headers: adminKey ? { 'x-admin-key': adminKey } : {} })
   .then(async (res) => { if (!res.ok) throw new Error(); return res.json(); }))

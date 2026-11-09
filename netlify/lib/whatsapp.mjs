@@ -144,7 +144,30 @@ export const COACH_TEMPLATES = [
       { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY', text: 'Show details' }] },
     ],
   },
+  {
+    // Players' login code for coachnavid.com/me (Meta's standard one-time-code format)
+    name: 'login_code',
+    category: 'AUTHENTICATION',
+    language: 'en',
+    components: [
+      { type: 'BODY', add_security_recommendation: true },
+      { type: 'FOOTER', code_expiration_minutes: 10 },
+      { type: 'BUTTONS', buttons: [{ type: 'OTP', otp_type: 'COPY_CODE', text: 'Copy code' }] },
+    ],
+  },
 ];
+
+export const sendLoginCode = (to, code) => send(to, {
+  type: 'template',
+  template: {
+    name: 'login_code',
+    language: { code: 'en' },
+    components: [
+      { type: 'body', parameters: [{ type: 'text', text: code }] },
+      { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: code }] },
+    ],
+  },
+});
 
 function sendTemplate(to, name, params, buttonPayloads = []) {
   return send(to, {

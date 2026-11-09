@@ -10,6 +10,7 @@ import { isAdmin, json, requireAdmin } from '../lib/auth.mjs';
 import { logActivity, readJSON, updateJSON } from '../lib/store.mjs';
 import { listFolder, shareFolder } from '../lib/google.mjs';
 import { SITE_URL } from '../lib/google.mjs';
+import { createReportPdf } from '../lib/report-pdf.mjs';
 import { AREAS, KINDS, kindForPlan } from '../../shared/report.js';
 
 const UPLOADS = 'uploads/list';
@@ -138,7 +139,7 @@ export default async (req, context) => {
       reports: reports.map((r) => ({
         token: r.token, ref: r.ref, kind: r.kind, lang: r.lang, headline: r.headline, publishedAt: r.publishedAt,
         scores: r.kind === 'match' ? r.scores : null, average: r.kind === 'match' ? scoreAverage(r.scores) : null,
-        fixes: r.items.filter((i) => i.title).map((i) => i.title),
+        fixes: r.items.filter((i) => i.title).map((i) => i.title), pdfFileId: r.pdfFileId ?? null,
       })),
     });
   }
@@ -206,11 +207,22 @@ export default async (req, context) => {
       if (x) Object.assign(x, { sharedAt: x.sharedAt ?? new Date().toISOString(), reportToken: r.token });
     }, []);
     if (first) await logActivity({ kind: 'sent', text: `Report ${r.ref} (${KINDS[r.kind].name}) published for ${r.student.firstName}.` });
+    // Real PDF in the student's folder (a failure here doesn't stop the report going out)
+    let pdfError = null;
+    try {
+      const earlier = (await playerReports(digits(r.student.phone))).filter((x) => x.ref !== r.ref && x.publishedAt < r.publishedAt);
+      r = { ...r, pdfFileId: await createReportPdf(r, earlier) };
+      await saveReport(r);
+      await updateJSON(UPLOADS, (list) => { const x = list.find((y) => y.ref === r.ref); if (x) x.pdfFileId = r.pdfFileId; }, []);
+    } catch (err) {
+      pdfError = err.message;
+      await logActivity({ kind: 'failed', text: `Report ${r.ref}: PDF not created — ${err.message}. Students can still save it from the page.` });
+    }
     const name = r.student.firstName;
     const text = r.lang === 'lt'
       ? `Labas, ${name}! 🎥 Jūsų ${KINDS[r.kind].name} video analizė paruošta:\n${reportUrl(r.token)}\n\nKlausimai? Tiesiog atsakykite čia. Treneris Navid`
       : `Hi ${name}! 🎥 Your ${KINDS[r.kind].name} video analysis is ready:\n${reportUrl(r.token)}\n\nAny questions, just reply here. Coach Navid`;
-    return json({ ok: true, report: r, url: reportUrl(r.token), whatsapp: `https://wa.me/${digits(r.student.phone)}?text=${encodeURIComponent(text)}` });
+    return json({ ok: true, report: r, pdfError, url: reportUrl(r.token), whatsapp: `https://wa.me/${digits(r.student.phone)}?text=${encodeURIComponent(text)}` });
   }
 
   return json({ error: 'Not found' }, 404);

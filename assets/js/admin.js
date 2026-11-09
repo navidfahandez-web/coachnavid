@@ -375,6 +375,8 @@ async function loadDrive() {
           <a class="btn btn--ghost" href="${esc(u.folderUrl)}" target="_blank" rel="noopener">Open folder ↗</a>
           ${u.status === 'uploaded' ? `<a class="btn ${u.reportToken ? 'btn--ghost' : 'btn--lime'}" href="/admin/report?ref=${encodeURIComponent(u.ref)}">${u.reportToken ? '✏️ Edit report' : '✏️ Write report'}</a>` : ''}
           ${u.reportToken ? `<a class="btn btn--ghost" href="/report/${esc(u.reportToken)}" target="_blank" rel="noopener">View report ↗</a>` : ''}
+          ${u.pdfFileId ? `<a class="btn btn--ghost" href="https://drive.google.com/uc?export=download&id=${esc(u.pdfFileId)}">PDF ↓</a>
+            <a class="btn btn--ghost" target="_blank" rel="noopener" href="https://wa.me/${digits(u.phone)}?text=${encodeURIComponent(`Hi ${u.firstName}! 📄 Here is your ${u.planName} report as a PDF: https://drive.google.com/uc?export=download&id=${u.pdfFileId}\n\nCoach Navid`)}">Send PDF on WhatsApp ↗</a>` : ''}
           ${u.status === 'uploaded' && !u.reportToken ? `<button class="btn btn--ghost" data-share-upload="${esc(u.id)}">${u.sharedAt ? 'Send folder link again' : 'Just share the folder'}</button>` : ''}
         </div>
       </article>`).join('') : '<p class="note">No videos uploaded yet. Students upload at coachnavid.com/upload.</p>';

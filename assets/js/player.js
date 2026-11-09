@@ -121,12 +121,16 @@ function render(d) {
           <div class="pl__when">${esc(day(r.publishedAt, lang))}<small>${esc(KINDS[r.kind]?.name)}${r.average !== null ? ` · ${fmt(r.average)}/10` : ''}</small></div>
           <div>
             <a href="/report/${esc(r.token)}"><b>${esc(r.headline || KINDS[r.kind]?.name)}</b> ↗</a>
+            ${r.pdfFileId ? `<a class="pl__pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(r.pdfFileId)}">PDF ↓</a>` : ''}
             ${r.fixes.length ? `<p>${L.fixes}: ${r.fixes.map(esc).join(' · ')}</p>` : ''}
           </div>
         </li>`).join('')}
       </ol>
     </section>`;
 
+  if (!d.example) { // remember it, so coachnavid.com/me opens straight to this page next time
+    try { localStorage.setItem('cn-player', JSON.stringify({ playerToken: token, firstName: d.firstName })); } catch { /* ignore */ }
+  }
   $('[data-player]').innerHTML = `
     ${d.example ? '<p class="rp__draft">📋 Example — this is what a player’s progress page looks like after 10 reports. <a href="/analysis#plans">Get your own analysis →</a></p>' : ''}
     <section class="rp__hero">

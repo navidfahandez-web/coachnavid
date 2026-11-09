@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My reports · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/report.css" />
+  <script type="module" src="/assets/js/me.js"></script>
+</head>
+<body class="rp-body">
+  <header class="nav">
+    <a class="lockup" href="/">
+      <span class="lockup__pb"><img src="/assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Coach Navid Fahandezh</b><small>Technical Director · Padel Beast</small></span>
+    </a>
+    <nav class="nav__links"><a class="pill" href="/analysis">Video analysis</a></nav>
+  </header>
+  <main class="wrap me">
+    <p class="kicker">My reports</p>
+    <h1 class="rp__title">Your reports &amp; progress.</h1>
+
+    <div class="panel me__box" data-saved hidden>
+      <p>Welcome back, <b data-name></b>!</p>
+      <a class="btn btn--lime btn--block" data-open>Open my reports →</a>
+      <button class="pill" type="button" data-logout>Not you? Log out</button>
+    </div>
+
+    <form class="panel form me__box" data-step="phone" novalidate>
+      <p class="panel__sub field--full">Enter the WhatsApp number you sent your videos from. We’ll send you a 6-digit code — no password needed.</p>
+      <label class="field field--full">WhatsApp number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" value="+971 " required /></label>
+      <p class="form__error field--full" data-error hidden></p>
+      <button class="btn btn--lime" type="submit">Send me a code</button>
+    </form>
+
+    <form class="panel form me__box" data-step="code" hidden novalidate>
+      <p class="panel__sub field--full">If this number has reports, a code is on its way on WhatsApp. It works for 10 minutes.</p>
+      <label class="field field--full">6-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required /></label>
+      <p class="form__error field--full" data-error hidden></p>
+      <button class="btn btn--lime" type="submit">Open my reports</button>
+      <button class="pill field--full" type="button" data-back>← Use another number</button>
+    </form>
+
+    <p class="note">No code? Coach Navid can send you your reports and PDFs directly on WhatsApp.</p>
+  </main>
+</body>
+</html>

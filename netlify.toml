@@ -35,6 +35,12 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 
+# Players' login (WhatsApp code)
+[[redirects]]
+  from = "/me"
+  to = "/me.html"
+  status = 200
+
 # Player progress page (private link)
 [[redirects]]
   from = "/player/*"

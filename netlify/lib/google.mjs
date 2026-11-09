@@ -139,3 +139,30 @@ export const listFolder = (id) =>
 // Anyone with the link can view (used when Navid delivers the analysis).
 export const shareFolder = (id) =>
   drive(`files/${id}/permissions?fields=id`, { method: 'POST', body: JSON.stringify({ role: 'reader', type: 'anyone' }) });
+
+// Upload a file in one request (small files: generated docs and PDFs).
+// `meta.mimeType` set to a Google type converts the upload (e.g. HTML → Google Doc).
+export async function uploadSimple(meta, body, contentType) {
+  const boundary = `cn${Date.now().toString(36)}`;
+  const head = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: ${contentType}\r\n\r\n`;
+  const data = Buffer.concat([Buffer.from(head), Buffer.isBuffer(body) ? body : Buffer.from(body), Buffer.from(`\r\n--${boundary}--`)]);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${await accessToken()}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: data,
+  });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Google Drive upload: ${out.error?.message || res.status}`);
+  return out.id;
+}
+
+export async function exportFile(id, mimeType) {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}/export?mimeType=${encodeURIComponent(mimeType)}`, {
+    headers: { Authorization: `Bearer ${await accessToken()}` },
+  });
+  if (!res.ok) throw new Error(`Google Drive export: ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+export const deleteFile = (id) => drive(`files/${id}`, { method: 'DELETE' });
+export const downloadUrl = (id) => `https://drive.google.com/uc?export=download&id=${id}`;
