@@ -134,12 +134,16 @@ export async function summarizeLesson(context) {
     system: SYSTEM,
     messages: [{ role: 'user', content: prompt }],
   };
-  const res = viaGateway
-    ? await client.messages.create(params)
-    : await client.beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
-  if (res.stop_reason === 'refusal') throw new Error('Claude declined to write this summary.');
-  if (res.stop_reason === 'max_tokens') throw new Error('The summary was cut off — try a shorter voice note.');
-  const text = res.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  const debug = { stop: res.stop_reason, model: res.model, blocks: res.content.map((b) => b.type), usage: res.usage, raw: text.slice(0, 3000) };
-  return { summary: JSON.parse(text), debug };
+  // One retry if the answer comes back without a title/summary (seen once in testing)
+  for (let attempt = 1; ; attempt++) {
+    const res = viaGateway
+      ? await client.messages.create(params)
+      : await client.beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
+    if (res.stop_reason === 'refusal') throw new Error('Claude declined to write this summary.');
+    if (res.stop_reason === 'max_tokens') throw new Error('The summary was cut off — try a shorter voice note.');
+    const text = res.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
+    const summary = JSON.parse(text);
+    const debug = { attempt, stop: res.stop_reason, model: res.model, usage: res.usage };
+    if ((summary.title && summary.summary) || attempt >= 2) return { summary, debug };
+  }
 }
