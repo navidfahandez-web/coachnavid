@@ -76,8 +76,8 @@ function render(d) {
   const tiles = `
     <div class="pl__tiles">
       <div class="pl__tile"><span>${L.reports}</span><b>${d.reports.length}</b></div>
-      <div class="pl__tile"><span>${L.now}</span><b>${fmt(last?.average)}<small>/10</small></b></div>
-      <div class="pl__tile"><span>${L.change}</span><b class="${change > 0 ? 'up' : change < 0 ? 'down' : ''}">${change === null ? '—' : `${change > 0 ? '▲ +' : change < 0 ? '▼ ' : ''}${fmt(change)}`}</b></div>
+      ${last ? `<div class="pl__tile"><span>${L.now}</span><b>${fmt(last.average)}<small>/10</small></b></div>` : ''}
+      ${change !== null ? `<div class="pl__tile"><span>${L.change}</span><b class="${change > 0 ? 'up' : change < 0 ? 'down' : ''}">${change > 0 ? '▲ +' : change < 0 ? '▼ ' : ''}${fmt(change)}</b></div>` : ''}
       ${ext.length ? `<div class="pl__tile"><span>${L.gwCount}</span><b>${ext.length}</b></div>` : ''}
       ${best ? `<div class="pl__tile"><span>${L.best}</span><b class="up">▲ +${best.delta}</b><small>${esc(best[lang] ?? best.en)}</small></div>` : ''}
     </div>`;
