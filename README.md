@@ -164,3 +164,17 @@ functions aren't running there, so the page switches to **demo mode**: bookings 
 and a panel lets you pretend to be Navid tapping Yes or No. Demo mode can only turn on locally or with `?demo`
 in the URL. The live site never falls back to fake bookings. To run the real functions locally, use
 `npx netlify dev` (needs Node.js).
+
+## Lesson voice notes (admin → Players)
+
+From your phone open **coachnavid.com/admin/player**, pick a player, tap 🎙️ and talk about the lesson.
+The site turns the recording into text (OpenAI speech-to-text), Claude (`claude-opus-5-5`) writes the lesson
+summary in the player's language — comparing it with their earlier lessons, reports and GlassWall data —
+and a PDF is saved in the player's Drive folder. **Send PDF on WhatsApp** opens a chat with the link ready.
+
+Needs two keys in Netlify → Environment variables, then a redeploy:
+- `OPENAI_API_KEY` — speech-to-text (≈ $0.006 per minute of audio)
+- `ANTHROPIC_API_KEY` — the summary (a few cents per lesson)
+
+Without `OPENAI_API_KEY` you can still type notes. Summaries use Claude's server-side refusal fallback
+(`fallbacks: "default"`), so a rare refusal is retried on another model automatically.

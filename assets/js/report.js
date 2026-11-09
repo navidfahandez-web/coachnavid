@@ -20,11 +20,19 @@ function scorecard(r, L) {
         const s = r.scores?.[a.id] ?? {};
         if (!s.score) return '';
         const before = prev?.scores?.[a.id]?.score;
-        const delta = before ? s.score - before : 0;
+        const delta = before ? Math.round((s.score - before) * 10) / 10 : 0;
+        const shots = a.shots.filter((x) => s.shots?.[x.id]?.score);
+        const shotList = shots.length ? `<ul class="rp__shots">${shots.map((x) => {
+          const v = s.shots[x.id].score;
+          const was = prev?.scores?.[a.id]?.shots?.[x.id]?.score;
+          const d = was ? v - was : 0;
+          return `<li><span>${esc(x[r.lang] ?? x.en)}${s.shots[x.id].note ? ` — ${esc(s.shots[x.id].note)}` : ''}</span><span><b>${v}</b>${d ? ` <span class="rp__delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>` : ''}</span></li>`;
+        }).join('')}</ul>` : '';
         return `<div class="rp__score">
           <div class="rp__score-top"><span>${esc(a[r.lang] ?? a.en)}</span><b>${s.score}<small>/10</small></b></div>
           <div class="rp__bar"><i style="width:${s.score * 10}%"></i>${before ? `<em style="left:${before * 10}%" title="${L.prev}"></em>` : ''}</div>
           ${s.note || before ? `<p>${esc(s.note)}${before ? ` <span class="rp__delta ${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}">${delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '='}${delta || ''} ${L.prev}</span>` : ''}</p>` : ''}
+          ${shotList}
         </div>`;
       }).join('')}</div>
     </section>`;

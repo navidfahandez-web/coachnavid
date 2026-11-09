@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Players · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+  <link rel="stylesheet" href="/assets/css/report.css" />
+  <script type="module" src="/assets/js/admin-player.js"></script>
+</head>
+<body class="admin">
+  <header class="nav">
+    <a class="lockup" href="/admin/player">
+      <span class="lockup__pb"><img src="/assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Players</b><small>Coach Navid · private</small></span>
+    </a>
+    <nav class="nav__links"><a class="pill" href="/admin">Admin</a></nav>
+  </header>
+
+  <main class="wrap admin__main ap">
+    <!-- list of players -->
+    <section data-list hidden>
+      <h2 class="adm-h">players</h2>
+      <input class="ap__search" data-search type="search" placeholder="Search a player…" />
+      <div class="adm-list" data-players></div>
+      <details class="adm-box">
+        <summary>＋ New player</summary>
+        <form class="rb__row" data-new-player>
+          <label class="field">WhatsApp <input name="phone" type="tel" value="+971 " required /></label>
+          <label class="field">First name <input name="firstName" required /></label>
+          <label class="field">Last name <input name="lastName" /></label>
+          <button class="btn btn--lime" type="submit">Open profile</button>
+        </form>
+      </details>
+    </section>
+
+    <!-- one player -->
+    <section data-profile hidden>
+      <p class="kicker"><a href="/admin/player">← All players</a></p>
+      <h1 class="ap__name" data-name></h1>
+      <p class="note" data-phone></p>
+      <div class="ap__links" data-links></div>
+
+      <form class="adm-box ap__new" data-new-lesson>
+        <h3>New lesson</h3>
+        <div class="rb__row">
+          <label class="field">Date <input name="date" type="date" /></label>
+          <label class="field">Summary in
+            <select name="lang"><option value="en">English</option><option value="lt">Lietuvių</option></select>
+          </label>
+        </div>
+        <div class="ap__rec">
+          <button class="ap__mic" type="button" data-rec aria-label="Record voice note">🎙️</button>
+          <div>
+            <b data-rec-label>Tap to record</b>
+            <p class="note" data-rec-info>Talk about the lesson: what you worked on, how each shot went, what to practise.</p>
+          </div>
+        </div>
+        <audio data-playback controls hidden></audio>
+        <label class="field">…or upload a voice note (e.g. from WhatsApp or Voice Memos)
+          <input name="audio" type="file" accept="audio/*" />
+        </label>
+        <label class="field">Extra notes (optional) <textarea name="notes" rows="3" placeholder="Anything you want to add in writing"></textarea></label>
+        <p class="form__error" data-new-error hidden></p>
+        <button class="btn btn--lime btn--block" type="submit">Create lesson summary</button>
+        <p class="note" data-ai-info></p>
+      </form>
+
+      <h2 class="adm-h">lessons <span data-count></span></h2>
+      <div class="ap__lessons" data-lessons></div>
+    </section>
+  </main>
+  <div class="toast" data-toast hidden role="status"></div>
+</body>
+</html>

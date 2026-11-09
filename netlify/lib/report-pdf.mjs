@@ -21,7 +21,7 @@ function html(r, history) {
     const before = prev?.scores?.[a.id]?.score;
     const d = before ? s.score - before : null;
     return `<tr>
-      <td style="padding:4pt 6pt;border-bottom:1px solid #eeeeee;width:42%"><b>${esc(a[r.lang] ?? a.en)}</b><br><span style="color:#666666;font-size:9pt">${esc(s.note)}</span></td>
+      <td style="padding:4pt 6pt;border-bottom:1px solid #eeeeee;width:42%"><b>${esc(a[r.lang] ?? a.en)}</b><br><span style="color:#666666;font-size:9pt">${esc(s.note)}</span>${a.shots.filter((x) => s.shots?.[x.id]?.score).map((x) => `<br><span style="font-size:8.5pt">· ${esc(x[r.lang] ?? x.en)}: <b>${s.shots[x.id].score}</b>/10${s.shots[x.id].note ? ` — ${esc(s.shots[x.id].note)}` : ''}</span>`).join('')}</td>
       <td style="padding:4pt 6pt;border-bottom:1px solid #eeeeee;font-size:9pt">${bar(s.score)}</td>
       <td style="padding:4pt 6pt;border-bottom:1px solid #eeeeee;text-align:right"><b style="font-size:14pt;color:${ORANGE}">${s.score}</b>/10${d ? `<br><span style="font-size:8pt;color:${d > 0 ? '#1f9d3a' : '#c0392b'}">${d > 0 ? '+' : ''}${d} ${L.prev}</span>` : ''}</td>
     </tr>`;
@@ -62,16 +62,19 @@ function html(r, history) {
   </body></html>`;
 }
 
-// Returns the new PDF's Drive file id. Replaces the previous PDF if there was one.
-export async function createReportPdf(r, history = []) {
-  const name = `${r.ref} – ${KINDS[r.kind].name} – ${r.student.firstName} ${r.student.lastName}`;
-  const docId = await uploadSimple({ name: `${name} (temp)`, mimeType: 'application/vnd.google-apps.document', parents: [r.folderId] }, html(r, history), 'text/html; charset=UTF-8');
+// HTML → Google Doc → PDF in `folderId`; deletes `replaceId` (an older PDF) and the temp Doc.
+export async function htmlToPdf(htmlText, name, folderId, replaceId = null) {
+  const docId = await uploadSimple({ name: `${name} (temp)`, mimeType: 'application/vnd.google-apps.document', parents: [folderId] }, htmlText, 'text/html; charset=UTF-8');
   try {
     const pdf = await exportFile(docId, 'application/pdf');
-    const pdfId = await uploadSimple({ name: `${name}.pdf`, mimeType: 'application/pdf', parents: [r.folderId] }, pdf, 'application/pdf');
-    if (r.pdfFileId) await deleteFile(r.pdfFileId).catch(() => {});
+    const pdfId = await uploadSimple({ name: `${name}.pdf`, mimeType: 'application/pdf', parents: [folderId] }, pdf, 'application/pdf');
+    if (replaceId) await deleteFile(replaceId).catch(() => {});
     return pdfId;
   } finally {
     await deleteFile(docId).catch(() => {});
   }
 }
+
+// Returns the new PDF's Drive file id. Replaces the previous PDF if there was one.
+export const createReportPdf = (r, history = []) =>
+  htmlToPdf(html(r, history), `${r.ref} – ${KINDS[r.kind].name} – ${r.student.firstName} ${r.student.lastName}`, r.folderId, r.pdfFileId);

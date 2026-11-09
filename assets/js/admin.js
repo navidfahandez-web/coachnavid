@@ -426,6 +426,7 @@ async function loadPlayers() {
         </div>
         <div class="bk__actions" style="grid-column:auto">
           <a class="btn btn--ghost" href="/player/${esc(p.token)}" target="_blank" rel="noopener">📈 Progress ↗</a>
+          <a class="btn btn--lime" href="/admin/player?phone=${encodeURIComponent(p.phone)}">🎙️ Lessons</a>
           <a class="btn btn--ghost" href="/admin/glasswall?phone=${encodeURIComponent(p.phone)}">＋ GlassWall</a>
         </div>
       </article>`;

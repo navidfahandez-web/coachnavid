@@ -163,3 +163,46 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 .rb__gw { border-color: #6fd3e0; }
 .rb__gw p { margin: 0 0 6px; font-size: 14px; color: var(--ink-2); }
 @media (max-width: 640px) { .gw__metric { grid-template-columns: 1fr 80px; } }
+
+/* shots inside each scorecard area (builder) */
+.rb__area { border-bottom: 1px solid var(--line-soft); padding: 6px 0 8px; }
+.rb__shots summary { cursor: pointer; font-size: 13px; color: var(--accent); margin: 6px 0 4px; }
+.rb__shots summary small { color: var(--muted); margin-left: 6px; }
+.rb__shot { display: grid; grid-template-columns: 1fr 70px 2fr; gap: 8px; align-items: center; font-size: 13px; padding: 3px 0 3px 14px; color: var(--ink-2); }
+.rb__shot input { font: inherit; color: var(--ink); background: #111; border: 1.5px solid var(--line-soft); border-radius: 10px; padding: 6px 8px; min-width: 0; }
+@media (max-width: 640px) { .rb__shot { grid-template-columns: 1fr 64px; } .rb__shot input[data-shot-note] { grid-column: 1 / -1; } }
+/* shots on the report page */
+.rp__shots { list-style: none; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line-soft); display: grid; gap: 3px; font-size: 13px; }
+.rp__shots li { display: flex; justify-content: space-between; gap: 8px; color: var(--ink-2); }
+.rp__shots b { color: var(--ink); }
+.pl__shots { border-collapse: collapse; width: 100%; font-size: 14px; }
+.pl__shots th, .pl__shots td { padding: 6px 10px; border-bottom: 1px solid var(--line-soft); text-align: center; }
+.pl__shots tbody th { text-align: left; font-weight: 500; }
+.pl__shots-area th { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding-top: 14px; font-weight: 700 !important; }
+
+/* ---------- player profiles on Navid's phone (admin-player.html) ---------- */
+.ap { max-width: 760px; padding-bottom: 60px; }
+.ap .kicker a { color: var(--accent); text-decoration: none; }
+.ap__name { font-size: clamp(2rem, 8vw, 3rem); letter-spacing: -.04em; margin: 0; line-height: 1; }
+.ap__links { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+.ap__links .btn { padding: 10px 16px; font-size: 14px; }
+.ap__search { width: 100%; font: inherit; color: var(--ink); background: #111; border: 1.5px solid var(--line-soft); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.ap__row { text-decoration: none; color: var(--ink); }
+.ap__new { display: grid; gap: 12px; margin-top: 18px; }
+.ap__new h3 { margin: 0; }
+.ap__new .field input, .ap__new .field select, .ap__new .field textarea, .ap__lesson .field input, .ap__lesson .field textarea, .ap__lesson .field select { width: 100%; }
+.ap__rec { display: flex; gap: 16px; align-items: center; }
+.ap__rec p { margin: 2px 0 0; }
+.ap__mic { flex: none; width: 84px; height: 84px; border-radius: 50%; border: 0; background: var(--accent); font-size: 36px; cursor: pointer; box-shadow: 0 8px 30px rgba(255, 91, 31, .35); }
+.ap__mic.is-rec { background: #d62828; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.07); box-shadow: 0 0 0 14px rgba(214, 40, 40, .15); } }
+.ap__new audio { width: 100%; }
+.ap__lessons { display: grid; gap: 12px; }
+.ap__lesson { display: grid; gap: 8px; margin-top: 0; }
+.ap__lesson h3 { margin: 4px 0 0; font-size: 19px; }
+.ap__lesson p { margin: 0; color: var(--ink-2); }
+.ap__lesson-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ap__edit summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+.ap__edit[open] { display: grid; gap: 10px; }
+.ap__del { justify-self: start; background: transparent; color: var(--muted); border-color: var(--line-soft); cursor: pointer; font-size: 13px; }
+.pl__lesson { border-left: 3px solid var(--accent) !important; }

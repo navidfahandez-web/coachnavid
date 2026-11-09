@@ -3,13 +3,73 @@
 
 // Match Report scorecard (1–10 each)
 export const AREAS = [
-  { id: 'ground',   en: 'Groundstrokes & walls',            lt: 'Smūgiai nuo žemės ir sienos' },
-  { id: 'volley',   en: 'Volleys & net play',               lt: 'Voledžiai ir žaidimas prie tinklo' },
-  { id: 'overhead', en: 'Overheads (bandeja, víbora, smash)', lt: 'Smūgiai virš galvos (bandeja, víbora, smash)' },
-  { id: 'position', en: 'Positioning & movement',           lt: 'Pozicija ir judėjimas' },
-  { id: 'tactics',  en: 'Tactics & decisions',              lt: 'Taktika ir sprendimai' },
-  { id: 'partner',  en: 'Partner play & communication',     lt: 'Žaidimas su partneriu ir komunikacija' },
+  { id: 'ground', en: 'Groundstrokes & walls', lt: 'Smūgiai nuo žemės ir sienos', shots: [
+    { id: 'fh_before', en: 'Forehand before the glass', lt: 'Forhendas prieš sieną' },
+    { id: 'bh_before', en: 'Backhand before the glass', lt: 'Bekhendas prieš sieną' },
+    { id: 'fh_after', en: 'Forehand after the back glass', lt: 'Forhendas po galinės sienos' },
+    { id: 'bh_after', en: 'Backhand after the back glass', lt: 'Bekhendas po galinės sienos' },
+    { id: 'side_wall', en: 'Side-wall & double-wall exits', lt: 'Šoninė ir dviguba siena' },
+    { id: 'contrapared', en: 'Back-wall shot (contrapared)', lt: 'Contrapared' },
+    { id: 'bajada', en: 'Attacking off the back wall (bajada)', lt: 'Bajada (puolimas nuo sienos)' },
+    { id: 'chiquita', en: 'Chiquita', lt: 'Chiquita' },
+    { id: 'lob', en: 'Defensive lob', lt: 'Gynybinis lobas' },
+    { id: 'serve', en: 'Serve', lt: 'Padavimas' },
+    { id: 'return', en: 'Return of serve', lt: 'Padavimo priėmimas' },
+  ] },
+  { id: 'volley', en: 'Volleys & net play', lt: 'Voledžiai ir žaidimas prie tinklo', shots: [
+    { id: 'fh_volley', en: 'Forehand volley', lt: 'Forhendo voledžas' },
+    { id: 'bh_volley', en: 'Backhand volley', lt: 'Bekhendo voledžas' },
+    { id: 'low_volley', en: 'Low volley', lt: 'Žemas voledžas' },
+    { id: 'block_volley', en: 'Block volley vs hard balls', lt: 'Blokuojantis voledžas' },
+    { id: 'half_volley', en: 'Half-volley (bote pronto)', lt: 'Pusvoledis (bote pronto)' },
+    { id: 'drop_volley', en: 'Drop volley (dejada)', lt: 'Trumpas voledžas (dejada)' },
+  ] },
+  { id: 'overhead', en: 'Overheads (bandeja, víbora, smash)', lt: 'Smūgiai virš galvos (bandeja, víbora, smash)', shots: [
+    { id: 'bandeja', en: 'Bandeja', lt: 'Bandeja' },
+    { id: 'vibora', en: 'Víbora', lt: 'Víbora' },
+    { id: 'gancho', en: 'Hook (gancho)', lt: 'Gancho' },
+    { id: 'flat_smash', en: 'Flat smash', lt: 'Plokščias smūgis' },
+    { id: 'por3', en: 'Kick smash out over the side (por 3)', lt: 'Smash per šoną (por 3)' },
+    { id: 'por4', en: 'Smash out over the back (por 4)', lt: 'Smash per galą (por 4)' },
+  ] },
+  { id: 'position', en: 'Positioning & movement', lt: 'Pozicija ir judėjimas', shots: [
+    { id: 'split_step', en: 'Split step', lt: 'Split step' },
+    { id: 'wall_footwork', en: 'Turning & footwork to the wall', lt: 'Pasisukimas ir kojų darbas prie sienos' },
+    { id: 'net_recovery', en: 'Recovering to the net after a lob', lt: 'Grįžimas prie tinklo po lobo' },
+    { id: 'pair_movement', en: 'Moving together as a pair', lt: 'Judėjimas kartu su partneriu' },
+    { id: 'net_position', en: 'Court position & balance at the net', lt: 'Pozicija ir pusiausvyra prie tinklo' },
+  ] },
+  { id: 'tactics', en: 'Tactics & decisions', lt: 'Taktika ir sprendimai', shots: [
+    { id: 'shot_selection', en: 'Shot selection', lt: 'Smūgių pasirinkimas' },
+    { id: 'lob_or_chiquita', en: 'Lob or chiquita — the right choice', lt: 'Lobas ar chiquita – teisingas pasirinkimas' },
+    { id: 'middle', en: 'Playing through the middle', lt: 'Žaidimas per vidurį' },
+    { id: 'patience', en: 'Patience & building the point', lt: 'Kantrybė ir taško kūrimas' },
+    { id: 'high_ball', en: 'Finishing the high ball', lt: 'Aukšto kamuolio užbaigimas' },
+    { id: 'big_points', en: 'Big points (30–30, deuce)', lt: 'Svarbūs taškai (30–30, lygu)' },
+  ] },
+  { id: 'partner', en: 'Partner play & communication', lt: 'Žaidimas su partneriu ir komunikacija', shots: [
+    { id: 'calling', en: 'Calling balls', lt: 'Kamuolių šaukimas' },
+    { id: 'cover_middle', en: 'Covering the middle', lt: 'Vidurio dengimas' },
+    { id: 'switches', en: 'Switches (cambios)', lt: 'Pasikeitimai (cambios)' },
+    { id: 'support', en: 'Support & body language', lt: 'Palaikymas ir kūno kalba' },
+  ] },
+  { id: 'physical', en: 'Physical condition', lt: 'Fizinė forma', shots: [
+    { id: 'speed', en: 'Speed & reaction', lt: 'Greitis ir reakcija' },
+    { id: 'first_step', en: 'First-step explosiveness', lt: 'Pirmo žingsnio sprogstamumas' },
+    { id: 'endurance', en: 'Endurance (long rallies, 3rd set)', lt: 'Ištvermė (ilgi taškai, 3 setas)' },
+    { id: 'agility', en: 'Agility & change of direction', lt: 'Vikrumas ir krypties keitimas' },
+    { id: 'low_positions', en: 'Low positions & flexibility', lt: 'Žemos pozicijos ir lankstumas' },
+    { id: 'recovery', en: 'Recovery between points', lt: 'Atsigavimas tarp taškų' },
+  ] },
 ];
+export const SHOTS = AREAS.flatMap((a) => a.shots.map((s) => ({ ...s, area: a.id })));
+
+// Area score = what Navid typed, else the average of the shots he scored.
+export function areaScore(s) {
+  if (Number.isFinite(s?.score)) return s.score;
+  const v = Object.values(s?.shots ?? {}).map((x) => x?.score).filter(Number.isFinite);
+  return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
+}
 
 // Report kinds. A Progress Plan is made of Quick Fix and Match Report reports.
 export const KINDS = {

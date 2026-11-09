@@ -1,6 +1,6 @@
 // Report builder: coachnavid.com/admin/report?ref=VA0001
 import { request } from './api.js';
-import { AREAS, DRILLS, KINDS } from '../../shared/report.js';
+import { AREAS, DRILLS, KINDS, areaScore } from '../../shared/report.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -67,10 +67,23 @@ function renderKind() {
 
   $('[data-scores]').innerHTML = AREAS.map((a) => {
     const s = report.scores?.[a.id] ?? {};
-    return `<div class="rb__score" data-area="${a.id}">
-      <span>${esc(a.en)}</span>
-      <input type="number" min="1" max="10" data-score value="${esc(s.score ?? '')}" aria-label="${esc(a.en)} score" />
-      <input data-note value="${esc(s.note ?? '')}" placeholder="One line, e.g. solid cross-court, rushes the lob" />
+    const shots = s.shots ?? {};
+    const scored = a.shots.filter((x) => shots[x.id]?.score).length;
+    const manual = s.manual === false ? '' : (s.score ?? ''); // older reports: score was always typed
+    return `<div class="rb__area" data-area="${a.id}">
+      <div class="rb__score">
+        <span>${esc(a.en)}</span>
+        <input type="number" min="1" max="10" step="1" data-score value="${esc(manual)}" placeholder="${esc(areaScore({ shots }) ?? '–')}" aria-label="${esc(a.en)} score" title="Leave empty to use the average of the shots" />
+        <input data-note value="${esc(s.note ?? '')}" placeholder="One line, e.g. solid cross-court, rushes the lob" />
+      </div>
+      <details class="rb__shots" ${scored ? 'open' : ''}>
+        <summary>Shots <small data-shot-count>${scored ? `${scored} scored` : 'score only what you saw'}</small></summary>
+        ${a.shots.map((x) => `<div class="rb__shot" data-shot="${x.id}">
+          <span>${esc(x.en)}</span>
+          <input type="number" min="1" max="10" step="1" data-shot-score value="${esc(shots[x.id]?.score ?? '')}" aria-label="${esc(x.en)} score" />
+          <input data-shot-note value="${esc(shots[x.id]?.note ?? '')}" placeholder="Note (optional)" />
+        </div>`).join('')}
+      </details>
     </div>`;
   }).join('');
 
@@ -117,8 +130,11 @@ function collect() {
     Object.fromEntries([...el.querySelectorAll('[data-k]')].map((i) => [i.dataset.k, i.value])));
   const weeks = [...document.querySelectorAll('[data-week]')].map((el) =>
     Object.fromEntries([...el.querySelectorAll('[data-k]')].map((i) => [i.dataset.k, i.value])));
-  const scores = Object.fromEntries([...document.querySelectorAll('[data-area]')].map((el) =>
-    [el.dataset.area, { score: el.querySelector('[data-score]').value, note: el.querySelector('[data-note]').value }]));
+  const scores = Object.fromEntries([...document.querySelectorAll('[data-area]')].map((el) => [el.dataset.area, {
+    score: el.querySelector('[data-score]').value, note: el.querySelector('[data-note]').value,
+    shots: Object.fromEntries([...el.querySelectorAll('[data-shot]')].map((x) => [x.dataset.shot,
+      { score: x.querySelector('[data-shot-score]').value, note: x.querySelector('[data-shot-note]').value }])),
+  }]));
   return {
     kind: val('kind'), lang: val('lang'), headline: val('headline'), summary: val('summary'),
     strengths: val('strengths'), closing: val('closing'), videoFileId: val('videoFileId'), mediaFileId: val('mediaFileId'),
@@ -134,7 +150,16 @@ async function save() {
 }
 
 // ---------- events ----------
-form().addEventListener('input', () => { dirty = true; $('[data-saved]').textContent = 'Unsaved changes'; });
+form().addEventListener('input', (e) => {
+  dirty = true;
+  $('[data-saved]').textContent = 'Unsaved changes';
+  const area = e.target.closest('[data-area]');
+  if (area && e.target.matches('[data-shot-score]')) { // show the live shot average as the area's placeholder
+    const vals = [...area.querySelectorAll('[data-shot-score]')].map((i) => Number(i.value)).filter((n) => n >= 1 && n <= 10);
+    area.querySelector('[data-score]').placeholder = vals.length ? String(Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10) : '–';
+    area.querySelector('[data-shot-count]').textContent = vals.length ? `${vals.length} scored` : 'score only what you saw';
+  }
+});
 form().addEventListener('change', (e) => {
   if (e.target.name === 'kind') {
     report = { ...report, ...collect() }; // keep what's typed while switching

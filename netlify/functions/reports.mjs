@@ -12,7 +12,7 @@ import { listFolder, shareFolder } from '../lib/google.mjs';
 import { SITE_URL } from '../lib/google.mjs';
 import { createReportPdf } from '../lib/report-pdf.mjs';
 import { ensurePlayer as savePlayer, externalKey, playerKey, playerTokenKey } from '../lib/players.mjs';
-import { AREAS, KINDS, kindForPlan } from '../../shared/report.js';
+import { AREAS, KINDS, areaScore, kindForPlan } from '../../shared/report.js';
 
 const UPLOADS = 'uploads/list';
 const INDEX = 'reports/index'; // [{ ref, token, phone, kind, status, publishedAt }]
@@ -73,8 +73,15 @@ function sanitize(r, b) {
   if (spec.scores) {
     for (const a of AREAS) {
       const s = b.scores?.[a.id] ?? {};
-      const n = Math.round(Number(s.score));
-      scores[a.id] = { score: n >= 1 && n <= 10 ? n : null, note: line(s.note, 160) };
+      const num = (v) => { const n = Math.round(Number(v)); return n >= 1 && n <= 10 ? n : null; };
+      const shots = {};
+      for (const shot of a.shots) {
+        const x = s.shots?.[shot.id];
+        if (num(x?.score) !== null || x?.note) shots[shot.id] = { score: num(x?.score), note: line(x?.note, 120) };
+      }
+      const manual = num(s.score);
+      // Stored score is final: typed by Navid, else the average of the shots he scored
+      scores[a.id] = { score: manual ?? areaScore({ shots }), manual: manual !== null, note: line(s.note, 160), shots };
     }
   }
   const weeks = (Array.isArray(b.weeks) ? b.weeks : []).slice(0, spec.weeks).map((w) => ({ focus: line(w?.focus, 100), plan: str(w?.plan, 800) }));
@@ -134,6 +141,8 @@ export default async (req, context) => {
         fixes: r.items.filter((i) => i.title).map((i) => i.title), pdfFileId: r.pdfFileId ?? null,
       })),
       external: await readJSON(externalKey(pointer.phone), []),
+      lessons: (await readJSON(`lessons/${pointer.phone}`, [])).filter((l) => l.status === 'ready')
+        .map(({ id, date, lang, summary, pdfFileId }) => ({ id, date, lang, summary, pdfFileId })),
     });
   }
 

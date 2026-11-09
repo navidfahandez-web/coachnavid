@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Padel lesson booking page for Coach Navid Fahandezh (Lithuania) with WhatsApp confirmation",
   "dependencies": {
+    "@anthropic-ai/sdk": "1.1.0",
     "@netlify/blobs": "11.1.7"
   }
 }

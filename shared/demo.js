@@ -61,6 +61,16 @@ const ROWS = [
 ];
 
 const AREA_IDS = ['ground', 'volley', 'overhead', 'position', 'tactics', 'partner'];
+// A few shots per area, improving report by report (m = index of the Match Report)
+const DEMO_SHOTS = {
+  ground: { fh_after: [4, 5, 5, 6, 6, 7, 7], bh_before: [6, 6, 7, 7, 7, 7, 8], chiquita: [3, 3, 4, 5, 5, 6, 7], lob: [4, 5, 5, 5, 6, 6, 7] },
+  volley: { fh_volley: [6, 6, 6, 7, 7, 7, 8], low_volley: [4, 4, 5, 6, 6, 7, 7], block_volley: [5, 5, 5, 5, 6, 7, 8] },
+  overhead: { bandeja: [3, 4, 5, 5, 6, 6, 7], vibora: [2, 3, 4, 4, 5, 6, 6], flat_smash: [5, 5, 5, 6, 6, 6, 7] },
+  position: { split_step: [3, 4, 5, 5, 6, 7, 7], net_recovery: [4, 4, 5, 6, 6, 7, 7] },
+  tactics: { patience: [3, 4, 4, 4, 5, 6, 7], middle: [4, 4, 5, 5, 6, 7, 7] },
+  partner: { calling: [4, 5, 6, 6, 6, 7, 8], cover_middle: [5, 5, 5, 6, 6, 7, 8] },
+};
+const demoShots = (area, m) => Object.fromEntries(Object.entries(DEMO_SHOTS[area] ?? {}).map(([id, v]) => [id, { score: v[m], note: '' }]));
 const NOTES = {
   ground: 'Walls getting more natural', volley: 'Quick hands, depth improving', overhead: 'Bandeja depth is the key',
   position: 'Moving better as a pair', tactics: 'Patience pays', partner: 'Talk on every ball',
@@ -76,7 +86,7 @@ export const DEMO_REPORTS = ROWS.map(([date, kind, headline, scores, items], i) 
     ? 'This is an example report. A full match, watched point by point: what wins you points, what costs you points, and the three things that will make the biggest difference right now.'
     : 'This is an example report. One clip, one shot, three clear corrections — with a drill for each.',
   strengths: 'Quick hands at the net, great energy, and you clearly listen — the fixes from the last report are already showing.',
-  scores: scores ? Object.fromEntries(AREA_IDS.map((id, n) => [id, { score: scores[n], note: NOTES[id] }])) : {},
+  scores: scores ? Object.fromEntries(AREA_IDS.map((id, n) => [id, { score: scores[n], note: NOTES[id], shots: demoShots(id, ROWS.slice(0, i + 1).filter((x) => x[1] === 'match').length - 1) }])) : {},
   items,
   weeks: kind === 'match' ? [
     { focus: items[0].title, plan: `2 × 45 min: ${items[0].drillName}, then 15 min of points using it.` },

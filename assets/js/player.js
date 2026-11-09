@@ -16,6 +16,7 @@ const T = {
     timeline: 'All your reports', fixes: 'Fixes', open: 'Open', table: 'Show the numbers', report: 'Report',
     grow: 'Your charts grow with every Match Report.', none: 'No Match Report scores yet — your charts start with your first Match Report.',
     best: 'Biggest improvement', avg: 'average',
+    shots: 'Shots', first: 'First', latest: 'Latest', lesson: 'Lesson with Navid', nextFocus: 'Next focus',
     gw: 'GlassWall AI — stats over time', gwNote: 'From GlassWall’s court-camera AI analysis of your matches.', gwFocus: 'Latest GlassWall focus areas', gwEntry: 'GlassWall AI analysis', gwCount: 'GlassWall analyses', since: 'since first',
   },
   lt: {
@@ -24,6 +25,7 @@ const T = {
     timeline: 'Visos jūsų ataskaitos', fixes: 'Pataisymai', open: 'Atidaryti', table: 'Rodyti skaičius', report: 'Ataskaita',
     grow: 'Grafikai pildosi su kiekviena Match Report.', none: 'Dar nėra Match Report įvertinimų — grafikai prasidės nuo pirmos Match Report.',
     best: 'Didžiausias pagerėjimas', avg: 'vidurkis',
+    shots: 'Smūgiai', first: 'Pirmas', latest: 'Naujausias', lesson: 'Treniruotė su Navid', nextFocus: 'Kitas tikslas',
     gw: 'GlassWall AI — statistika laike', gwNote: 'Iš GlassWall kortų kamerų AI analizės.', gwFocus: 'Naujausios GlassWall sritys', gwEntry: 'GlassWall AI analizė', gwCount: 'GlassWall analizės', since: 'nuo pirmos',
   },
 };
@@ -68,8 +70,29 @@ function render(d) {
   const areas = AREAS.map((a) => {
     const vals = matches.map((r) => r.scores?.[a.id]?.score ?? null);
     const known = vals.filter((v) => v !== null);
-    return { ...a, vals, avg: mean(known), delta: known.length > 1 ? known.at(-1) - known[0] : null };
-  });
+    return { ...a, vals, avg: mean(known), delta: known.length > 1 ? round1(known.at(-1) - known[0]) : null };
+  }).filter((a) => a.vals.some((v) => v !== null)); // e.g. Physical condition only once it's been scored
+
+  // every shot Navid has scored, first → latest
+  const shots = AREAS.flatMap((a) => a.shots.map((x) => {
+    const pts = matches.map((r) => r.scores?.[a.id]?.shots?.[x.id]?.score).filter(Number.isFinite);
+    return pts.length ? { ...x, area: a, first: pts[0], last: pts.at(-1), n: pts.length } : null;
+  })).filter(Boolean);
+  const shotTable = shots.length ? `
+    <section class="rp__sec">
+      <h2 class="rp__h">${L.shots}</h2>
+      <div class="pl__scroll"><table class="pl__shots">
+        <thead><tr><th></th><th>${L.first}</th><th>${L.latest}</th><th></th></tr></thead>
+        <tbody>${AREAS.filter((a) => shots.some((x) => x.area.id === a.id)).map((a) => `
+          <tr class="pl__shots-area"><th colspan="4">${esc(a[lang] ?? a.en)}</th></tr>
+          ${shots.filter((x) => x.area.id === a.id).map((x) => {
+            const d = x.n > 1 ? x.last - x.first : null;
+            return `<tr><th>${esc(x[lang] ?? x.en)}</th><td>${x.n > 1 ? x.first : '—'}</td><td><b>${x.last}</b></td>
+              <td>${d ? `<span class="rp__delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ '}${d}</span>` : ''}</td></tr>`;
+          }).join('')}`).join('')}
+        </tbody>
+      </table></div>
+    </section>` : '';
   const best = areas.filter((a) => a.delta > 0).sort((a, b) => b.delta - a.delta)[0];
 
   const ext = d.external ?? [];
@@ -149,7 +172,16 @@ function render(d) {
       <ol class="pl__timeline">${[
         ...d.reports.map((r) => ({ at: r.publishedAt, r })),
         ...ext.map((e) => ({ at: `${e.date}T${e.time || '12:00'}:00Z`, e })),
-      ].sort((a, b) => b.at.localeCompare(a.at)).map(({ r, e }) => (e ? `
+        ...(d.lessons ?? []).map((l) => ({ at: `${l.date}T13:00:00Z`, l })),
+      ].sort((a, b) => b.at.localeCompare(a.at)).map(({ r, e, l }) => (l ? `
+        <li class="pl__lesson">
+          <div class="pl__when">${esc(day(l.date, lang))}<small>${L.lesson}</small></div>
+          <div>
+            <b>${esc(l.summary?.title)}</b>
+            ${l.pdfFileId ? `<a class="pl__pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(l.pdfFileId)}">PDF ↓</a>` : ''}
+            ${l.summary?.next_focus ? `<p>${L.nextFocus}: ${esc(l.summary.next_focus)}</p>` : ''}
+          </div>
+        </li>` : e ? `
         <li class="pl__ext">
           <div class="pl__when">${esc(day(e.date, lang))}<small>${L.gwEntry}</small></div>
           <div>
@@ -179,7 +211,7 @@ function render(d) {
       <h1 class="rp__title">${esc(d.firstName)} ${esc(d.lastName)}</h1>
       <p class="rp__by">Coach Navid Fahandezh · Technical Director, Padel Beast</p>
     </section>
-    ${tiles}${charts}${glasswall}${timeline}`;
+    ${tiles}${charts}${shotTable}${glasswall}${timeline}`;
 }
 
 // ---------- hover tooltip ----------

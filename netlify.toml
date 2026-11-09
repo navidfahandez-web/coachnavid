@@ -52,6 +52,12 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 
+# Player profiles + lesson voice notes (admin, phone-friendly)
+[[redirects]]
+  from = "/admin/player"
+  to = "/admin-player.html"
+  status = 200
+
 # GlassWall import (admin)
 [[redirects]]
   from = "/admin/glasswall"
