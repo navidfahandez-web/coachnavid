@@ -206,3 +206,14 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 .ap__edit[open] { display: grid; gap: 10px; }
 .ap__del { justify-self: start; background: transparent; color: var(--muted); border-color: var(--line-soft); cursor: pointer; font-size: 13px; }
 .pl__lesson { border-left: 3px solid var(--accent) !important; }
+
+/* AI first draft (report builder) */
+.rb__ai { border-color: var(--accent); }
+.rb__ai h3 { margin: 0 0 4px; }
+.rb__ai-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.rb__ai-top .note { margin: 0; max-width: 520px; }
+.rb__ai-notes { background: rgba(255, 91, 31, .1); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; display: grid; gap: 6px; }
+.rb__ai-notes p { margin: 0; color: var(--ink-2); }
+.rb__ai-notes b { color: var(--ink); }
+.rb__ai .upload__progress { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+.rb__ai .upload__progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }

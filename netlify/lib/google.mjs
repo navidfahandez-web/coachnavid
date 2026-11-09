@@ -166,3 +166,12 @@ export async function exportFile(id, mimeType) {
 
 export const deleteFile = (id) => drive(`files/${id}`, { method: 'DELETE' });
 export const downloadUrl = (id) => `https://drive.google.com/uc?export=download&id=${id}`;
+
+// One byte range of a Drive file (used to stream big videos on to other services in pieces).
+export async function downloadRange(id, start, end) {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
+    headers: { Authorization: `Bearer ${await accessToken()}`, Range: `bytes=${start}-${end}` },
+  });
+  if (!res.ok && res.status !== 206) throw new Error(`Google Drive download: ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}

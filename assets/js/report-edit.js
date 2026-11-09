@@ -100,9 +100,43 @@ function renderFiles() {
   $('[name=mediaFileId]').innerHTML = fileOptions('media', report.mediaFileId);
 }
 
+// ---------- AI first draft ----------
+let aiAvailable = false;
+let aiTimer = null;
+function renderAi() {
+  const ai = report.ai ?? {};
+  const btn = $('[data-ai-run]');
+  const bar = $('[data-ai-progress]');
+  btn.disabled = !aiAvailable || ai.status === 'running';
+  btn.textContent = ai.status === 'running' ? 'Working…' : ai.status === 'ready' ? 'Make a new AI draft' : 'Make AI draft';
+  bar.hidden = ai.status !== 'running';
+  bar.querySelector('i').style.width = `${ai.progress ?? 0}%`;
+  $('[data-ai-status]').textContent = !aiAvailable ? 'Needs GEMINI_VIDEO_KEY in Netlify (Google AI Studio key) — see the README.'
+    : ai.status === 'running' ? `${ai.step ?? 'Working…'}${ai.progress && ai.progress < 100 ? ` ${ai.progress}%` : ''} — a full match takes a few minutes; you can leave this page.`
+    : ai.status === 'failed' ? `⚠️ ${ai.error}`
+    : ai.status === 'ready' ? `✅ Draft filled in below (${ai.model}, ${new Date(ai.at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}). Check every timestamp, score and fix before publishing.`
+    : 'The AI watches the student’s video with your framework and fills in this report for you to check.';
+  const notes = $('[data-ai-notes]');
+  notes.hidden = ai.status !== 'ready' || !(ai.player || ai.notes);
+  notes.innerHTML = `${ai.player ? `<p><b>Who it analysed:</b> ${esc(ai.player)}</p>` : ''}${ai.notes ? `<p><b>Not sure about:</b> ${esc(ai.notes)}</p>` : ''}`;
+  clearTimeout(aiTimer);
+  if (ai.status === 'running') aiTimer = setTimeout(pollAi, 5000);
+}
+async function pollAi() {
+  try {
+    const data = await api('GET');
+    if (data.report.ai?.status === 'ready') {
+      dirty = false;
+      render(data);
+      toast('AI draft ready ✅ — check it before publishing.', 10000);
+    } else { report.ai = data.report.ai; renderAi(); }
+  } catch { aiTimer = setTimeout(pollAi, 10000); }
+}
+
 function render(data) {
   report = data.report;
   files = data.files;
+  aiAvailable = Boolean(data.aiAvailable);
   const u = data.upload;
   $('[data-ref]').textContent = report.ref;
   $('[data-student]').textContent = `${report.student.firstName} ${report.student.lastName}`;
@@ -122,6 +156,7 @@ function render(data) {
   renderKind();
   form().hidden = false;
   $('[data-status]').hidden = true;
+  renderAi();
 }
 
 // ---------- collect ----------
@@ -198,6 +233,17 @@ $('[data-publish]').addEventListener('click', async () => {
   } catch (err) { win?.close(); toast(esc(err.message)); }
 });
 addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+$('[data-ai-run]').addEventListener('click', async () => {
+  const hasContent = report.headline || report.items?.some((i) => i.title);
+  if (hasContent && !confirm('The AI draft will replace what’s in this report now. Continue?')) return;
+  try {
+    if (val('videoFileId') && val('videoFileId') !== report.videoFileId) await save(); // analyse the video picked above
+    const r = await api('POST', '/ai');
+    report = { ...report, ai: r.report.ai };
+    renderAi();
+  } catch (err) { toast(esc(err.message)); }
+});
 
 // ---------- boot ----------
 if (!password) location.href = '/admin';

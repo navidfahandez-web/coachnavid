@@ -176,3 +176,16 @@ No keys needed: Netlify's **AI Gateway** gives the functions access to Claude an
 Netlify credits (a few cents per lesson). To use your own accounts instead, set `ANTHROPIC_API_KEY` and/or
 `OPENAI_API_KEY` in Netlify → Environment variables. With your own Anthropic key, summaries also use Claude's
 server-side refusal fallback (`fallbacks: "default"`); the gateway doesn't forward beta headers, so it's off there.
+
+## AI first draft of video reports (report builder → 🤖 Make AI draft)
+
+The student's video is streamed from their Drive folder to Google **Gemini** (it watches video natively, up to
+about an hour per match), with Navid's framework: the 7 areas / 43 shots, the drill library, the plan type, the
+student's note ("red shirt, revés side"), earlier reports and GlassWall data. Gemini fills the report builder:
+scores per area and shot, the top 3 errors with timestamps, fixes, drills and (Match Report) the 3-week plan,
+plus "who it analysed" and "not sure about" notes for Navid only. Navid checks everything, then publishes.
+The copy at Google is deleted when the draft is done.
+
+Setup: aistudio.google.com → **Get API key** (use a Google Cloud project **with billing enabled** — on the free
+tier Google may use the videos to improve its models) → Netlify env **`GEMINI_VIDEO_KEY`** → redeploy.
+Cost: roughly a few cents for a clip, up to ~$1 for a full match (Gemini pricing).

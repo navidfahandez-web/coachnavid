@@ -12,6 +12,7 @@ import { listFolder, shareFolder } from '../lib/google.mjs';
 import { SITE_URL } from '../lib/google.mjs';
 import { ensurePlayer as savePlayer, externalKey, playerKey, playerTokenKey } from '../lib/players.mjs';
 import { AREAS, KINDS, areaScore, kindForPlan } from '../../shared/report.js';
+import { canAnalyze } from '../lib/video-ai.mjs';
 
 const UPLOADS = 'uploads/list';
 const INDEX = 'reports/index'; // [{ ref, token, phone, kind, status, publishedAt }]
@@ -108,7 +109,7 @@ async function publicView(r) {
     const e = await readJSON(reportKey(x.ref));
     if (e) history.push({ token: e.token, kind: e.kind, headline: e.headline, publishedAt: e.publishedAt, scores: e.scores });
   }
-  const { student, folderId, studentNotes, ...rest } = r;
+  const { student, folderId, studentNotes, ai, ...rest } = r; // ai notes are for Navid only
   const player = await readJSON(playerKey(digits(student.phone)));
   return { ...rest, student: { firstName: student.firstName, lastName: student.lastName }, history, playerToken: player?.token ?? null };
 }
@@ -178,7 +179,7 @@ export default async (req, context) => {
     if (!r) { r = blankReport(u); await saveReport(r); }
     const files = await listFolder(u.folderId).then((x) => x.files ?? []).catch(() => []);
     const external = (await readJSON(externalKey(digits(u.phone)), [])).slice(-3).reverse();
-    return json({ report: r, upload: { ref: u.ref, planName: u.planName, notes: u.notes, phone: u.phone }, files, external, url: reportUrl(r.token) });
+    return json({ report: r, upload: { ref: u.ref, planName: u.planName, notes: u.notes, phone: u.phone }, files, external, url: reportUrl(r.token), aiAvailable: canAnalyze() });
   }
 
   if (!r) return json({ error: 'Open the report first.' }, 400);
@@ -189,6 +190,18 @@ export default async (req, context) => {
     r = sanitize(r, b);
     await saveReport(r);
     return json({ ok: true, report: r });
+  }
+
+  if (req.method === 'POST' && pathname.endsWith('/ai')) { // AI first draft from the student's video
+    if (!canAnalyze()) return json({ error: 'AI video analysis needs GEMINI_VIDEO_KEY in Netlify (see README).', code: 'no-key' }, 503);
+    if (r.ai?.status === 'running') return json({ report: r });
+    await updateJSON(reportKey(ref), (x) => { x.ai = { status: 'running', step: 'Starting…', progress: 0, startedAt: new Date().toISOString() }; }, {});
+    await fetch(`${new URL(req.url).origin}/api/ai-run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() },
+      body: JSON.stringify({ ref }),
+    });
+    return json({ report: await readJSON(reportKey(ref)) });
   }
 
   if (req.method === 'POST' && pathname.endsWith('/publish')) {
@@ -228,5 +241,5 @@ export default async (req, context) => {
 };
 
 export const config = {
-  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
+  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/admin/reports/:ref/ai', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
 };
