@@ -37,8 +37,8 @@ async function transcribeGemini(audio, type) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env('GEMINI_API_KEY') },
       body: JSON.stringify({
-        contents: [{ parts: [
-          { inline_data: { mime_type: mime, data: Buffer.from(audio).toString('base64') } },
+        contents: [{ role: 'user', parts: [
+          { inlineData: { mimeType: mime, data: Buffer.from(audio).toString('base64') } },
           { text: `Transcribe this padel coach's voice note word for word, in the language it is spoken (English, Spanish or Lithuanian). Padel terms you may hear: ${PADEL_TERMS}. Return only the transcript.` },
         ] }],
       }),
