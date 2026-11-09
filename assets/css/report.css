@@ -147,3 +147,19 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 .me { max-width: 520px; padding: 48px 0 80px; }
 .me__box { margin-top: 22px; display: grid; gap: 12px; }
 .me__box .pill { justify-self: start; background: transparent; color: var(--ink); cursor: pointer; }
+
+/* ---------- GlassWall (external AI) ---------- */
+.pl__sub { font-size: 15px; margin: 22px 0 10px; }
+.pl__gwfocus { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.pl__gwfocus .pl__card { display: grid; gap: 4px; align-content: start; }
+.pl__gwfocus p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.pl__cat { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #6fd3e0; }
+.pl__drill { font-size: 13px !important; }
+.pl__ext { border-left: 3px solid #6fd3e0 !important; }
+.gw__metric { display: grid; grid-template-columns: 2fr 90px 110px auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.gw__metric input { font: inherit; font-size: 14px; color: var(--ink); background: #111; border: 1.5px solid var(--line-soft); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.gw__metric small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; margin-top: -4px; }
+.gw__metric .pill, .rb .pill { background: transparent; color: var(--ink); cursor: pointer; justify-self: start; }
+.rb__gw { border-color: #6fd3e0; }
+.rb__gw p { margin: 0 0 6px; font-size: 14px; color: var(--ink-2); }
+@media (max-width: 640px) { .gw__metric { grid-template-columns: 1fr 80px; } }

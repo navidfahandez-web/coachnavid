@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Add GlassWall report · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+  <link rel="stylesheet" href="/assets/css/report.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script type="module" src="/assets/js/glasswall.js"></script>
+</head>
+<body class="admin">
+  <header class="nav">
+    <a class="lockup" href="/admin">
+      <span class="lockup__pb"><img src="/assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>GlassWall import</b><small>Coach Navid · private</small></span>
+    </a>
+    <nav class="nav__links"><a class="pill" href="/admin">← Admin</a></nav>
+  </header>
+
+  <main class="wrap admin__main">
+    <form class="rb" data-gw>
+      <section class="adm-box">
+        <h2 class="adm-h">Add a GlassWall report</h2>
+        <p class="note">Drop the GlassWall PDF here. The site reads it in your browser and fills everything in below — check it, rename the stats if you like, and save it to the player’s record.</p>
+        <div class="rb__row">
+          <label class="field">Player’s WhatsApp <input name="phone" type="tel" placeholder="+971 50 123 4567" required /></label>
+          <label class="field">First name <input name="firstName" /></label>
+          <label class="field">Last name <input name="lastName" /></label>
+        </div>
+        <p class="note" data-player-info></p>
+        <label class="field upload__drop">GlassWall PDF <input name="pdf" type="file" accept="application/pdf" /></label>
+        <p class="note" data-parse-info></p>
+      </section>
+
+      <section class="adm-box" data-details hidden>
+        <h3>Match</h3>
+        <div class="rb__row">
+          <label class="field">Date <input name="date" type="date" /></label>
+          <label class="field">Time <input name="time" placeholder="17:28" /></label>
+          <label class="field">Court <input name="court" /></label>
+        </div>
+        <div class="rb__row">
+          <label class="field">GlassWall label <input name="label" placeholder="Player 1 · Light blue shirt" /></label>
+          <label class="field">Partner <input name="partner" /></label>
+          <label class="field">Coach on GlassWall <input name="coachName" /></label>
+        </div>
+        <label class="field">Coach note <textarea name="coachNote" rows="4"></textarea></label>
+      </section>
+
+      <section class="adm-box" data-details hidden>
+        <h3>Stats <small class="note">charted over time — keep the same name for the same stat</small></h3>
+        <datalist id="metric-names"></datalist>
+        <div data-metrics></div>
+        <button class="pill" type="button" data-add-metric>+ Add a stat</button>
+      </section>
+
+      <section class="adm-box" data-details hidden>
+        <h3>Focus areas</h3>
+        <div data-focus></div>
+      </section>
+
+      <div class="rb__bar">
+        <span class="note" data-status></span>
+        <a class="btn btn--ghost" data-player-link hidden target="_blank" rel="noopener">Player’s progress ↗</a>
+        <button class="btn btn--lime" type="submit">Save to player’s record</button>
+      </div>
+    </form>
+
+    <section class="adm-section" data-history hidden>
+      <h2 class="adm-h">already on record</h2>
+      <div class="adm-list" data-entries></div>
+    </section>
+  </main>
+  <div class="toast" data-toast hidden role="status"></div>
+</body>
+</html>

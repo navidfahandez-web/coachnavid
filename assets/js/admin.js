@@ -422,10 +422,11 @@ async function loadPlayers() {
         <div class="bk__who">
           <b>${esc(p.firstName)} ${esc(p.lastName)}</b>
           <span><a href="https://wa.me/${digits(p.phone)}" target="_blank" rel="noopener">${esc(p.phone)}</a></span>
-          <small>${p.reports} report${p.reports === 1 ? '' : 's'} · average ${f(p.lastAverage)}/10${change ? ` · ${change > 0 ? '▲ +' : '▼ '}${f(change)} since first` : ''} · last ${esc(ago(p.lastAt))}</small>
+          <small>${p.reports} report${p.reports === 1 ? '' : 's'}${p.external ? ` · ${p.external} GlassWall` : ''} · average ${f(p.lastAverage)}/10${change ? ` · ${change > 0 ? '▲ +' : '▼ '}${f(change)} since first` : ''}${p.lastAt ? ` · last ${esc(ago(p.lastAt))}` : ''}</small>
         </div>
         <div class="bk__actions" style="grid-column:auto">
           <a class="btn btn--ghost" href="/player/${esc(p.token)}" target="_blank" rel="noopener">📈 Progress ↗</a>
+          <a class="btn btn--ghost" href="/admin/glasswall?phone=${encodeURIComponent(p.phone)}">＋ GlassWall</a>
         </div>
       </article>`;
     }).join('') : '<p class="note">No published reports yet.</p>';

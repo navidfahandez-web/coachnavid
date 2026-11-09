@@ -16,6 +16,7 @@ const T = {
     timeline: 'All your reports', fixes: 'Fixes', open: 'Open', table: 'Show the numbers', report: 'Report',
     grow: 'Your charts grow with every Match Report.', none: 'No Match Report scores yet — your charts start with your first Match Report.',
     best: 'Biggest improvement', avg: 'average',
+    gw: 'GlassWall AI — stats over time', gwNote: 'From GlassWall’s court-camera AI analysis of your matches.', gwFocus: 'Latest GlassWall focus areas', gwEntry: 'GlassWall AI analysis', gwCount: 'GlassWall analyses', since: 'since first',
   },
   lt: {
     title: 'Jūsų pažanga', reports: 'Ataskaitos', now: 'Dabartinis vidurkis', change: 'Nuo pirmos ataskaitos',
@@ -23,6 +24,7 @@ const T = {
     timeline: 'Visos jūsų ataskaitos', fixes: 'Pataisymai', open: 'Atidaryti', table: 'Rodyti skaičius', report: 'Ataskaita',
     grow: 'Grafikai pildosi su kiekviena Match Report.', none: 'Dar nėra Match Report įvertinimų — grafikai prasidės nuo pirmos Match Report.',
     best: 'Didžiausias pagerėjimas', avg: 'vidurkis',
+    gw: 'GlassWall AI — statistika laike', gwNote: 'Iš GlassWall kortų kamerų AI analizės.', gwFocus: 'Naujausios GlassWall sritys', gwEntry: 'GlassWall AI analizė', gwCount: 'GlassWall analizės', since: 'nuo pirmos',
   },
 };
 
@@ -30,13 +32,13 @@ const day = (iso, lang) => new Date(iso).toLocaleDateString(lang === 'lt' ? 'lt-
 
 // ---------- line chart (single series, fixed 0–10 scale, SVG) ----------
 // points: [{ label, value, tip }]
-function lineChart(points, { height = 200, compact = false } = {}) {
+function lineChart(points, { height = 200, compact = false, max = 10 } = {}) {
   const W = compact ? 300 : innerWidth < 600 ? 360 : 640, H = height;
   const pad = compact ? { l: 22, r: 16, t: 14, b: 22 } : { l: 30, r: 28, t: 18, b: 30 };
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const x = (i) => pad.l + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
-  const y = (v) => pad.t + ih - (v / 10) * ih;
-  const grid = (compact ? [0, 5, 10] : [0, 2, 4, 6, 8, 10]).map((v) => `
+  const y = (v) => pad.t + ih - (Math.min(v, max) / max) * ih;
+  const grid = (compact ? [0, max / 2, max] : [0, 1, 2, 3, 4, 5].map((n) => (max * n) / 5)).map((v) => `
     <line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" class="pl__grid" />
     <text x="${pad.l - 8}" y="${y(v) + 4}" class="pl__axis" text-anchor="end">${v}</text>`).join('');
   const valid = points.map((p, i) => ({ ...p, i })).filter((p) => p.value !== null);
@@ -70,11 +72,13 @@ function render(d) {
   });
   const best = areas.filter((a) => a.delta > 0).sort((a, b) => b.delta - a.delta)[0];
 
+  const ext = d.external ?? [];
   const tiles = `
     <div class="pl__tiles">
       <div class="pl__tile"><span>${L.reports}</span><b>${d.reports.length}</b></div>
       <div class="pl__tile"><span>${L.now}</span><b>${fmt(last?.average)}<small>/10</small></b></div>
       <div class="pl__tile"><span>${L.change}</span><b class="${change > 0 ? 'up' : change < 0 ? 'down' : ''}">${change === null ? '—' : `${change > 0 ? '▲ +' : change < 0 ? '▼ ' : ''}${fmt(change)}`}</b></div>
+      ${ext.length ? `<div class="pl__tile"><span>${L.gwCount}</span><b>${ext.length}</b></div>` : ''}
       ${best ? `<div class="pl__tile"><span>${L.best}</span><b class="up">▲ +${best.delta}</b><small>${esc(best[lang] ?? best.en)}</small></div>` : ''}
     </div>`;
 
@@ -111,12 +115,49 @@ function render(d) {
           </tbody>
         </table></div>
       </details>
-    </section>` : `<p class="note">${L.none}</p>`;
+    </section>` : (d.external?.length ? '' : `<p class="note">${L.none}</p>`);
+
+  // GlassWall (external AI) — every stat charted over time, plus the latest focus areas
+  const unitText = (m) => (m.unit === '%' ? '%' : m.unit ? ` ${m.unit}` : '');
+  const series = [...new Set(ext.flatMap((e) => e.metrics.map((m) => m.name)))].map((name) => {
+    const pts = ext.map((e) => ({ e, m: e.metrics.find((m) => m.name === name) })).filter((p) => p.m);
+    const top = Math.max(...pts.map((p) => p.m.value));
+    return { name, pts, max: pts[0].m.unit === '%' ? 100 : Math.max(10, Math.ceil((top * 1.25) / 5) * 5) };
+  });
+  const latest = ext.at(-1);
+  const glasswall = ext.length ? `
+    <section class="rp__sec">
+      <h2 class="rp__h">${L.gw}</h2>
+      <p class="note">${L.gwNote}</p>
+      ${series.length ? `<div class="pl__multiples">${series.map((s) => {
+        const first = s.pts[0].m, last = s.pts.at(-1).m;
+        const delta = s.pts.length > 1 ? round1(last.value - first.value) : null;
+        return `<div class="pl__card pl__mini">
+          <div class="pl__mini-top"><b>${esc(s.name)}</b>${delta !== null ? `<span class="rp__delta">${delta > 0 ? '+' : ''}${fmt(delta)}${last.unit === '%' ? ' pts' : unitText(last)} ${L.since}</span>` : ''}</div>
+          ${lineChart(s.pts.map((p) => ({ label: p.e.date, value: p.m.value, tip: `${day(p.e.date, lang)} · ${fmt(p.m.value)}${unitText(p.m)}` })), { height: 130, compact: true, max: s.max })}
+        </div>`;
+      }).join('')}</div>` : ''}
+      ${latest.focus.length ? `<h3 class="pl__sub">${L.gwFocus} · ${esc(day(latest.date, lang))}</h3>
+      <div class="pl__gwfocus">${latest.focus.map((f) => `
+        <div class="pl__card"><span class="pl__cat">${esc(f.category)}</span><b>${esc(f.title)}</b><p>${esc(f.finding)}</p>
+          ${f.drills.map((x) => `<p class="pl__drill">• ${esc(x)}</p>`).join('')}</div>`).join('')}</div>` : ''}
+    </section>` : '';
 
   const timeline = `
     <section class="rp__sec">
       <h2 class="rp__h">${L.timeline}</h2>
-      <ol class="pl__timeline">${[...d.reports].reverse().map((r) => `
+      <ol class="pl__timeline">${[
+        ...d.reports.map((r) => ({ at: r.publishedAt, r })),
+        ...ext.map((e) => ({ at: `${e.date}T${e.time || '12:00'}:00Z`, e })),
+      ].sort((a, b) => b.at.localeCompare(a.at)).map(({ r, e }) => (e ? `
+        <li class="pl__ext">
+          <div class="pl__when">${esc(day(e.date, lang))}<small>${L.gwEntry}</small></div>
+          <div>
+            <b>${esc(e.focus.map((f) => f.title).join(' · ') || L.gwEntry)}</b>
+            ${e.pdfFileId ? `<a class="pl__pdf" href="https://drive.google.com/file/d/${encodeURIComponent(e.pdfFileId)}/view" target="_blank" rel="noopener">PDF ↗</a>` : ''}
+            ${e.metrics.length ? `<p>${e.metrics.map((m) => `${esc(m.name)}: ${fmt(m.value)}${esc(unitText(m))}`).join(' · ')}</p>` : ''}
+          </div>
+        </li>` : `
         <li>
           <div class="pl__when">${esc(day(r.publishedAt, lang))}<small>${esc(KINDS[r.kind]?.name)}${r.average !== null ? ` · ${fmt(r.average)}/10` : ''}</small></div>
           <div>
@@ -124,7 +165,7 @@ function render(d) {
             ${r.pdfFileId ? `<a class="pl__pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(r.pdfFileId)}">PDF ↓</a>` : ''}
             ${r.fixes.length ? `<p>${L.fixes}: ${r.fixes.map(esc).join(' · ')}</p>` : ''}
           </div>
-        </li>`).join('')}
+        </li>`)).join('')}
       </ol>
     </section>`;
 
@@ -138,7 +179,7 @@ function render(d) {
       <h1 class="rp__title">${esc(d.firstName)} ${esc(d.lastName)}</h1>
       <p class="rp__by">Coach Navid Fahandezh · Technical Director, Padel Beast</p>
     </section>
-    ${tiles}${charts}${timeline}`;
+    ${tiles}${charts}${glasswall}${timeline}`;
 }
 
 // ---------- hover tooltip ----------

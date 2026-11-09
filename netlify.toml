@@ -52,6 +52,12 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 
+# GlassWall import (admin)
+[[redirects]]
+  from = "/admin/glasswall"
+  to = "/glasswall.html"
+  status = 200
+
 # Report builder (admin)
 [[redirects]]
   from = "/admin/report"

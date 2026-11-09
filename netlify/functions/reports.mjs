@@ -11,6 +11,7 @@ import { logActivity, readJSON, updateJSON } from '../lib/store.mjs';
 import { listFolder, shareFolder } from '../lib/google.mjs';
 import { SITE_URL } from '../lib/google.mjs';
 import { createReportPdf } from '../lib/report-pdf.mjs';
+import { ensurePlayer as savePlayer, externalKey, playerKey, playerTokenKey } from '../lib/players.mjs';
 import { AREAS, KINDS, kindForPlan } from '../../shared/report.js';
 
 const UPLOADS = 'uploads/list';
@@ -23,8 +24,6 @@ const line = (s, n = 120) => str(s, n).replace(/\s+/g, ' ');
 
 const findUpload = async (ref) => (await readJSON(UPLOADS, [])).find((u) => u.ref === ref);
 const reportUrl = (token) => `${SITE_URL}/report/${token}`;
-const playerKey = (phone) => `players/by-phone/${phone}`;
-const playerTokenKey = (token) => `players/by-token/${token}`;
 
 // Average of the scorecard (Match Reports only); null when there are no scores.
 function scoreAverage(scores) {
@@ -34,14 +33,7 @@ function scoreAverage(scores) {
 
 // Every player (by phone number) gets one private progress link.
 async function ensurePlayer(r) {
-  const phone = digits(r.student.phone);
-  const p = await updateJSON(playerKey(phone), (x) => {
-    if (!x.token) x.token = randomBytes(16).toString('hex');
-    Object.assign(x, { phone, firstName: r.student.firstName, lastName: r.student.lastName });
-    return { ...x };
-  }, {});
-  await updateJSON(playerTokenKey(p.token), (x) => { x.phone = phone; }, {});
-  return p.token;
+  return (await savePlayer(r.student)).token;
 }
 
 // Published reports of one player, oldest first.
@@ -141,6 +133,7 @@ export default async (req, context) => {
         scores: r.kind === 'match' ? r.scores : null, average: r.kind === 'match' ? scoreAverage(r.scores) : null,
         fixes: r.items.filter((i) => i.title).map((i) => i.title), pdfFileId: r.pdfFileId ?? null,
       })),
+      external: await readJSON(externalKey(pointer.phone), []),
     });
   }
 
@@ -150,16 +143,18 @@ export default async (req, context) => {
 
   if (pathname === '/api/admin/players') {
     const index = (await readJSON(INDEX, [])).filter((x) => x.status === 'published');
-    const phones = [...new Set(index.map((x) => x.phone))];
+    const phones = [...new Set([...index.map((x) => x.phone), ...await readJSON('players/all', [])])];
     const players = [];
     for (const phone of phones) {
       const p = await readJSON(playerKey(phone));
       if (!p) continue;
       const reports = await playerReports(phone);
       const avgs = reports.map((r) => (r.kind === 'match' ? scoreAverage(r.scores) : null)).filter((n) => n !== null);
+      const external = await readJSON(externalKey(phone), []);
       players.push({
+        external: external.length, lastExternal: external.at(-1)?.date ?? null,
         token: p.token, firstName: p.firstName, lastName: p.lastName, phone: `+${phone}`,
-        reports: reports.length, lastAt: reports.at(-1)?.publishedAt ?? null,
+        reports: reports.length, lastAt: [reports.at(-1)?.publishedAt, external.at(-1)?.addedAt].filter(Boolean).sort().at(-1) ?? null,
         firstAverage: avgs[0] ?? null, lastAverage: avgs.at(-1) ?? null,
       });
     }
@@ -174,7 +169,8 @@ export default async (req, context) => {
   if (req.method === 'GET') {
     if (!r) { r = blankReport(u); await saveReport(r); }
     const files = await listFolder(u.folderId).then((x) => x.files ?? []).catch(() => []);
-    return json({ report: r, upload: { ref: u.ref, planName: u.planName, notes: u.notes, phone: u.phone }, files, url: reportUrl(r.token) });
+    const external = (await readJSON(externalKey(digits(u.phone)), [])).slice(-3).reverse();
+    return json({ report: r, upload: { ref: u.ref, planName: u.planName, notes: u.notes, phone: u.phone }, files, external, url: reportUrl(r.token) });
   }
 
   if (!r) return json({ error: 'Open the report first.' }, 400);

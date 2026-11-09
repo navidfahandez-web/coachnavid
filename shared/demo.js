@@ -95,6 +95,26 @@ export function demoReport(token) {
   return { ...r, history: DEMO_REPORTS.slice(0, i).map((h) => ({ token: h.token, kind: h.kind, headline: h.headline, publishedAt: h.publishedAt, scores: h.scores })) };
 }
 
+// Example GlassWall (court-camera AI) analyses, shown next to Navid's reports
+const gw = (date, back, winners, long, focus) => ({
+  id: `gw-${date}`, source: 'GlassWall', date, time: '18:00', court: 'Court 1', label: 'Example', partner: '', coachName: '', coachNote: '',
+  focus, pdfFileId: null,
+  metrics: [
+    { name: 'Rallies at the back', value: back, unit: '%' },
+    { name: 'Backhand winners', value: winners, unit: 'winners' },
+    { name: 'Long rallies won', value: long, unit: '%' },
+  ],
+});
+const DEMO_GLASSWALL = [
+  gw('2026-06-28', 57, 16, 20, [{ category: 'Tactics', title: 'Transition to the net immediately', finding: 'Too much time at the back.', drills: ['Defensive reset: lob, then both move up together. 10 reps.'] }]),
+  gw('2026-08-09', 49, 18, 30, [{ category: 'Technique', title: 'Aggressive backhand placement', finding: 'Backhand is the most reliable weapon.', drills: ['Cross-court backhand flow. 20 reps.'] }]),
+  gw('2026-09-27', 42, 21, 40, [{ category: 'Fitness', title: 'Explosive recovery speed', finding: 'Long rallies are improving.', drills: ['Court shuttles, 8 × 30 seconds.'] }]),
+  gw('2026-11-01', 35, 24, 50, [
+    { category: 'Tactics', title: 'Hold the net under pressure', finding: 'Much better net presence — keep it in long rallies.', drills: ['Lob defence + recover: 10 reps.'] },
+    { category: 'Technique', title: 'Finish with the víbora', finding: 'High balls at the net are not finished.', drills: ['Víbora to the side wall, 3 × 10.'] },
+  ]),
+];
+
 // Same shape as GET /api/player/:token
 export function demoPlayer() {
   const avg = (s) => {
@@ -103,6 +123,7 @@ export function demoPlayer() {
   };
   return {
     firstName: DEMO_PLAYER.firstName, lastName: DEMO_PLAYER.lastName, example: true,
+    external: DEMO_GLASSWALL,
     reports: DEMO_REPORTS.map((r) => ({
       token: r.token, ref: r.ref, kind: r.kind, lang: r.lang, headline: r.headline, publishedAt: r.publishedAt,
       scores: r.kind === 'match' ? r.scores : null, average: r.kind === 'match' ? avg(r.scores) : null,

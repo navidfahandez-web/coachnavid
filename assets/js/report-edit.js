@@ -97,6 +97,11 @@ function render(data) {
   $('[data-student-notes]').hidden = !u.notes;
   $('[data-student-notes]').textContent = `📝 Student asked: ${u.notes}`;
   $('[data-folder]').href = `https://drive.google.com/drive/folders/${report.folderId}`;
+  const gw = data.external ?? [];
+  $('[data-gw-box]').hidden = !gw.length;
+  $('[data-gw]').innerHTML = gw.map((e) => `
+    <p><b>${esc(e.date)}</b>${e.coachName ? ` · ${esc(e.coachName)}` : ''}: ${esc(e.focus.map((f) => `${f.category}: ${f.title}`).join(' · '))}</p>
+    ${e.metrics.length ? `<p class="note">${esc(e.metrics.map((m) => `${m.name}: ${m.value}${m.unit === '%' ? '%' : ` ${m.unit}`}`).join(' · '))}</p>` : ''}`).join('');
   $('[data-preview]').href = `/report/${report.token}`;
   $('[data-publish]').textContent = report.status === 'published' ? 'Update & send again ↗' : 'Publish & send ↗';
   for (const k of ['kind', 'lang', 'headline', 'summary', 'strengths', 'closing']) form().elements[k].value = report[k] ?? '';
