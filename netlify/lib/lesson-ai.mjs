@@ -1,5 +1,6 @@
 // Lesson voice notes → text (OpenAI speech-to-text) → lesson summary (Claude).
-// Needs OPENAI_API_KEY (transcription) and ANTHROPIC_API_KEY (summary) in Netlify.
+// Keys: Netlify's AI Gateway injects ANTHROPIC_/OPENAI_ API keys + base URLs automatically (billed in
+// Netlify credits). Setting your own OPENAI_API_KEY / ANTHROPIC_API_KEY in Netlify overrides the gateway.
 import Anthropic from '@anthropic-ai/sdk';
 import { SHOTS } from '../../shared/report.js';
 
@@ -16,7 +17,8 @@ export async function transcribe(audio, mimeType) {
   form.append('model', 'gpt-4o-transcribe');
   // Padel words the recogniser would otherwise get wrong
   form.append('prompt', 'Padel coaching voice note after a lesson. Terms: bandeja, víbora, chiquita, globo, por 3, por 4, contrapared, bajada de pared, bote pronto, dejada, gancho, remate, revés, drive, split step, salida de pared.');
-  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+  const base = (env('OPENAI_BASE_URL') || 'https://api.openai.com').replace(/\/+$/, '').replace(/\/v1$/, '');
+  const res = await fetch(`${base}/v1/audio/transcriptions`, {
     method: 'POST', headers: { Authorization: `Bearer ${env('OPENAI_API_KEY')}` }, body: form,
   });
   const body = await res.json().catch(() => ({}));
@@ -69,7 +71,10 @@ After a lesson Navid records a voice note about his player. Turn it into a clear
 
 // context: { player, lang, notes, previousLessons, reports, glasswall }
 export async function summarizeLesson(context) {
-  const client = new Anthropic({ apiKey: env('ANTHROPIC_API_KEY') });
+  const baseURL = env('ANTHROPIC_BASE_URL');
+  const client = new Anthropic({ apiKey: env('ANTHROPIC_API_KEY'), ...(baseURL ? { baseURL } : {}) });
+  // The Netlify AI Gateway doesn't forward beta headers, so the refusal fallback is only used with our own key
+  const viaGateway = Boolean(baseURL) && !baseURL.includes('api.anthropic.com');
   const shotNames = SHOTS.map((s) => `${s.id} = ${s.en}`).join('\n');
   const prompt = [
     `Player: ${context.player.firstName} ${context.player.lastName}`,
@@ -85,16 +90,17 @@ export async function summarizeLesson(context) {
     '<shot_ids>', shotNames, '</shot_ids>',
   ].join('\n');
 
-  const res = await client.beta.messages.create({
+  const params = {
     model: 'claude-opus-5-5',
     max_tokens: 16000,
     thinking: { type: 'adaptive' },
     output_config: { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
     system: SYSTEM,
     messages: [{ role: 'user', content: prompt }],
-  });
+  };
+  const res = viaGateway
+    ? await client.messages.create(params)
+    : await client.beta.messages.create({ ...params, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
   if (res.stop_reason === 'refusal') throw new Error('Claude declined to write this summary.');
   if (res.stop_reason === 'max_tokens') throw new Error('The summary was cut off — try a shorter voice note.');
   const text = res.content.filter((b) => b.type === 'text').map((b) => b.text).join('');

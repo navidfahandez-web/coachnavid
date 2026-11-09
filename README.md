@@ -172,9 +172,7 @@ The site turns the recording into text (OpenAI speech-to-text), Claude (`claude-
 summary in the player's language — comparing it with their earlier lessons, reports and GlassWall data —
 and a PDF is saved in the player's Drive folder. **Send PDF on WhatsApp** opens a chat with the link ready.
 
-Needs two keys in Netlify → Environment variables, then a redeploy:
-- `OPENAI_API_KEY` — speech-to-text (≈ $0.006 per minute of audio)
-- `ANTHROPIC_API_KEY` — the summary (a few cents per lesson)
-
-Without `OPENAI_API_KEY` you can still type notes. Summaries use Claude's server-side refusal fallback
-(`fallbacks: "default"`), so a rare refusal is retried on another model automatically.
+No keys needed: Netlify's **AI Gateway** gives the functions access to Claude and OpenAI and bills it in
+Netlify credits (a few cents per lesson). To use your own accounts instead, set `ANTHROPIC_API_KEY` and/or
+`OPENAI_API_KEY` in Netlify → Environment variables. With your own Anthropic key, summaries also use Claude's
+server-side refusal fallback (`fallbacks: "default"`); the gateway doesn't forward beta headers, so it's off there.
