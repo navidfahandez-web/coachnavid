@@ -55,7 +55,8 @@ async function transcribeGemini(audio, type) {
 }
 
 export async function transcribe(audio, mimeType) {
-  const type = String(mimeType || 'audio/mp4').split(';')[0];
+  let type = String(mimeType || '').split(';')[0].trim().toLowerCase();
+  if (!type.startsWith('audio/')) type = 'audio/mp4'; // unlabelled uploads: phones record m4a
   const text = ownOpenAI() ? await transcribeOpenAI(audio, type) : await transcribeGemini(audio, type);
   if (!text) throw new Error('The recording came back empty — was the microphone on?');
   return text;
