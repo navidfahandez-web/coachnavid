@@ -45,7 +45,7 @@ export function lessonHtml(lesson, player) {
   return `<!doctype html><html><head><meta charset="utf-8"></head>
   <body style="font-family:Arial,sans-serif;font-size:10.5pt;color:#111111">
     <table border="0" style="border-collapse:collapse;width:100%;border:0 solid #ffffff"><tr>
-      <td style="width:60pt;border:0 solid #ffffff"><img src="${SITE_URL}/assets/img/padel-beast-logo-sm.png" width="45" height="60"></td>
+      <td style="width:60pt;border:0 solid #ffffff"><img src="${SITE_URL}/assets/img/padel-beast-logo-dark.png" width="45" height="60"></td>
       <td style="border:0 solid #ffffff"><b style="font-size:12pt">Coach Navid Fahandezh</b><br><span style="color:${ORANGE};font-size:9pt">Technical Director · Padel Beast</span></td>
       <td style="text-align:right;color:#666666;font-size:9pt;border:0 solid #ffffff">${esc(date)}</td>
     </tr></table>

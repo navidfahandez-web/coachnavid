@@ -47,7 +47,7 @@ function html(r, history) {
   return `<!doctype html><html><head><meta charset="utf-8"></head>
   <body style="font-family:Arial,sans-serif;font-size:10.5pt;color:#111111">
     <table border="0" style="border-collapse:collapse;width:100%;border:0 solid #ffffff"><tr>
-      <td style="width:60pt;border:0 solid #ffffff"><img src="${SITE_URL}/assets/img/padel-beast-logo-sm.png" width="45" height="60"></td>
+      <td style="width:60pt;border:0 solid #ffffff"><img src="${SITE_URL}/assets/img/padel-beast-logo-dark.png" width="45" height="60"></td>
       <td style="border:0 solid #ffffff"><b style="font-size:12pt">Coach Navid Fahandezh</b><br><span style="color:${ORANGE};font-size:9pt">Technical Director · Padel Beast</span></td>
       <td style="text-align:right;color:#666666;font-size:9pt;border:0 solid #ffffff">${esc(r.ref)}<br>${esc(date)}</td>
     </tr></table>
@@ -62,21 +62,8 @@ function html(r, history) {
   </body></html>`;
 }
 
-// Google Docs doesn't fetch images from URLs when importing HTML, so the logo goes in as a data URI.
-const LOGO_URL = `${SITE_URL}/assets/img/padel-beast-logo-sm.png`;
-let logoData = null;
-async function inlineLogo(htmlText) {
-  if (!htmlText.includes(LOGO_URL)) return htmlText;
-  if (!logoData) {
-    const res = await fetch(LOGO_URL).catch(() => null);
-    if (res?.ok) logoData = `data:image/png;base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
-  }
-  return logoData ? htmlText.replaceAll(LOGO_URL, logoData) : htmlText;
-}
-
 // HTML → Google Doc → PDF in `folderId`; deletes `replaceId` (an older PDF) and the temp Doc.
 export async function htmlToPdf(htmlText, name, folderId, replaceId = null) {
-  htmlText = await inlineLogo(htmlText);
   const docId = await uploadSimple({ name: `${name} (temp)`, mimeType: 'application/vnd.google-apps.document', parents: [folderId] }, htmlText, 'text/html; charset=UTF-8');
   try {
     const pdf = await exportFile(docId, 'application/pdf');
