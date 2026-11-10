@@ -103,7 +103,7 @@ function renderFiles() {
 }
 
 // ---------- voice-over lines (one per fix, sized to the fix's seconds in the clip) ----------
-const WORDS_PER_SEC = 2.4; // a calm coaching pace
+const WORDS_PER_SEC = 2.7; // Navid's Higgsfield voice: 19 words ≈ 7 s
 const fixSeconds = (it) => (Number(it.clipLen) || 2.4) * 3; // normal speed + 2x slow motion
 function suggestLine(it, words) {
   const text = `${it.title ? `${it.title}.` : ''} ${it.fix ?? ''}`.replace(/\s+/g, ' ').trim();
