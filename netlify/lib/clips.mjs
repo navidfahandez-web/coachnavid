@@ -135,8 +135,8 @@ export async function makeFixClips(videoFileId, items, onStep = async () => {}) 
         '-i', labelFile(k * 2), '-i', labelFile(k * 2 + 1),
         '-filter_complex', [
           '[0:v]fps=30,scale=-2:720,setsar=1,setpts=PTS-STARTPTS,split=2[a][b]',
-          '[a][1:v]overlay=40:40,format=yuv420p[n]',
-          `[b]setpts=${CLIP.slow}*PTS[bs];[bs][2:v]overlay=40:40,format=yuv420p[s]`,
+          '[a][1:v]overlay=40:main_h-overlay_h-40,format=yuv420p[n]',
+          `[b]setpts=${CLIP.slow}*PTS[bs];[bs][2:v]overlay=40:main_h-overlay_h-40,format=yuv420p[s]`,
           '[n][s]concat=n=2:v=1:a=0[out]',
         ].join(';'),
         '-map', '[out]', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-pix_fmt', 'yuv420p', '-an', out]);
