@@ -203,8 +203,11 @@ function renderAi() {
     : ai.status === 'ready' ? `✅ Draft filled in below (${ai.model}, ${new Date(ai.at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}). Check every timestamp, score and fix before publishing.`
     : 'The AI watches the student’s video with your framework and fills in this report for you to check.';
   const notes = $('[data-ai-notes]');
-  notes.hidden = ai.status !== 'ready' || !(ai.player || ai.notes);
-  notes.innerHTML = `${ai.player ? `<p><b>Who it analysed:</b> ${esc(ai.player)}</p>` : ''}${ai.notes ? `<p><b>Not sure about:</b> ${esc(ai.notes)}</p>` : ''}`;
+  const checks = ai.checks ?? [];
+  notes.hidden = ai.status !== 'ready' || !(ai.player || ai.notes || checks.length);
+  notes.innerHTML = `${ai.player ? `<p><b>Who it analysed:</b> ${esc(ai.player)}</p>` : ''}${ai.notes ? `<p><b>Not sure about:</b> ${esc(ai.notes)}</p>` : ''}
+    ${checks.length ? `<p><b>Moment check</b> (the AI re-watched the seconds around each time):</p>${checks.map((c) => `<p class="${c.ok === false ? 'rb__bad' : ''}">${c.ok === true ? '✅' : c.ok === false ? '⚠️' : '•'} ${c.index !== undefined ? `Fix ${c.index + 1} at ${esc(c.time)} — ` : ''}${c.ok === false ? '<b>doesn’t match.</b> It shows: ' : ''}${esc(c.seen)}</p>`).join('')}
+      <button class="pill" type="button" data-recheck>Re-check moments after changing times</button>` : ''}`;
   clearTimeout(aiTimer);
   if (ai.status === 'running') aiTimer = setTimeout(pollAi, 5000);
 }
@@ -321,6 +324,16 @@ $('[data-publish]').addEventListener('click', async () => {
   } catch (err) { win?.close(); toast(esc(err.message)); }
 });
 addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('[data-recheck]')) return;
+  try {
+    await save();
+    const r = await api('POST', '/check');
+    report = { ...report, ai: r.report.ai };
+    renderAi();
+  } catch (err) { toast(esc(err.message)); }
+});
 
 $('[data-clips-run]').addEventListener('click', async () => {
   try {

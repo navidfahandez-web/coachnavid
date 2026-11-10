@@ -174,3 +174,24 @@ export async function addVoice(clipMp4, lines, offsets, duration) {
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+// Short low-res cuts of the video (for the AI to double-check its own timestamps).
+// moments: [{ start, length }] in seconds → Buffers (small MP4s, no sound).
+export async function cutMoments(videoFileId, moments) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'moments-'));
+  const proxy = await driveProxy(videoFileId);
+  try {
+    const out = [];
+    for (const [k, m] of moments.entries()) {
+      const f = path.join(dir, `m${k}.mp4`);
+      await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1',
+        '-ss', Math.max(0, m.start).toFixed(2), '-t', m.length.toFixed(2), '-i', proxy.url,
+        '-vf', 'fps=10,scale=-2:540', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '28', '-pix_fmt', 'yuv420p', f]);
+      out.push(readFileSync(f));
+    }
+    return out;
+  } finally {
+    proxy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}

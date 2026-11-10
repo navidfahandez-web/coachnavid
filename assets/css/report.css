@@ -225,3 +225,5 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 .rb__voice { display: grid; gap: 10px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
 .rb__voice h3 { margin: 0; }
 .rb__voice .field textarea { width: 100%; }
+.rb__ai-notes .rb__bad { color: var(--danger); }
+.rb__ai-notes .pill { justify-self: start; background: transparent; color: var(--ink); cursor: pointer; margin-top: 4px; }

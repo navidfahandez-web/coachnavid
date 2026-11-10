@@ -217,6 +217,17 @@ export default async (req, context) => {
     return json({ report: await readJSON(reportKey(ref)) });
   }
 
+  if (req.method === 'POST' && pathname.endsWith('/check')) { // re-check the fix moments after Navid changed times
+    if (!canAnalyze()) return json({ error: 'Needs GEMINI_VIDEO_KEY in Netlify.' }, 503);
+    await updateJSON(reportKey(ref), (x) => { x.ai = { ...(x.ai ?? {}), status: 'running', step: 'Double-checking each moment…', startedAt: new Date().toISOString(), error: null }; }, {});
+    await fetch(`${new URL(req.url).origin}/api/ai-run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() },
+      body: JSON.stringify({ ref, checkOnly: true }),
+    });
+    return json({ report: await readJSON(reportKey(ref)) });
+  }
+
   if (req.method === 'POST' && pathname.endsWith('/ai')) { // AI first draft from the student's video
     if (!canAnalyze()) return json({ error: 'AI video analysis needs GEMINI_VIDEO_KEY in Netlify (see README).', code: 'no-key' }, 503);
     if (r.ai?.status === 'running' && Date.now() - Date.parse(r.ai.startedAt) < 16 * 60e3) return json({ report: r });
@@ -266,5 +277,5 @@ export default async (req, context) => {
 };
 
 export const config = {
-  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/admin/reports/:ref/ai', '/api/admin/reports/:ref/clips', '/api/admin/reports/:ref/voice', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
+  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/admin/reports/:ref/ai', '/api/admin/reports/:ref/check', '/api/admin/reports/:ref/clips', '/api/admin/reports/:ref/voice', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
 };

@@ -4,18 +4,43 @@ import { isAdmin } from '../lib/auth.mjs';
 import { logActivity, readJSON, updateJSON } from '../lib/store.mjs';
 import { listFolder } from '../lib/google.mjs';
 import { externalKey } from '../lib/players.mjs';
-import { analyzeVideo, deleteUpload, draftToReport, uploadFromDrive } from '../lib/video-ai.mjs';
-import { AREAS } from '../../shared/report.js';
+import { analyzeVideo, deleteUpload, draftToReport, uploadFromDrive, verifyMoment } from '../lib/video-ai.mjs';
+import { cutMoments } from '../lib/clips.mjs';
+import { AREAS, toSeconds } from '../../shared/report.js';
+
+const BEFORE = 4; // seconds of context before the claimed moment
+
+// Watch only the seconds around each fix and record whether they really show it.
+async function checkMoments(key, setAi) {
+  const r = await readJSON(key);
+  const items = (r.items ?? []).map((it, k) => ({ it, k, t: toSeconds(it.time) })).filter((x) => x.it.title && x.t !== null);
+  if (!items.length || !r.videoFileId) return;
+  await setAi({ step: 'Double-checking each moment…', checks: null });
+  const clips = await cutMoments(r.videoFileId, items.map((x) => ({ start: x.t - BEFORE, length: BEFORE + 4 })));
+  const checks = [];
+  for (const [n, x] of items.entries()) {
+    try {
+      const v = await verifyMoment(clips[n], x.it, r.ai?.player, Math.min(BEFORE, x.t));
+      checks.push({ index: x.k, time: x.it.time, title: x.it.title, ok: Boolean(v.matches), seen: v.what_happens ?? '' });
+    } catch (err) { checks.push({ index: x.k, time: x.it.time, title: x.it.title, ok: null, seen: `Couldn’t check: ${err.message}` }); }
+  }
+  await setAi({ checks, checkedAt: new Date().toISOString() });
+}
 
 const digits = (p) => String(p ?? '').replace(/\D/g, '');
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { ref } = await req.json();
+  const { ref, checkOnly } = await req.json();
   const key = `reports/by-ref/${ref}`;
   const setAi = (ai) => updateJSON(key, (x) => { x.ai = { ...(x.ai ?? {}), ...ai }; }, {});
   let upload = null;
   try {
+    if (checkOnly) { // Navid changed times: only re-check the moments
+      await checkMoments(key, setAi);
+      await setAi({ status: 'ready', step: null });
+      return new Response('done');
+    }
     const r = await readJSON(key);
     if (!r) return new Response('Not found', { status: 404 });
 
@@ -55,6 +80,10 @@ export default async (req) => {
         updatedAt: new Date().toISOString(),
       });
     }, {});
+    if (upload?.name) { await deleteUpload(upload.name); upload = null; }
+    await setAi({ status: 'running', step: 'Double-checking each moment…' });
+    try { await checkMoments(key, setAi); } catch (err) { await setAi({ checks: [{ ok: null, seen: `Moments not checked: ${err.message}` }] }); }
+    await setAi({ status: 'ready', step: null });
     await logActivity({ kind: 'sent', text: `AI draft ready for ${ref} (${model}) — check it in the report builder.` });
   } catch (err) {
     console.error(`AI draft for ${ref} failed: ${err.message}`);
