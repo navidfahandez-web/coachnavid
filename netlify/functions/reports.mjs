@@ -66,7 +66,7 @@ function sanitize(r, b) {
   const kind = KINDS[b.kind] ? b.kind : r.kind;
   const spec = KINDS[kind];
   const items = (Array.isArray(b.items) ? b.items : []).slice(0, spec.items).map((i) => ({
-    time: line(i?.time, 12), title: line(i?.title), detail: str(i?.detail, 600),
+    time: line(i?.time, 12), clipStart: line(i?.clipStart, 12), clipLen: Number(i?.clipLen) > 0 ? Math.min(8, Number(i.clipLen)) : null, title: line(i?.title), detail: str(i?.detail, 600),
     fix: str(i?.fix, 600), drillName: line(i?.drillName, 80), drillHow: str(i?.drillHow, 600),
   }));
   const scores = {};
@@ -109,7 +109,7 @@ async function publicView(r) {
     const e = await readJSON(reportKey(x.ref));
     if (e) history.push({ token: e.token, kind: e.kind, headline: e.headline, publishedAt: e.publishedAt, scores: e.scores });
   }
-  const { student, folderId, studentNotes, ai, ...rest } = r; // ai notes are for Navid only
+  const { student, folderId, studentNotes, ai, clips, ...rest } = r; // ai notes and raw clips are for Navid only
   const player = await readJSON(playerKey(digits(student.phone)));
   return { ...rest, student: { firstName: student.firstName, lastName: student.lastName }, history, playerToken: player?.token ?? null };
 }
@@ -192,6 +192,17 @@ export default async (req, context) => {
     return json({ ok: true, report: r });
   }
 
+  if (req.method === 'POST' && pathname.endsWith('/clips')) { // 20 s video of the fixes, for Navid's voice-over
+    if (r.clips?.status === 'running') return json({ report: r });
+    await updateJSON(reportKey(ref), (x) => { x.clips = { ...(x.clips ?? {}), status: 'running', error: null, startedAt: new Date().toISOString() }; }, {});
+    await fetch(`${new URL(req.url).origin}/api/clips-run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() },
+      body: JSON.stringify({ ref }),
+    });
+    return json({ report: await readJSON(reportKey(ref)) });
+  }
+
   if (req.method === 'POST' && pathname.endsWith('/ai')) { // AI first draft from the student's video
     if (!canAnalyze()) return json({ error: 'AI video analysis needs GEMINI_VIDEO_KEY in Netlify (see README).', code: 'no-key' }, 503);
     if (r.ai?.status === 'running') return json({ report: r });
@@ -241,5 +252,5 @@ export default async (req, context) => {
 };
 
 export const config = {
-  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/admin/reports/:ref/ai', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
+  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/admin/reports/:ref/ai', '/api/admin/reports/:ref/clips', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
 };

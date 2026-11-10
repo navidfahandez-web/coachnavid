@@ -5,7 +5,9 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
   # headless Chromium for the PDFs must not be bundled
-  external_node_modules = ["@sparticuz/chromium-min", "puppeteer-core"]
+  external_node_modules = ["@sparticuz/chromium-min", "puppeteer-core", "ffmpeg-static"]
+  # label font for the fix clips (ffmpeg drawtext)
+  included_files = ["assets/fonts/*.ttf"]
 
 [[headers]]
   for = "/*"

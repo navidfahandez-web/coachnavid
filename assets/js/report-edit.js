@@ -54,6 +54,8 @@ function renderKind() {
       <legend>${i + 1}</legend>
       <div class="rb__row">
         <label class="field rb__time">Time <input data-k="time" value="${esc(it.time)}" placeholder="3:12" /></label>
+        <label class="field rb__time" title="Where the clip of this fix starts. Empty = 1 second before the time.">Clip from <input data-k="clipStart" value="${esc(it.clipStart ?? '')}" placeholder="auto" /></label>
+        <label class="field rb__time" title="Seconds shown at normal speed (then repeated in slow motion)">Clip secs <input data-k="clipLen" type="number" min="1" max="8" step="0.5" value="${esc(it.clipLen ?? '')}" placeholder="2.4" /></label>
         <label class="field">${kind === 'match' ? 'Fix' : 'Error'} <input data-k="title" value="${esc(it.title)}" placeholder="e.g. Bandeja hit too flat and too early" /></label>
       </div>
       <label class="field">What happens <textarea data-k="detail" rows="2" placeholder="What you see in the clip and why it costs points.">${esc(it.detail)}</textarea></label>
@@ -98,6 +100,32 @@ function renderKind() {
 function renderFiles() {
   $('[name=videoFileId]').innerHTML = fileOptions('video', report.videoFileId);
   $('[name=mediaFileId]').innerHTML = fileOptions('media', report.mediaFileId);
+}
+
+// ---------- fix clips (normal speed + slow motion, for the voice-over) ----------
+let clipsTimer = null;
+function renderClips() {
+  const c = report.clips ?? {};
+  const btn = $('[data-clips-run]');
+  btn.disabled = c.status === 'running';
+  btn.textContent = c.status === 'running' ? 'Cutting…' : c.status === 'ready' ? 'Make the clip again' : 'Make 20 s clip';
+  const link = $('[data-clips-open]');
+  link.hidden = c.status !== 'ready';
+  if (c.fileId) link.href = `https://drive.google.com/file/d/${c.fileId}/view`;
+  $('[data-clips-status]').textContent = c.status === 'running' ? 'Cutting the fixes from the video… about a minute.'
+    : c.status === 'failed' ? `⚠️ ${c.error}`
+    : c.status === 'ready' ? `✅ ${c.seconds} s clip saved in the student’s Drive folder. Record your voice-over on it, upload the result to the folder, then choose it below as the voice-over video.`
+    : 'Each fix at normal speed, then again in slow motion with a label — about 20 seconds, silent, ready for your voice-over. Uses the times of the fixes below; adjust “Clip from” if a moment is off.';
+  clearTimeout(clipsTimer);
+  if (c.status === 'running') clipsTimer = setTimeout(pollClips, 5000);
+}
+async function pollClips() {
+  try {
+    const data = await api('GET');
+    report.clips = data.report.clips;
+    if (report.clips?.status === 'ready') { files = data.files; renderFiles(); toast('Fix clip ready ✅', 8000); }
+    renderClips();
+  } catch { clipsTimer = setTimeout(pollClips, 10000); }
 }
 
 // ---------- AI first draft ----------
@@ -157,6 +185,7 @@ function render(data) {
   form().hidden = false;
   $('[data-status]').hidden = true;
   renderAi();
+  renderClips();
 }
 
 // ---------- collect ----------
@@ -233,6 +262,15 @@ $('[data-publish]').addEventListener('click', async () => {
   } catch (err) { win?.close(); toast(esc(err.message)); }
 });
 addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+$('[data-clips-run]').addEventListener('click', async () => {
+  try {
+    await save(); // use the times as they are on screen now
+    const r = await api('POST', '/clips');
+    report = { ...report, clips: r.report.clips };
+    renderClips();
+  } catch (err) { toast(esc(err.message)); }
+});
 
 $('[data-ai-run]').addEventListener('click', async () => {
   const hasContent = report.headline || report.items?.some((i) => i.title);

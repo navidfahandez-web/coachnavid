@@ -175,3 +175,6 @@ export async function downloadRange(id, start, end) {
   if (!res.ok && res.status !== 206) throw new Error(`Google Drive download: ${res.status}`);
   return Buffer.from(await res.arrayBuffer());
 }
+
+// Short-lived access token, for tools that read Drive files directly (e.g. ffmpeg over HTTPS).
+export const googleAccessToken = () => accessToken();
