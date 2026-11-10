@@ -218,7 +218,9 @@ export async function cutParts(videoFileId, partSec, onPart) {
   };
   const timer = setInterval(() => { try { flush(false); } catch { /* next tick */ } }, 2000);
   try {
-    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-i', proxy.url,
+    // decoding every frame of a 30-minute phone video is too slow for a function (~2.5 min per
+    // 5 minutes), so only the key frames are decoded (phones put one every ~0.5-1 s)
+    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-skip_frame', 'nokey', '-i', proxy.url,
       '-map', '0:v:0', '-an', '-vf', 'fps=2,scale=-2:480', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '30', '-pix_fmt', 'yuv420p',
       '-force_key_frames', `expr:gte(t,n_forced*${partSec})`,
       '-f', 'segment', '-segment_time', String(partSec), '-reset_timestamps', '1', '-segment_format', 'mp4',
