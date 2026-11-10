@@ -33,16 +33,21 @@ export function segments(items) {
   });
 }
 
+// never put the Drive link / access token into an error message
+const clean = (t) => t.replace(/https?:\/\/\S+/g, '<video>').replace(/Bearer\s+\S+/g, 'Bearer <token>');
+const proxyLog = []; // byte ranges ffmpeg asked for (for diagnosing slow cuts)
+
 function run(args, timeoutMs = 240000) {
   return new Promise((resolve, reject) => {
-    const p = spawn(ffmpegPath, args);
-    const timer = setTimeout(() => { p.kill('SIGKILL'); reject(new Error(`ffmpeg took longer than ${timeoutMs / 1000} s`)); }, timeoutMs);
+    const p = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] }); // no stdin: ffmpeg must never wait for a key press
+    const timer = setTimeout(() => {
+      p.kill('SIGKILL');
+      reject(new Error(`ffmpeg took longer than ${timeoutMs / 1000} s. Last output: ${clean(err.split('\n').filter(Boolean).slice(-4).join(' | '))}${proxyLog.length ? ` · reads: ${proxyLog.slice(-6).join(', ')}` : ''}`));
+    }, timeoutMs);
     p.on('exit', () => clearTimeout(timer));
     let err = '';
     p.stderr.on('data', (d) => { err = (err + d).slice(-3000); });
     p.on('error', reject);
-    // never put the Drive link / access token into an error message
-    const clean = (t) => t.replace(/https?:\/\/\S+/g, '<video>').replace(/Bearer\s+\S+/g, 'Bearer <token>');
     p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg failed (${code}): ${clean(err.split('\n').filter(Boolean).slice(-3).join(' | '))}`))));
   });
 }
@@ -59,6 +64,7 @@ async function driveProxy(fileId) {
     const m = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? '');
     const start = m ? Number(m[1]) : 0;
     const end = m && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+    proxyLog.push(`${Math.round(start / 1e6)}MB${m && m[2] ? `-${Math.round(end / 1e6)}MB` : '-'}`);
     if (start >= size) { res.writeHead(416, { 'Content-Range': `bytes */${size}` }); res.end(); return; }
     try {
       const up = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
@@ -101,7 +107,7 @@ export async function makeFixClips(videoFileId, items, onStep = async () => {}) 
     for (const [k, s] of segs.entries()) {
       await onStep(`Cutting fix ${k + 1} of ${segs.length}… (${secs()})`);
       const out = path.join(dir, `p${k}.mp4`);
-      await run(['-hide_banner', '-loglevel', 'error',
+      await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'info',
         '-seekable', '1', '-ss', s.start.toFixed(2), '-t', s.length.toFixed(2), '-i', url,
         '-i', labelFile(k * 2), '-i', labelFile(k * 2 + 1),
         '-filter_complex', [
@@ -118,7 +124,7 @@ export async function makeFixClips(videoFileId, items, onStep = async () => {}) 
     const list = path.join(dir, 'list.txt');
     writeFileSync(list, pieces.map((f) => `file '${f}'`).join('\n'));
     const out = path.join(dir, 'clips.mp4');
-    await run(['-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', out], 60000);
+    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', out], 60000);
     return { mp4: readFileSync(out), seconds: segs.reduce((t, s) => t + s.length * (1 + CLIP.slow), 0), segments: segs };
   } finally {
     proxy?.close();
