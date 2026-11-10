@@ -3,7 +3,7 @@
 // ffmpeg reads only the needed seconds straight from Google Drive (HTTP range requests).
 import { spawn } from 'node:child_process';
 import http from 'node:http';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import ffmpegPath from 'ffmpeg-static';
@@ -191,6 +191,46 @@ export async function cutMoments(videoFileId, moments) {
     }
     return out;
   } finally {
+    proxy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// The whole video as small low-res parts for the AI (one file per `partSec` seconds, 2 frames/s,
+// 480p, no sound). Gemini can't jump into the middle of some phone videos, so each part is its
+// own file with its own 0:00. onPart(k, Buffer) is called as soon as part k is finished, so the
+// AI can start on it while the next parts are still being cut.
+export async function cutParts(videoFileId, partSec, onPart) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'parts-'));
+  const proxy = await driveProxy(videoFileId);
+  const sent = new Set();
+  const jobs = [];
+  const flush = (all) => {
+    const names = readdirSync(dir).filter((f) => /^p\d+\.mp4$/.test(f)).sort();
+    // a part is finished once the next one has started (or ffmpeg has ended)
+    for (const [i, f] of names.entries()) {
+      const k = Number(f.slice(1, 4));
+      if (sent.has(k) || (!all && i === names.length - 1)) continue;
+      sent.add(k);
+      // keep failures until the end (an early unhandled rejection would kill the function)
+      jobs.push(onPart(k, readFileSync(path.join(dir, f))).then((v) => ({ v }), (e) => ({ e })));
+    }
+  };
+  const timer = setInterval(() => { try { flush(false); } catch { /* next tick */ } }, 2000);
+  try {
+    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-i', proxy.url,
+      '-map', '0:v:0', '-an', '-vf', 'fps=2,scale=-2:480', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '30', '-pix_fmt', 'yuv420p',
+      '-force_key_frames', `expr:gte(t,n_forced*${partSec})`,
+      '-f', 'segment', '-segment_time', String(partSec), '-reset_timestamps', '1', '-segment_format', 'mp4',
+      path.join(dir, 'p%03d.mp4')], 11 * 60 * 1000);
+    clearInterval(timer);
+    flush(true);
+    const out = await Promise.all(jobs);
+    const bad = out.find((x) => x.e);
+    if (bad) throw bad.e;
+    return out.map((x) => x.v);
+  } finally {
+    clearInterval(timer);
     proxy.close();
     rmSync(dir, { recursive: true, force: true });
   }

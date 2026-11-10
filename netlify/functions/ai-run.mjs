@@ -4,8 +4,9 @@ import { isAdmin } from '../lib/auth.mjs';
 import { logActivity, readJSON, updateJSON } from '../lib/store.mjs';
 import { listFolder } from '../lib/google.mjs';
 import { externalKey } from '../lib/players.mjs';
-import { analyzeVideo, deleteUpload, draftToReport, uploadFromDrive, verifyMoment } from '../lib/video-ai.mjs';
-import { cutMoments } from '../lib/clips.mjs';
+import { analyzeVideo, draftToReport, PART, verifyMoment } from '../lib/video-ai.mjs';
+import { cutMoments, cutParts } from '../lib/clips.mjs';
+import { drive } from '../lib/google.mjs';
 import { AREAS, toSeconds } from '../../shared/report.js';
 
 const BEFORE = 4; // seconds of context before the claimed moment
@@ -34,7 +35,6 @@ export default async (req) => {
   const { ref, checkOnly } = await req.json();
   const key = `reports/by-ref/${ref}`;
   const setAi = (ai) => updateJSON(key, (x) => { x.ai = { ...(x.ai ?? {}), ...ai }; }, {});
-  let upload = null;
   try {
     if (checkOnly) { // Navid changed times: only re-check the moments
       await checkMoments(key, setAi);
@@ -52,14 +52,9 @@ export default async (req) => {
     }
     if (!videoId) throw new Error('No video in the student’s folder yet.');
 
-    await setAi({ status: 'running', step: 'Sending the video to the AI…', progress: 0 });
-    let last = 0;
-    upload = await uploadFromDrive(videoId, async (done, total) => {
-      const pct = Math.round((done / total) * 100);
-      if (pct - last >= 10) { last = pct; await setAi({ progress: pct }); }
-    });
-
-    await setAi({ step: 'Finding the student’s moments, part by part…', progress: 100 });
+    const ms = Number((await drive(`files/${videoId}?fields=videoMediaMetadata`)).videoMediaMetadata?.durationMillis) || 0;
+    const total = ms ? Math.ceil(ms / 1000 / PART) : '?';
+    await setAi({ status: 'running', step: `Cutting the video into ${total} parts and watching each one…`, progress: 0, error: null });
     // Context: earlier published reports of this player + GlassWall
     const phone = digits(r.student.phone);
     const index = (await readJSON('reports/index', [])).filter((x) => x.status === 'published' && x.phone === phone && x.ref !== ref).slice(-3);
@@ -70,8 +65,9 @@ export default async (req) => {
     }
     const glasswall = (await readJSON(externalKey(phone), [])).slice(-2).map((g) => ({ date: g.date, focus: g.focus.map((f) => f.title), stats: g.metrics.map((m) => `${m.name}: ${m.value}${m.unit === '%' ? '%' : ` ${m.unit}`}`) }));
 
-    const { draft, model, moments, parts, duration } = await analyzeVideo(upload, r, { history, glasswall },
-      (done, total) => setAi({ step: done < total ? `Finding the student’s moments: part ${done} of ${total}…` : 'Writing the draft from the moments…' }));
+    const cut = (onPart) => cutParts(videoId, PART, onPart);
+    const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall },
+      (done) => setAi({ step: done === total ? 'Writing the draft from the moments…' : `Watched part ${done} of ${total}…` }));
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);
       Object.assign(x, filled, {
@@ -80,7 +76,6 @@ export default async (req) => {
         updatedAt: new Date().toISOString(),
       });
     }, {});
-    if (upload?.name) { await deleteUpload(upload.name); upload = null; }
     await setAi({ status: 'running', step: 'Double-checking each moment…' });
     try { await checkMoments(key, setAi); } catch (err) { await setAi({ checks: [{ ok: null, seen: `Moments not checked: ${err.message}` }] }); }
     await setAi({ status: 'ready', step: null });
@@ -88,8 +83,6 @@ export default async (req) => {
   } catch (err) {
     console.error(`AI draft for ${ref} failed: ${err.message}`);
     await setAi({ status: 'failed', error: err.message });
-  } finally {
-    if (upload?.name) await deleteUpload(upload.name); // don't keep student videos at Google longer than needed
   }
   return new Response('done');
 };
