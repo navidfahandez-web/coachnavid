@@ -2,12 +2,14 @@
 // normal speed, then the same moment in slow motion, with a label — about 20 s for three fixes.
 // ffmpeg reads only the needed seconds straight from Google Drive (HTTP range requests).
 import { spawn } from 'node:child_process';
+import http from 'node:http';
+import { Readable } from 'node:stream';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import ffmpegPath from 'ffmpeg-static';
 import { toSeconds } from '../../shared/report.js';
-import { googleAccessToken } from './google.mjs';
+import { drive, googleAccessToken } from './google.mjs';
 import { renderPngs } from './pdf-render.mjs';
 
 export const CLIP = { before: 1.0, length: 2.4, slow: 2 }; // seconds before the timestamp, seconds shown, slow-motion factor
@@ -46,14 +48,45 @@ function run(args, timeoutMs = 240000) {
 }
 
 // Returns the finished MP4 as a Buffer.
+// A tiny local server in front of the Drive file, so ffmpeg can jump around in it: it answers
+// every byte-range request with proper Content-Length / Content-Range (Drive's own replies
+// don't let ffmpeg seek, so it would read the whole match — phone videos keep their index at the end).
+async function driveProxy(fileId) {
+  const { size: sizeStr } = await drive(`files/${fileId}?fields=size`);
+  const size = Number(sizeStr);
+  const token = await googleAccessToken();
+  const server = http.createServer(async (req, res) => {
+    const m = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? '');
+    const start = m ? Number(m[1]) : 0;
+    const end = m && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+    if (start >= size) { res.writeHead(416, { 'Content-Range': `bytes */${size}` }); res.end(); return; }
+    try {
+      const up = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: { Authorization: `Bearer ${token}`, Range: `bytes=${start}-${end}` },
+      });
+      res.writeHead(m ? 206 : 200, {
+        'Accept-Ranges': 'bytes', 'Content-Type': 'video/mp4', 'Content-Length': end - start + 1,
+        ...(m ? { 'Content-Range': `bytes ${start}-${end}/${size}` } : {}),
+      });
+      const body = Readable.fromWeb(up.body);
+      req.on('close', () => body.destroy()); // ffmpeg hangs up as soon as it has what it needs
+      body.on('error', () => res.destroy());
+      body.pipe(res);
+    } catch { res.destroy(); }
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  return { url: `http://127.0.0.1:${server.address().port}/video`, close: () => server.close() };
+}
+
 // onStep(text) reports progress so a slow step is visible in the builder.
 export async function makeFixClips(videoFileId, items, onStep = async () => {}) {
   const segs = segments(items);
   if (!segs.length) throw new Error('No fixes with a timestamp (m:ss) to make clips from.');
   const dir = mkdtempSync(path.join(tmpdir(), 'clips-'));
+  let proxy = null;
   try {
-    const url = `https://www.googleapis.com/drive/v3/files/${videoFileId}?alt=media`;
-    const auth = `Authorization: Bearer ${await googleAccessToken()}\r\n`;
+    proxy = await driveProxy(videoFileId);
+    const { url } = proxy;
     const t0 = Date.now();
     const secs = () => `${Math.round((Date.now() - t0) / 1000)} s`;
 
@@ -69,8 +102,7 @@ export async function makeFixClips(videoFileId, items, onStep = async () => {}) 
       await onStep(`Cutting fix ${k + 1} of ${segs.length}… (${secs()})`);
       const out = path.join(dir, `p${k}.mp4`);
       await run(['-hide_banner', '-loglevel', 'error',
-        '-seekable', '1', '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
-        '-ss', s.start.toFixed(2), '-t', s.length.toFixed(2), '-headers', auth, '-i', url,
+        '-seekable', '1', '-ss', s.start.toFixed(2), '-t', s.length.toFixed(2), '-i', url,
         '-i', labelFile(k * 2), '-i', labelFile(k * 2 + 1),
         '-filter_complex', [
           '[0:v]fps=30,scale=-2:720,setsar=1,setpts=PTS-STARTPTS,split=2[a][b]',
@@ -89,6 +121,7 @@ export async function makeFixClips(videoFileId, items, onStep = async () => {}) 
     await run(['-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', out], 60000);
     return { mp4: readFileSync(out), seconds: segs.reduce((t, s) => t + s.length * (1 + CLIP.slow), 0), segments: segs };
   } finally {
+    proxy?.close();
     rmSync(dir, { recursive: true, force: true });
   }
 }
