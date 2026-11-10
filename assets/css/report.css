@@ -217,3 +217,8 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 .rb__ai-notes b { color: var(--ink); }
 .rb__ai .upload__progress { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
 .rb__ai .upload__progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+.rb__players { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.rb__players figure { margin: 0; display: grid; gap: 6px; }
+.rb__players figcaption { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.rb__players figcaption small { color: var(--accent); font-weight: 700; margin-left: 6px; }
+.rb__players figure[hidden] { display: none; }

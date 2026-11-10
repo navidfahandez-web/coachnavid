@@ -112,6 +112,17 @@ function renderClips() {
   const link = $('[data-clips-open]');
   link.hidden = c.status !== 'ready';
   if (c.fileId) link.href = `https://drive.google.com/file/d/${c.fileId}/view`;
+  // players: the clip, and the student's full video to check the timestamps against
+  const setPlayer = (sel, id) => {
+    const fig = $(sel);
+    fig.hidden = !id;
+    const frame = fig.querySelector('iframe');
+    const src = id ? `https://drive.google.com/file/d/${id}/preview` : '';
+    if (frame.getAttribute('src') !== src) frame.setAttribute('src', src);
+  };
+  setPlayer('[data-clips-player]', c.status === 'ready' ? c.fileId : null);
+  setPlayer('[data-video-player]', val('videoFileId') || report.videoFileId || null);
+  $('[data-video-times]').textContent = (report.items ?? []).filter((i) => i.time).map((i, n) => `${n + 1}: ${i.time}`).join(' · ');
   $('[data-clips-status]').textContent = c.status === 'running' ? `${c.step || 'Starting…'} — usually 1–3 minutes.`
     : c.status === 'failed' ? `⚠️ ${c.error}`
     : c.status === 'ready' ? `✅ ${c.seconds} s clip saved in the student’s Drive folder. Record your voice-over on it, upload the result to the folder, then choose it below as the voice-over video.`
