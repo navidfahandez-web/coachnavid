@@ -3,13 +3,12 @@
 // ffmpeg reads only the needed seconds straight from Google Drive (HTTP range requests).
 import { spawn } from 'node:child_process';
 import http from 'node:http';
-import { Readable } from 'node:stream';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import ffmpegPath from 'ffmpeg-static';
 import { toSeconds } from '../../shared/report.js';
-import { drive, googleAccessToken } from './google.mjs';
+import { downloadRange, drive } from './google.mjs';
 import { renderPngs } from './pdf-render.mjs';
 
 export const CLIP = { before: 1.0, length: 2.4, slow: 2 }; // seconds before the timestamp, seconds shown, slow-motion factor
@@ -53,31 +52,55 @@ function run(args, timeoutMs = 240000) {
 }
 
 // Returns the finished MP4 as a Buffer.
-// A tiny local server in front of the Drive file, so ffmpeg can jump around in it: it answers
-// every byte-range request with proper Content-Length / Content-Range (Drive's own replies
-// don't let ffmpeg seek, so it would read the whole match — phone videos keep their index at the end).
+// A tiny local server in front of the Drive file, so ffmpeg can jump around in it quickly.
+// Drive's own replies don't let ffmpeg seek, and some phone/camera videos spread their index
+// through the whole file, so ffmpeg makes thousands of small reads. This server fetches the
+// file in 16 MB pieces, keeps recent pieces in memory and fetches the next ones ahead.
+const PIECE = 16 * 1024 * 1024;
+const KEEP = 10; // pieces kept in memory (~160 MB)
 async function driveProxy(fileId) {
   const { size: sizeStr } = await drive(`files/${fileId}?fields=size`);
   const size = Number(sizeStr);
-  const token = await googleAccessToken();
+  const cache = new Map(); // piece index → Buffer (Map keeps insertion order = LRU)
+  const inflight = new Map();
+  const piece = (i) => {
+    if (cache.has(i)) { const b = cache.get(i); cache.delete(i); cache.set(i, b); return Promise.resolve(b); }
+    if (inflight.has(i)) return inflight.get(i);
+    const p = downloadRange(fileId, i * PIECE, Math.min(size, (i + 1) * PIECE) - 1).then((b) => {
+      cache.set(i, b);
+      inflight.delete(i);
+      while (cache.size > KEEP) cache.delete(cache.keys().next().value);
+      return b;
+    }, (err) => { inflight.delete(i); throw err; });
+    inflight.set(i, p);
+    return p;
+  };
+  const last = Math.floor((size - 1) / PIECE);
   const server = http.createServer(async (req, res) => {
     const m = /bytes=(\d+)-(\d*)/.exec(req.headers.range ?? '');
     const start = m ? Number(m[1]) : 0;
     const end = m && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
-    proxyLog.push(`${Math.round(start / 1e6)}MB${m && m[2] ? `-${Math.round(end / 1e6)}MB` : '-'}`);
     if (start >= size) { res.writeHead(416, { 'Content-Range': `bytes */${size}` }); res.end(); return; }
+    proxyLog.push(`${Math.round(start / 1e6)}MB`);
+    res.writeHead(m ? 206 : 200, {
+      'Accept-Ranges': 'bytes', 'Content-Type': 'video/mp4', 'Content-Length': end - start + 1,
+      ...(m ? { 'Content-Range': `bytes ${start}-${end}/${size}` } : {}),
+    });
+    let closed = false;
+    req.on('close', () => { closed = true; }); // ffmpeg hangs up as soon as it has what it needs
     try {
-      const up = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-        headers: { Authorization: `Bearer ${token}`, Range: `bytes=${start}-${end}` },
-      });
-      res.writeHead(m ? 206 : 200, {
-        'Accept-Ranges': 'bytes', 'Content-Type': 'video/mp4', 'Content-Length': end - start + 1,
-        ...(m ? { 'Content-Range': `bytes ${start}-${end}/${size}` } : {}),
-      });
-      const body = Readable.fromWeb(up.body);
-      req.on('close', () => body.destroy()); // ffmpeg hangs up as soon as it has what it needs
-      body.on('error', () => res.destroy());
-      body.pipe(res);
+      for (let pos = start; pos <= end && !closed;) {
+        const i = Math.floor(pos / PIECE);
+        if (i + 1 <= last) piece(i + 1).catch(() => {}); // read ahead
+        if (i + 2 <= last) piece(i + 2).catch(() => {});
+        const buf = await piece(i);
+        const from = pos - i * PIECE;
+        const to = Math.min(buf.length, end - i * PIECE + 1);
+        const slice = buf.subarray(from, to);
+        if (!res.write(slice)) await new Promise((r) => { res.once('drain', r); res.once('close', r); });
+        pos += slice.length;
+      }
+      res.end();
     } catch { res.destroy(); }
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
