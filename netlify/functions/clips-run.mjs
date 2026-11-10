@@ -21,7 +21,7 @@ export default async (req) => {
     const { mp4, seconds, segments } = await makeFixClips(videoId, r.items, (step) => setClips({ step }));
     const fileId = await uploadSimple({ name: `${ref} – fix clips (${Math.round(seconds)} s).mp4`, mimeType: 'video/mp4', parents: [r.folderId] }, mp4, 'video/mp4');
     if (r.clips?.fileId) await deleteFile(r.clips.fileId).catch(() => {});
-    await setClips({ status: 'ready', fileId, seconds: Math.round(seconds), offsets: segments.map((s, k) => segments.slice(0, k).reduce((t, x) => t + x.length * (1 + CLIP.slow), 0)), at: new Date().toISOString(), error: null, voiceFileId: null });
+    await setClips({ status: 'ready', fileId, seconds: Math.round(seconds), duration: seconds, offsets: segments.map((s, k) => segments.slice(0, k).reduce((t, x) => t + x.length * (1 + CLIP.slow), 0)), at: new Date().toISOString(), error: null, voiceFileId: null });
     await logActivity({ kind: 'sent', text: `Fix clips ready for ${ref} (${Math.round(seconds)} s) — in the student’s Drive folder.` });
   } catch (err) {
     console.error(`Clips for ${ref} failed: ${err.message}`);

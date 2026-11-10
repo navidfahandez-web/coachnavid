@@ -23,7 +23,7 @@ export default async (req) => {
       if (!res.ok) throw new Error(`Couldn’t download a voice line (${res.status}).`);
       audio.push(Buffer.from(await res.arrayBuffer()));
     }
-    const mp4 = await addVoice(clip, audio, r.clips.offsets ?? []);
+    const mp4 = await addVoice(clip, audio, r.clips.offsets ?? [], r.clips.duration ?? r.clips.seconds);
     const fileId = await uploadSimple({ name: `${ref} – fix clips + voice.mp4`, mimeType: 'video/mp4', parents: [r.folderId] }, mp4, 'video/mp4');
     if (r.clips.voiceFileId) await deleteFile(r.clips.voiceFileId).catch(() => {});
     await setClips({ voiceStatus: 'ready', voiceFileId: fileId, voiceError: null });

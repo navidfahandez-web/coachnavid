@@ -157,7 +157,7 @@ export async function makeFixClips(videoFileId, items, onStep = async () => {}) 
 
 // Lay one voice line per fix onto the clip: line k starts where fix k starts (offsets in seconds).
 // lines: Buffers (mp3/wav/m4a). Returns the MP4 with sound.
-export async function addVoice(clipMp4, lines, offsets) {
+export async function addVoice(clipMp4, lines, offsets, duration) {
   const dir = mkdtempSync(path.join(tmpdir(), 'voice-'));
   try {
     const clip = path.join(dir, 'clip.mp4');
@@ -168,7 +168,7 @@ export async function addVoice(clipMp4, lines, offsets) {
     const out = path.join(dir, 'voiced.mp4');
     await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-i', clip, ...files.flatMap((f) => ['-i', f]),
       '-filter_complex', `${delays.join(';')};${mix}`, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k',
-      '-shortest', '-movflags', '+faststart', out], 60000);
+      '-t', duration.toFixed(2), '-movflags', '+faststart', out], 90000); // exact length (apad + -shortest hangs with copied video)
     return readFileSync(out);
   } finally {
     rmSync(dir, { recursive: true, force: true });
