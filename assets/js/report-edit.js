@@ -120,7 +120,8 @@ function renderClips() {
     const src = id ? `https://drive.google.com/file/d/${id}/preview` : '';
     if (frame.getAttribute('src') !== src) frame.setAttribute('src', src);
   };
-  setPlayer('[data-clips-player]', c.status === 'ready' ? c.fileId : null);
+  setPlayer('[data-clips-player]', c.status === 'ready' ? (c.voiceFileId || c.fileId) : null);
+  $('[data-clips-player] figcaption').textContent = c.voiceFileId ? 'Fix clip with your voice' : 'Fix clip';
   setPlayer('[data-video-player]', val('videoFileId') || report.videoFileId || null);
   $('[data-video-times]').textContent = (report.items ?? []).filter((i) => i.time).map((i, n) => `${n + 1}: ${i.time}`).join(' · ');
   $('[data-clips-status]').textContent = c.status === 'running' ? `${c.step || 'Starting…'} — usually 1–3 minutes.`
