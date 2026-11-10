@@ -193,7 +193,7 @@ async function ask(body, models = MODELS, retried = false, timeoutMs = 240000) {
 }
 
 const MOMENTS_SCHEMA = {
-  type: 'OBJECT', required: ['usable', 'student_description', 'moments'],
+  type: 'OBJECT', required: ['usable', 'student_description', 'part_summary', 'moments'],
   properties: {
     usable: { type: 'BOOLEAN', description: 'false if this is not padel or the student cannot be followed in this part' },
     student_description: S('How to recognise the student in any part of the match: clothes and colours (front and back), racket, build, partner’s clothes. Not the court side: teams change ends.'),
