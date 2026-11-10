@@ -29,3 +29,24 @@ export async function renderToDrive(html, name, folderId, replaceId = null) {
   if (replaceId) await deleteFile(replaceId).catch(() => {});
   return id;
 }
+
+// Small PNGs (transparent background) from HTML snippets — e.g. text labels for video clips.
+export async function renderPngs(snippets, { fontsCss = '' } = {}) {
+  const browser = await puppeteer.launch({
+    args: await puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' }),
+    executablePath: await chromium.executablePath(PACK),
+    headless: 'shell',
+  });
+  try {
+    const page = await browser.newPage();
+    const out = [];
+    for (const html of snippets) {
+      await page.setContent(`<!doctype html><html><head>${fontsCss}<style>html,body{margin:0;background:transparent}</style></head><body><span id="l">${html}</span></body></html>`, { waitUntil: 'networkidle0', timeout: 30000 });
+      await page.evaluate(() => document.fonts.ready);
+      out.push(Buffer.from(await (await page.$('#l')).screenshot({ omitBackground: true })));
+    }
+    return out;
+  } finally {
+    await browser.close();
+  }
+}

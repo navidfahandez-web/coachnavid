@@ -25,7 +25,7 @@ export default async (req) => {
     await logActivity({ kind: 'sent', text: `Fix clips ready for ${ref} (${Math.round(seconds)} s) — in the student’s Drive folder.` });
   } catch (err) {
     console.error(`Clips for ${ref} failed: ${err.message}`);
-    await setClips({ status: 'failed', error: err.message });
+    await setClips({ status: 'failed', error: err.message.replace(/https?:\/\/\S+/g, '<link>').replace(/Bearer\s+\S+/g, 'Bearer <token>').slice(0, 500) });
   }
   return new Response('done');
 };
