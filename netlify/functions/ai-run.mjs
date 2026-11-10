@@ -46,7 +46,7 @@ export default async (req) => {
     const glasswall = (await readJSON(externalKey(phone), [])).slice(-2).map((g) => ({ date: g.date, focus: g.focus.map((f) => f.title), stats: g.metrics.map((m) => `${m.name}: ${m.value}${m.unit === '%' ? '%' : ` ${m.unit}`}`) }));
 
     const { draft, model } = await analyzeVideo(upload, r, { history, glasswall });
-    if (draft.usable === false) throw new Error(`The AI couldn’t analyse this video: ${draft.unusable_reason || 'no reason given'}. Your report wasn’t changed.`);
+    if (draft.usable === false) throw new Error(`The AI couldn’t analyse this video: ${(draft.unusable_reason || 'no reason given').replace(/[.\s]+$/, '')}. Your report wasn’t changed.`);
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);
       Object.assign(x, filled, {
