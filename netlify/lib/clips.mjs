@@ -2,7 +2,7 @@
 // normal speed, then the same moment in slow motion, with a label — about 20 s for three fixes.
 // ffmpeg reads only the needed seconds straight from Google Drive (HTTP range requests).
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import ffmpegPath from 'ffmpeg-static';
@@ -13,7 +13,12 @@ import { renderPngs } from './pdf-render.mjs';
 export const CLIP = { before: 1.0, length: 2.4, slow: 2 }; // seconds before the timestamp, seconds shown, slow-motion factor
 
 // Labels are drawn as PNGs by headless Chromium (this ffmpeg build has no text filter) and overlaid
-const LABEL_CSS = '<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">';
+// Anton is bundled with the function (netlify.toml included_files), so no font download is needed
+const FONT_FILE = [process.env.LAMBDA_TASK_ROOT, process.cwd()].filter(Boolean)
+  .map((d) => path.join(d, 'assets/fonts/Anton-Regular.ttf')).find((f) => existsSync(f));
+const labelCss = () => (FONT_FILE
+  ? `<style>@font-face{font-family:Anton;src:url(data:font/ttf;base64,${readFileSync(FONT_FILE).toString('base64')}) format('truetype')}</style>`
+  : '');
 const label = (text, bg) => `<span style="display:inline-block;padding:10px 20px 8px;background:${bg};color:#fff;font:400 40px Anton,sans-serif;letter-spacing:.02em;border-radius:8px">${text.replace(/[<>&]/g, '')}</span>`;
 
 // Which part of the video each fix uses (Navid can override start/length per fix in the builder)
@@ -47,7 +52,7 @@ export async function makeFixClips(videoFileId, items) {
     const url = `https://www.googleapis.com/drive/v3/files/${videoFileId}?alt=media`;
     const auth = `Authorization: Bearer ${await googleAccessToken()}\r\n`;
     // two labels per fix: "1 · LOW VOLLEYS" (accent) and "1 · SLOW MOTION" (dark)
-    const pngs = await renderPngs(segs.flatMap((s) => [label(`${s.n} · ${s.title.toUpperCase()}`, '#ff5b1f'), label(`${s.n} · SLOW MOTION`, '#0d0d0e')]), { fontsCss: LABEL_CSS });
+    const pngs = await renderPngs(segs.flatMap((s) => [label(`${s.n} · ${s.title.toUpperCase()}`, '#ff5b1f'), label(`${s.n} · SLOW MOTION`, '#0d0d0e')]), { fontsCss: labelCss() });
     const labelFiles = pngs.map((png, i) => { const f = path.join(dir, `l${i}.png`); writeFileSync(f, png); return f; });
     const inputs = [
       ...segs.flatMap((s) => ['-ss', s.start.toFixed(2), '-t', s.length.toFixed(2), '-headers', auth, '-i', url]),

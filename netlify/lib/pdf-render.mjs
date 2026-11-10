@@ -41,8 +41,8 @@ export async function renderPngs(snippets, { fontsCss = '' } = {}) {
     const page = await browser.newPage();
     const out = [];
     for (const html of snippets) {
-      await page.setContent(`<!doctype html><html><head>${fontsCss}<style>html,body{margin:0;background:transparent}</style></head><body><span id="l">${html}</span></body></html>`, { waitUntil: 'networkidle0', timeout: 30000 });
-      await page.evaluate(() => document.fonts.ready);
+      await page.setContent(`<!doctype html><html><head>${fontsCss}<style>html,body{margin:0;background:transparent}</style></head><body><span id="l">${html}</span></body></html>`, { waitUntil: 'load', timeout: 20000 });
+      await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 3000))]));
       out.push(Buffer.from(await (await page.$('#l')).screenshot({ omitBackground: true })));
     }
     return out;
