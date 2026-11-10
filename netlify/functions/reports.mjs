@@ -90,6 +90,8 @@ function sanitize(r, b) {
     ...r, kind, lang: b.lang === 'lt' ? 'lt' : 'en',
     headline: line(b.headline, 140), summary: str(b.summary, 1500), strengths: str(b.strengths, 800), closing: str(b.closing, 800),
     items, scores, weeks, videoFileId: fileId(b.videoFileId), mediaFileId: fileId(b.mediaFileId),
+    // one voice-over line per fix (spoken in Navid's Higgsfield voice, then laid on the fix clip)
+    voiceLines: (Array.isArray(b.voiceLines) ? b.voiceLines : r.voiceLines ?? []).slice(0, spec.items).map((t) => str(t, 300)),
     updatedAt: new Date().toISOString(),
   };
 }

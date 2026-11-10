@@ -102,6 +102,51 @@ function renderFiles() {
   $('[name=mediaFileId]').innerHTML = fileOptions('media', report.mediaFileId);
 }
 
+// ---------- voice-over lines (one per fix, sized to the fix's seconds in the clip) ----------
+const WORDS_PER_SEC = 2.4; // a calm coaching pace
+const fixSeconds = (it) => (Number(it.clipLen) || 2.4) * 3; // normal speed + 2x slow motion
+function suggestLine(it, words) {
+  const text = `${it.title ? `${it.title}.` : ''} ${it.fix ?? ''}`.replace(/\s+/g, ' ').trim();
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  let out = '';
+  for (const s of sentences) {
+    const next = `${out} ${s}`.trim();
+    if (next.split(' ').length > words && out) break;
+    out = next;
+  }
+  return out.split(' ').slice(0, words + 4).join(' ');
+}
+function renderVoice() {
+  const c = report.clips ?? {};
+  const box = $('[data-voice-box]');
+  box.hidden = c.status !== 'ready';
+  if (box.hidden) return;
+  $('[data-voice-ref]').textContent = report.ref;
+  const items = (report.items ?? []).filter((i) => i.title);
+  const lines = report.voiceLines ?? [];
+  const wrap = $('[data-voice-lines]');
+  if (!wrap.dataset.ready) { // don't overwrite what's being typed
+    wrap.innerHTML = items.map((it, k) => {
+      const secs = fixSeconds(it);
+      const words = Math.floor(secs * WORDS_PER_SEC);
+      return `<label class="field">${k + 1} · ${esc(it.title)} <small class="note">≈ ${secs.toFixed(1)} s · up to ~${words} words · <span data-wc></span></small>
+        <textarea data-voice-line rows="2" data-max="${words}">${esc(lines[k] || suggestLine(it, words))}</textarea></label>`;
+    }).join('');
+    wrap.dataset.ready = '1';
+    wrap.querySelectorAll('[data-voice-line]').forEach(countWords);
+  }
+  $('[data-voice-status]').textContent = c.voiceStatus === 'running' ? '⏳ Putting your voice on the clip…'
+    : c.voiceStatus === 'failed' ? `⚠️ ${c.voiceError}` : c.voiceFileId ? '✅ Your voice is on the clip (left player).' : '';
+}
+function countWords(t) {
+  const n = t.value.trim() ? t.value.trim().split(/\s+/).length : 0;
+  const max = Number(t.dataset.max);
+  const span = t.closest('label').querySelector('[data-wc]');
+  span.textContent = `${n} words${n > max ? ' — too long, it will run into the next fix' : ''}`;
+  span.style.color = n > max ? 'var(--danger)' : '';
+}
+document.addEventListener('input', (e) => { if (e.target.matches('[data-voice-line]')) countWords(e.target); });
+
 // ---------- fix clips (normal speed + slow motion, for the voice-over) ----------
 let clipsTimer = null;
 function renderClips() {
@@ -124,6 +169,7 @@ function renderClips() {
   $('[data-clips-player] figcaption').textContent = c.voiceFileId ? 'Fix clip with your voice' : 'Fix clip';
   setPlayer('[data-video-player]', val('videoFileId') || report.videoFileId || null);
   $('[data-video-times]').textContent = (report.items ?? []).filter((i) => i.time).map((i, n) => `${n + 1}: ${i.time}`).join(' · ');
+  renderVoice();
   $('[data-clips-status]').textContent = c.status === 'running' ? `${c.step || 'Starting…'} — usually 1–3 minutes.`
     : c.status === 'failed' ? `⚠️ ${c.error}`
     : c.status === 'ready' ? `✅ ${c.seconds} s clip saved in the student’s Drive folder. Record your voice-over on it, upload the result to the folder, then choose it below as the voice-over video.`
@@ -215,6 +261,7 @@ function collect() {
     kind: val('kind'), lang: val('lang'), headline: val('headline'), summary: val('summary'),
     strengths: val('strengths'), closing: val('closing'), videoFileId: val('videoFileId'), mediaFileId: val('mediaFileId'),
     items, weeks, scores,
+    voiceLines: document.querySelector('[data-voice-line]') ? [...document.querySelectorAll('[data-voice-line]')].map((t) => t.value.trim()) : undefined,
   };
 }
 

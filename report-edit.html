@@ -67,6 +67,12 @@
             <button class="btn btn--lime" type="button" data-clips-run>Make 20 s clip</button>
           </div>
         </div>
+        <div class="rb__voice" data-voice-box hidden>
+          <h3>🎙️ Your voice-over</h3>
+          <p class="note">One line per fix, sized to fit its part of the clip. Edit them so they sound like you, press <b>Save draft</b>, then tell Claude <b>“add my voice to <span data-voice-ref></span>”</b> — it speaks them in your Higgsfield voice and puts them on the clip.</p>
+          <div data-voice-lines></div>
+          <p class="note" data-voice-status></p>
+        </div>
         <div class="rb__players">
           <figure data-clips-player hidden><figcaption>Fix clip</figcaption><div class="rp__embed"><iframe allow="autoplay; fullscreen" allowfullscreen title="Fix clip"></iframe></div></figure>
           <figure data-video-player hidden><figcaption>Full video <small data-video-times></small></figcaption><div class="rp__embed"><iframe allow="autoplay; fullscreen" allowfullscreen title="Student video"></iframe></div></figure>

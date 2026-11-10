@@ -222,3 +222,6 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 .rb__players figcaption { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .rb__players figcaption small { color: var(--accent); font-weight: 700; margin-left: 6px; }
 .rb__players figure[hidden] { display: none; }
+.rb__voice { display: grid; gap: 10px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.rb__voice h3 { margin: 0; }
+.rb__voice .field textarea { width: 100%; }
