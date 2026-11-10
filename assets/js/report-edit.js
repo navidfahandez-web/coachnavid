@@ -112,7 +112,7 @@ function renderClips() {
   const link = $('[data-clips-open]');
   link.hidden = c.status !== 'ready';
   if (c.fileId) link.href = `https://drive.google.com/file/d/${c.fileId}/view`;
-  $('[data-clips-status]').textContent = c.status === 'running' ? 'Cutting the fixes from the video… about a minute.'
+  $('[data-clips-status]').textContent = c.status === 'running' ? `${c.step || 'Starting…'} — usually 1–3 minutes.`
     : c.status === 'failed' ? `⚠️ ${c.error}`
     : c.status === 'ready' ? `✅ ${c.seconds} s clip saved in the student’s Drive folder. Record your voice-over on it, upload the result to the folder, then choose it below as the voice-over video.`
     : 'Each fix at normal speed, then again in slow motion with a label — about 20 seconds, silent, ready for your voice-over. Uses the times of the fixes below; adjust “Clip from” if a moment is off.';

@@ -18,7 +18,7 @@ export default async (req) => {
       videoId = files.filter((f) => /^video\//.test(f.mimeType)).sort((a, b) => Number(b.size) - Number(a.size))[0]?.id;
     }
     if (!videoId) throw new Error('No video in the student’s folder yet.');
-    const { mp4, seconds } = await makeFixClips(videoId, r.items);
+    const { mp4, seconds } = await makeFixClips(videoId, r.items, (step) => setClips({ step }));
     const fileId = await uploadSimple({ name: `${ref} – fix clips (${Math.round(seconds)} s).mp4`, mimeType: 'video/mp4', parents: [r.folderId] }, mp4, 'video/mp4');
     if (r.clips?.fileId) await deleteFile(r.clips.fileId).catch(() => {});
     await setClips({ status: 'ready', fileId, seconds: Math.round(seconds), at: new Date().toISOString(), error: null });

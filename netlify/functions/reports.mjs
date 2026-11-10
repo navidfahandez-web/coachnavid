@@ -193,7 +193,7 @@ export default async (req, context) => {
   }
 
   if (req.method === 'POST' && pathname.endsWith('/clips')) { // 20 s video of the fixes, for Navid's voice-over
-    if (r.clips?.status === 'running') return json({ report: r });
+    if (r.clips?.status === 'running' && Date.now() - Date.parse(r.clips.startedAt) < 16 * 60e3) return json({ report: r }); // background runs stop after 15 min
     await updateJSON(reportKey(ref), (x) => { x.clips = { ...(x.clips ?? {}), status: 'running', error: null, startedAt: new Date().toISOString() }; }, {});
     await fetch(`${new URL(req.url).origin}/api/clips-run`, {
       method: 'POST',
@@ -205,7 +205,7 @@ export default async (req, context) => {
 
   if (req.method === 'POST' && pathname.endsWith('/ai')) { // AI first draft from the student's video
     if (!canAnalyze()) return json({ error: 'AI video analysis needs GEMINI_VIDEO_KEY in Netlify (see README).', code: 'no-key' }, 503);
-    if (r.ai?.status === 'running') return json({ report: r });
+    if (r.ai?.status === 'running' && Date.now() - Date.parse(r.ai.startedAt) < 16 * 60e3) return json({ report: r });
     await updateJSON(reportKey(ref), (x) => { x.ai = { status: 'running', step: 'Starting…', progress: 0, startedAt: new Date().toISOString() }; }, {});
     await fetch(`${new URL(req.url).origin}/api/ai-run`, {
       method: 'POST',

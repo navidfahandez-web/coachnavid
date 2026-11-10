@@ -31,9 +31,11 @@ export function segments(items) {
   });
 }
 
-function run(args) {
+function run(args, timeoutMs = 240000) {
   return new Promise((resolve, reject) => {
     const p = spawn(ffmpegPath, args);
+    const timer = setTimeout(() => { p.kill('SIGKILL'); reject(new Error(`ffmpeg took longer than ${timeoutMs / 1000} s`)); }, timeoutMs);
+    p.on('exit', () => clearTimeout(timer));
     let err = '';
     p.stderr.on('data', (d) => { err = (err + d).slice(-3000); });
     p.on('error', reject);
@@ -44,30 +46,47 @@ function run(args) {
 }
 
 // Returns the finished MP4 as a Buffer.
-export async function makeFixClips(videoFileId, items) {
+// onStep(text) reports progress so a slow step is visible in the builder.
+export async function makeFixClips(videoFileId, items, onStep = async () => {}) {
   const segs = segments(items);
   if (!segs.length) throw new Error('No fixes with a timestamp (m:ss) to make clips from.');
   const dir = mkdtempSync(path.join(tmpdir(), 'clips-'));
   try {
     const url = `https://www.googleapis.com/drive/v3/files/${videoFileId}?alt=media`;
     const auth = `Authorization: Bearer ${await googleAccessToken()}\r\n`;
+    const t0 = Date.now();
+    const secs = () => `${Math.round((Date.now() - t0) / 1000)} s`;
+
+    await onStep('Drawing the labels…');
     // two labels per fix: "1 · LOW VOLLEYS" (accent) and "1 · SLOW MOTION" (dark)
     const pngs = await renderPngs(segs.flatMap((s) => [label(`${s.n} · ${s.title.toUpperCase()}`, '#ff5b1f'), label(`${s.n} · SLOW MOTION`, '#0d0d0e')]), { fontsCss: labelCss() });
-    const labelFiles = pngs.map((png, i) => { const f = path.join(dir, `l${i}.png`); writeFileSync(f, png); return f; });
-    const inputs = [
-      ...segs.flatMap((s) => ['-ss', s.start.toFixed(2), '-t', s.length.toFixed(2), '-headers', auth, '-i', url]),
-      ...labelFiles.flatMap((f) => ['-i', f]),
-    ];
-    const L = (k, slow) => segs.length + k * 2 + (slow ? 1 : 0); // input index of a label image
-    const parts = segs.map((s, k) => [
-      `[${k}:v]fps=30,scale=-2:720,setsar=1,setpts=PTS-STARTPTS,split=2[a${k}][b${k}]`,
-      `[a${k}][${L(k, false)}:v]overlay=40:40,format=yuv420p[n${k}]`,
-      `[b${k}]setpts=${CLIP.slow}*PTS[bs${k}];[bs${k}][${L(k, true)}:v]overlay=40:40,format=yuv420p[s${k}]`,
-    ].join(';'));
-    const concat = `${segs.map((_, k) => `[n${k}][s${k}]`).join('')}concat=n=${segs.length * 2}:v=1:a=0[out]`;
+    const labelFile = (i) => { const f = path.join(dir, `l${i}.png`); writeFileSync(f, pngs[i]); return f; };
+
+    // One small ffmpeg run per fix: read only those seconds from Drive (HTTP range requests),
+    // then normal speed + slow motion with the labels, into a local file.
+    const pieces = [];
+    for (const [k, s] of segs.entries()) {
+      await onStep(`Cutting fix ${k + 1} of ${segs.length}… (${secs()})`);
+      const out = path.join(dir, `p${k}.mp4`);
+      await run(['-hide_banner', '-loglevel', 'error',
+        '-seekable', '1', '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
+        '-ss', s.start.toFixed(2), '-t', s.length.toFixed(2), '-headers', auth, '-i', url,
+        '-i', labelFile(k * 2), '-i', labelFile(k * 2 + 1),
+        '-filter_complex', [
+          '[0:v]fps=30,scale=-2:720,setsar=1,setpts=PTS-STARTPTS,split=2[a][b]',
+          '[a][1:v]overlay=40:40,format=yuv420p[n]',
+          `[b]setpts=${CLIP.slow}*PTS[bs];[bs][2:v]overlay=40:40,format=yuv420p[s]`,
+          '[n][s]concat=n=2:v=1:a=0[out]',
+        ].join(';'),
+        '-map', '[out]', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-pix_fmt', 'yuv420p', '-an', out]);
+      pieces.push(out);
+    }
+
+    await onStep(`Joining the clips… (${secs()})`);
+    const list = path.join(dir, 'list.txt');
+    writeFileSync(list, pieces.map((f) => `file '${f}'`).join('\n'));
     const out = path.join(dir, 'clips.mp4');
-    await run(['-hide_banner', '-loglevel', 'error', ...inputs, '-filter_complex', `${parts.join(';')};${concat}`,
-      '-map', '[out]', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', out]);
+    await run(['-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', out], 60000);
     return { mp4: readFileSync(out), seconds: segs.reduce((t, s) => t + s.length * (1 + CLIP.slow), 0), segments: segs };
   } finally {
     rmSync(dir, { recursive: true, force: true });
