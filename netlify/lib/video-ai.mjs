@@ -195,8 +195,9 @@ async function findMoments(file, r, onProgress) {
   const parts = [];
   for (let s0 = 0; s0 < duration; s0 += PART) parts.push([s0, Math.min(duration, s0 + PART)]);
   let who = r.studentNotes || '';
+  const partLog = parts.map(([a, b]) => ({ from: fmt(a), to: fmt(b), found: null, model: null }));
   const run = async ([a, b], k) => {
-    const { json } = await ask({
+    const { json, model } = await ask({
       contents: [{ role: 'user', parts: [
         { fileData: { mimeType: file.mimeType, fileUri: file.uri }, videoMetadata: { startOffset: `${a}s`, endOffset: `${b}s`, fps: 2 } },
         { text: `Padel match video, part ${k + 1} of ${parts.length} (from ${fmt(a)} to ${fmt(b)} of the match).
@@ -211,6 +212,7 @@ Only the student, not the partner or opponents (except to explain what happened)
     }, MOMENT_MODELS);
     if (k === 0 && json.usable === false) throw new Error(`The AI couldn’t analyse this video: ${json.student_description || 'not padel or the student can’t be found'}. Your report wasn’t changed.`);
     if (k === 0 && json.student_description) who = json.student_description;
+    partLog[k] = { ...partLog[k], found: (json.moments ?? []).length, model, raw: (json.moments ?? []).slice(0, 3).map((m) => m.time) };
     return (json.moments ?? []).map((m) => {
       const rel = toSec(m.time);
       return rel === null ? null : { ...m, t: Math.min(b, a + rel), time: fmt(a + rel) };
@@ -223,12 +225,12 @@ Only the student, not the partner or opponents (except to explain what happened)
   const rest = await Promise.all(parts.slice(1).map((p, j) => run(p, j + 1).then((m) => { onProgress?.(++done, parts.length); return m; })));
   rest.forEach((m) => out.push(...m)); // all remaining parts at once (a background run has 15 minutes)
   out.sort((x, y) => x.t - y.t);
-  return { moments: out.map((m, i) => ({ id: i, ...m })), who, duration };
+  return { moments: out.map((m, i) => ({ id: i, ...m })), who, duration, partLog };
 }
 
 // Pass 2: write the report from the moment list — every fix must point at a found moment
 export async function analyzeVideo(file, r, ctx, onProgress) {
-  const { moments, who } = await findMoments(file, r, onProgress);
+  const { moments, who, duration, partLog } = await findMoments(file, r, onProgress);
   const errors = moments.filter((m) => m.kind === 'error');
   if (!errors.length) throw new Error('The AI didn’t find clear errors by the student in this video. Your report wasn’t changed.');
   const sch = schema(r.kind);
@@ -256,7 +258,7 @@ ${moments.map((m) => `${m.id} · ${m.time} · ${m.kind} · ${m.area}/${m.shot} �
     return { ...it, time: m.time, seen_at_time: m.what_happens };
   });
   draft.player_identified = draft.player_identified || who;
-  return { draft, model, moments };
+  return { draft, model, moments, parts: partLog, duration };
 }
 
 // Gemini's draft → the report's own fields (what the builder edits)

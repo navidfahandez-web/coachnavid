@@ -70,13 +70,13 @@ export default async (req) => {
     }
     const glasswall = (await readJSON(externalKey(phone), [])).slice(-2).map((g) => ({ date: g.date, focus: g.focus.map((f) => f.title), stats: g.metrics.map((m) => `${m.name}: ${m.value}${m.unit === '%' ? '%' : ` ${m.unit}`}`) }));
 
-    const { draft, model, moments } = await analyzeVideo(upload, r, { history, glasswall },
+    const { draft, model, moments, parts, duration } = await analyzeVideo(upload, r, { history, glasswall },
       (done, total) => setAi({ step: done < total ? `Finding the student’s moments: part ${done} of ${total}…` : 'Writing the draft from the moments…' }));
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);
       Object.assign(x, filled, {
         videoFileId: x.videoFileId || videoId,
-        ai: { status: 'ready', at: new Date().toISOString(), model, player: draft.player_identified, notes: draft.confidence_notes, moments, checked: false },
+        ai: { status: 'ready', at: new Date().toISOString(), model, player: draft.player_identified, notes: draft.confidence_notes, moments, parts, duration, checked: false },
         updatedAt: new Date().toISOString(),
       });
     }, {});
