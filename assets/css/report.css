@@ -227,3 +227,11 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 .rb__voice .field textarea { width: 100%; }
 .rb__ai-notes .rb__bad { color: var(--danger); }
 .rb__ai-notes .pill { justify-self: start; background: transparent; color: var(--ink); cursor: pointer; margin-top: 4px; }
+.rb__ok { align-self: end; padding-bottom: 10px; font-size: 13px; white-space: nowrap; }
+.rb__moments { margin-top: 6px; }
+.rb__moments summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.rb__moment { display: grid; grid-template-columns: 58px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+.rb__mt { font-weight: 700; color: var(--accent); }
+.rb__mb { display: flex; gap: 4px; }
+.rb__mb .pill { padding: 3px 9px; font-size: 12px; margin: 0 !important; }
+@media (max-width: 640px) { .rb__moment { grid-template-columns: 50px 1fr; } .rb__mb { grid-column: 1 / -1; } }

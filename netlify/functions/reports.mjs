@@ -66,7 +66,7 @@ function sanitize(r, b) {
   const kind = KINDS[b.kind] ? b.kind : r.kind;
   const spec = KINDS[kind];
   const items = (Array.isArray(b.items) ? b.items : []).slice(0, spec.items).map((i) => ({
-    time: line(i?.time, 12), clipStart: line(i?.clipStart, 12), clipLen: Number(i?.clipLen) > 0 ? Math.min(8, Number(i.clipLen)) : null, title: line(i?.title), detail: str(i?.detail, 600),
+    time: line(i?.time, 12), confirmed: i?.confirmed === true || i?.confirmed === 'true', clipStart: line(i?.clipStart, 12), clipLen: Number(i?.clipLen) > 0 ? Math.min(8, Number(i.clipLen)) : null, title: line(i?.title), detail: str(i?.detail, 600),
     fix: str(i?.fix, 600), drillName: line(i?.drillName, 80), drillHow: str(i?.drillHow, 600),
   }));
   const scores = {};

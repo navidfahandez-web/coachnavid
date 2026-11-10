@@ -55,6 +55,7 @@ function renderKind() {
       <div class="rb__row">
         <label class="field rb__time">Time <input data-k="time" value="${esc(it.time)}" placeholder="3:12" /></label>
         <label class="field rb__time" title="Where the clip of this fix starts. Empty = 1 second before the time.">Clip from <input data-k="clipStart" value="${esc(it.clipStart ?? '')}" placeholder="auto" /></label>
+        <label class="check rb__ok" title="Tick after you've watched this moment in the full video"><input type="checkbox" data-k="confirmed" ${it.confirmed ? 'checked' : ''} /> I checked this moment</label>
         <label class="field rb__time" title="Seconds shown at normal speed (then repeated in slow motion)">Clip secs <input data-k="clipLen" type="number" min="1" max="8" step="0.5" value="${esc(it.clipLen ?? '')}" placeholder="2.4" /></label>
         <label class="field">${kind === 'match' ? 'Fix' : 'Error'} <input data-k="title" value="${esc(it.title)}" placeholder="e.g. Bandeja hit too flat and too early" /></label>
       </div>
@@ -207,7 +208,12 @@ function renderAi() {
   notes.hidden = ai.status !== 'ready' || !(ai.player || ai.notes || checks.length);
   notes.innerHTML = `${ai.player ? `<p><b>Who it analysed:</b> ${esc(ai.player)}</p>` : ''}${ai.notes ? `<p><b>Not sure about:</b> ${esc(ai.notes)}</p>` : ''}
     ${checks.length ? `<p><b>Moment check</b> (the AI re-watched the seconds around each time):</p>${checks.map((c) => `<p class="${c.ok === false ? 'rb__bad' : ''}">${c.ok === true ? '✅' : c.ok === false ? '⚠️' : '•'} ${c.index !== undefined ? `Fix ${c.index + 1} at ${esc(c.time)} — ` : ''}${c.ok === false ? '<b>doesn’t match.</b> It shows: ' : ''}${esc(c.seen)}</p>`).join('')}
-      <button class="pill" type="button" data-recheck>Re-check moments after changing times</button>` : ''}`;
+      <button class="pill" type="button" data-recheck>Re-check moments after changing times</button>` : ''}
+    ${ai.moments?.length ? `<details class="rb__moments"><summary>All moments the AI found (${ai.moments.length}) — swap a fix for another moment</summary>
+      ${ai.moments.map((m) => `<div class="rb__moment">
+        <span class="rb__mt">${esc(m.time)}</span><span>${m.kind === 'error' ? '⚠️' : '👍'} ${esc(m.what_happens)}</span>
+        <span class="rb__mb">${(report.items ?? []).map((_, k) => `<button type="button" class="pill" data-use-moment="${m.id}" data-fix="${k}">Fix ${k + 1}</button>`).join('')}</span>
+      </div>`).join('')}</details>` : ''}`;
   clearTimeout(aiTimer);
   if (ai.status === 'running') aiTimer = setTimeout(pollAi, 5000);
 }
@@ -252,7 +258,7 @@ function render(data) {
 // ---------- collect ----------
 function collect() {
   const items = [...document.querySelectorAll('[data-item]')].map((el) =>
-    Object.fromEntries([...el.querySelectorAll('[data-k]')].map((i) => [i.dataset.k, i.value])));
+    Object.fromEntries([...el.querySelectorAll('[data-k]')].map((i) => [i.dataset.k, i.type === 'checkbox' ? i.checked : i.value])));
   const weeks = [...document.querySelectorAll('[data-week]')].map((el) =>
     Object.fromEntries([...el.querySelectorAll('[data-k]')].map((i) => [i.dataset.k, i.value])));
   const scores = Object.fromEntries([...document.querySelectorAll('[data-area]')].map((el) => [el.dataset.area, {
@@ -325,6 +331,23 @@ $('[data-publish]').addEventListener('click', async () => {
 });
 addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-use-moment]');
+  if (!b) return;
+  const m = (report.ai?.moments ?? []).find((x) => String(x.id) === b.dataset.useMoment);
+  const box = document.querySelector(`[data-item="${b.dataset.fix}"]`);
+  if (!m || !box) return;
+  box.querySelector('[data-k=time]').value = m.time;
+  box.querySelector('[data-k=clipStart]').value = '';
+  box.querySelector('[data-k=confirmed]').checked = false;
+  const detail = box.querySelector('[data-k=detail]');
+  detail.value = m.what_happens;
+  dirty = true;
+  $('[data-saved]').textContent = 'Unsaved changes';
+  toast(`Fix ${Number(b.dataset.fix) + 1} now uses ${esc(m.time)}. Update its title, fix and drill if needed, then Save.`);
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
 document.addEventListener('click', async (e) => {
   if (!e.target.closest('[data-recheck]')) return;
   try {
@@ -336,6 +359,8 @@ document.addEventListener('click', async (e) => {
 });
 
 $('[data-clips-run]').addEventListener('click', async () => {
+  const unchecked = [...document.querySelectorAll('[data-item]')].filter((el) => el.querySelector('[data-k=title]').value && !el.querySelector('[data-k=confirmed]').checked).length;
+  if (unchecked && !confirm(`${unchecked} fix${unchecked > 1 ? 'es are' : ' is'} not ticked as checked yet. Make the clip anyway?`)) return;
   try {
     await save(); // use the times as they are on screen now
     const r = await api('POST', '/clips');

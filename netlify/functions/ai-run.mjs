@@ -59,7 +59,7 @@ export default async (req) => {
       if (pct - last >= 10) { last = pct; await setAi({ progress: pct }); }
     });
 
-    await setAi({ step: 'Watching the video and writing the draft…', progress: 100 });
+    await setAi({ step: 'Finding the student’s moments, part by part…', progress: 100 });
     // Context: earlier published reports of this player + GlassWall
     const phone = digits(r.student.phone);
     const index = (await readJSON('reports/index', [])).filter((x) => x.status === 'published' && x.phone === phone && x.ref !== ref).slice(-3);
@@ -70,13 +70,13 @@ export default async (req) => {
     }
     const glasswall = (await readJSON(externalKey(phone), [])).slice(-2).map((g) => ({ date: g.date, focus: g.focus.map((f) => f.title), stats: g.metrics.map((m) => `${m.name}: ${m.value}${m.unit === '%' ? '%' : ` ${m.unit}`}`) }));
 
-    const { draft, model } = await analyzeVideo(upload, r, { history, glasswall });
-    if (draft.usable === false) throw new Error(`The AI couldn’t analyse this video: ${(draft.unusable_reason || 'no reason given').replace(/[.\s]+$/, '')}. Your report wasn’t changed.`);
+    const { draft, model, moments } = await analyzeVideo(upload, r, { history, glasswall },
+      (done, total) => setAi({ step: done < total ? `Finding the student’s moments: part ${done} of ${total}…` : 'Writing the draft from the moments…' }));
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);
       Object.assign(x, filled, {
         videoFileId: x.videoFileId || videoId,
-        ai: { status: 'ready', at: new Date().toISOString(), model, player: draft.player_identified, notes: draft.confidence_notes, checked: false },
+        ai: { status: 'ready', at: new Date().toISOString(), model, player: draft.player_identified, notes: draft.confidence_notes, moments, checked: false },
         updatedAt: new Date().toISOString(),
       });
     }, {});
