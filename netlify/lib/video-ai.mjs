@@ -196,7 +196,8 @@ const MOMENTS_SCHEMA = {
   type: 'OBJECT', required: ['usable', 'student_description', 'moments'],
   properties: {
     usable: { type: 'BOOLEAN', description: 'false if this is not padel or the student cannot be followed in this part' },
-    student_description: S('How to recognise the student (shirt, side, partner)'),
+    student_description: S('How to recognise the student in any part of the match: clothes and colours (front and back), racket, build, partner’s clothes. Not the court side: teams change ends.'),
+    part_summary: S('One sentence: what this part shows (rallies, breaks, change of ends…) and where the student is'),
     moments: {
       type: 'ARRAY',
       items: {
@@ -234,6 +235,7 @@ async function findMoments(cut, r, onProgress) {
           { fileData: { mimeType: 'video/mp4', fileUri: file.uri } },
           { text: `Padel match video, part ${k + 1} (this file starts at ${fmt(a)} of the match; it has no sound).
 The student is ${r.student.firstName} ${r.student.lastName}. ${who ? `How to recognise them: ${who}` : 'Work out which player it is (name on the shirt, the note below) and describe them.'}
+Teams change ends during a match, so the student may be on the far side of the net in this part, facing the camera: follow the same player by clothes and partner.
 Student's note: "${r.studentNotes || '—'}"
 
 List every clear moment in THIS FILE where the student makes an error that costs or risks the point, or does something notably good.
@@ -244,7 +246,7 @@ Only the student, not the partner or opponents (except to explain what happened)
       }, MOMENT_MODELS);
       if (k === 0 && json.usable === false) throw new Error(`The AI couldn’t analyse this video: ${json.student_description || 'not padel or the student can’t be found'}. Your report wasn’t changed.`);
       if (k === 0 && json.student_description) who = json.student_description;
-      partLog[k] = { from: fmt(a), found: (json.moments ?? []).length, model, mb: Math.round(buf.length / 1e5) / 10 };
+      partLog[k] = { from: fmt(a), found: (json.moments ?? []).length, model, mb: Math.round(buf.length / 1e5) / 10, usable: json.usable, seen: String(json.part_summary ?? '').slice(0, 300) };
       onProgress?.(++done);
       return (json.moments ?? []).map((m) => {
         const rel = toSec(m.time);
