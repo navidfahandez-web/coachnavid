@@ -192,6 +192,18 @@ export default async (req, context) => {
     return json({ ok: true, report: r });
   }
 
+  if (req.method === 'POST' && pathname.endsWith('/voice')) { // voice lines (audio links) onto the fix clip
+    const lines = (Array.isArray(b?.lines) ? b.lines : []).filter((u) => /^https:\/\//.test(u)).slice(0, 6);
+    if (!lines.length) return json({ error: 'No voice lines given.' }, 400);
+    await updateJSON(reportKey(ref), (x) => { x.clips = { ...(x.clips ?? {}), voiceStatus: 'running', voiceError: null }; }, {});
+    await fetch(`${new URL(req.url).origin}/api/voice-run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() },
+      body: JSON.stringify({ ref, lines }),
+    });
+    return json({ report: await readJSON(reportKey(ref)) });
+  }
+
   if (req.method === 'POST' && pathname.endsWith('/clips')) { // 20 s video of the fixes, for Navid's voice-over
     if (r.clips?.status === 'running' && Date.now() - Date.parse(r.clips.startedAt) < 16 * 60e3) return json({ report: r }); // background runs stop after 15 min
     await updateJSON(reportKey(ref), (x) => { x.clips = { ...(x.clips ?? {}), status: 'running', error: null, startedAt: new Date().toISOString() }; }, {});
@@ -252,5 +264,5 @@ export default async (req, context) => {
 };
 
 export const config = {
-  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/admin/reports/:ref/ai', '/api/admin/reports/:ref/clips', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
+  path: ['/api/admin/reports/:ref', '/api/admin/reports/:ref/publish', '/api/admin/reports/:ref/ai', '/api/admin/reports/:ref/clips', '/api/admin/reports/:ref/voice', '/api/report/:token', '/api/player/:token', '/api/admin/players'],
 };

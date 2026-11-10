@@ -3,7 +3,7 @@
 import { isAdmin } from '../lib/auth.mjs';
 import { logActivity, readJSON, updateJSON } from '../lib/store.mjs';
 import { deleteFile, listFolder, uploadSimple } from '../lib/google.mjs';
-import { makeFixClips } from '../lib/clips.mjs';
+import { CLIP, makeFixClips } from '../lib/clips.mjs';
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
@@ -18,10 +18,10 @@ export default async (req) => {
       videoId = files.filter((f) => /^video\//.test(f.mimeType)).sort((a, b) => Number(b.size) - Number(a.size))[0]?.id;
     }
     if (!videoId) throw new Error('No video in the student’s folder yet.');
-    const { mp4, seconds } = await makeFixClips(videoId, r.items, (step) => setClips({ step }));
+    const { mp4, seconds, segments } = await makeFixClips(videoId, r.items, (step) => setClips({ step }));
     const fileId = await uploadSimple({ name: `${ref} – fix clips (${Math.round(seconds)} s).mp4`, mimeType: 'video/mp4', parents: [r.folderId] }, mp4, 'video/mp4');
     if (r.clips?.fileId) await deleteFile(r.clips.fileId).catch(() => {});
-    await setClips({ status: 'ready', fileId, seconds: Math.round(seconds), at: new Date().toISOString(), error: null });
+    await setClips({ status: 'ready', fileId, seconds: Math.round(seconds), offsets: segments.map((s, k) => segments.slice(0, k).reduce((t, x) => t + x.length * (1 + CLIP.slow), 0)), at: new Date().toISOString(), error: null, voiceFileId: null });
     await logActivity({ kind: 'sent', text: `Fix clips ready for ${ref} (${Math.round(seconds)} s) — in the student’s Drive folder.` });
   } catch (err) {
     console.error(`Clips for ${ref} failed: ${err.message}`);

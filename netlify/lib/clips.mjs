@@ -154,3 +154,23 @@ export async function makeFixClips(videoFileId, items, onStep = async () => {}) 
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+// Lay one voice line per fix onto the clip: line k starts where fix k starts (offsets in seconds).
+// lines: Buffers (mp3/wav/m4a). Returns the MP4 with sound.
+export async function addVoice(clipMp4, lines, offsets) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'voice-'));
+  try {
+    const clip = path.join(dir, 'clip.mp4');
+    writeFileSync(clip, clipMp4);
+    const files = lines.map((b, k) => { const f = path.join(dir, `v${k}`); writeFileSync(f, b); return f; });
+    const delays = files.map((_, k) => `[${k + 1}:a]aresample=48000,adelay=${Math.round((offsets[k] ?? 0) * 1000)}:all=1[v${k}]`);
+    const mix = `${files.map((_, k) => `[v${k}]`).join('')}amix=inputs=${files.length}:normalize=0,apad[a]`;
+    const out = path.join(dir, 'voiced.mp4');
+    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-i', clip, ...files.flatMap((f) => ['-i', f]),
+      '-filter_complex', `${delays.join(';')};${mix}`, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k',
+      '-shortest', '-movflags', '+faststart', out], 60000);
+    return readFileSync(out);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
