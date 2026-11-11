@@ -173,7 +173,7 @@ export const PART = 300; // seconds per analysed part: short parts at full quali
 const fmt = (sec) => { const t = Math.max(0, Math.round(sec)); const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), x = t % 60; return h ? `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`; };
 const toSec = (t) => { const p = String(t ?? '').split(':').map(Number); return p.some(Number.isNaN) ? null : p.reduce((a, b) => a * 60 + b, 0); };
 
-async function ask(body, models = MODELS, retried = false, timeoutMs = 240000) {
+export async function ask(body, models = MODELS, retried = false, timeoutMs = 240000) {
   let lastErr;
   for (const [n, model] of models.entries()) {
     try {
