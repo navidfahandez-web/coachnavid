@@ -1,17 +1,22 @@
 // Navid's coaching guide, built from coaching videos (and later his lesson recordings):
-// GET  /api/admin/learn                     → sources + candidates
-// POST /api/admin/learn        { videos: [{url, title}] } → the AI starts watching each one
-// POST /api/admin/learn/review { id, status: 'approved'|'rejected', fix? } → Navid's decision
+// GET  /api/admin/learn                         → sources, candidates, notes, queue size
+// POST /api/admin/learn        { videos: [{url|videoId, title?, channel?}], now? }
+//      → adds the videos to the queue (watched a few every 10 min); now=true starts up to 12 at once
+// POST /api/admin/learn/review { id, status: 'approved'|'rejected'|'pending', fix? } → Navid's decision
+// POST /api/admin/learn/note   { technique, text } → Navid's own notes on top of a technique
 import { json, requireAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, SOURCES, youtubeId } from '../lib/learn.mjs';
+import { CANDIDATES, NOTES, QUEUE, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
 import { canAnalyze } from '../lib/video-ai.mjs';
 
 export default async (req) => {
   const denied = await requireAdmin(req);
   if (denied) return denied;
   const { pathname } = new URL(req.url);
-  if (req.method === 'GET') return json({ sources: await readJSON(SOURCES, []), candidates: await readJSON(CANDIDATES, []) });
+  if (req.method === 'GET') {
+    const [sources, candidates, notes, queue] = await Promise.all([readJSON(SOURCES, []), readJSON(CANDIDATES, []), readJSON(NOTES, {}), readJSON(QUEUE, [])]);
+    return json({ sources, candidates, notes, queued: queue.length });
+  }
   const b = await req.json().catch(() => ({}));
 
   if (pathname.endsWith('/review')) {
@@ -23,31 +28,37 @@ export default async (req) => {
       if (!c) return;
       c.status = status;
       if (typeof b.fix === 'string' && b.fix.trim()) c.fix = b.fix.trim().slice(0, 300);
-      if (typeof b.note === 'string') c.note = b.note.trim().slice(0, 300);
       c.reviewedAt = new Date().toISOString();
       found = c;
     }, []);
     return found ? json({ ok: true, candidate: found }) : json({ error: 'Not found' }, 404);
   }
 
-  if (!canAnalyze()) return json({ error: 'Needs GEMINI_VIDEO_KEY in Netlify.' }, 503);
-  const videos = (Array.isArray(b.videos) ? b.videos : []).filter((v) => youtubeId(v?.url)).slice(0, 12);
-  if (!videos.length) return json({ error: 'No YouTube links.' }, 400);
-  const origin = new URL(req.url).origin;
-  for (const v of videos) {
-    const videoId = youtubeId(v.url);
-    await updateJSON(SOURCES, (list) => {
-      const i = list.findIndex((x) => x.videoId === videoId);
-      const s = { videoId, title: String(v.title ?? '').slice(0, 200), status: 'running', startedAt: new Date().toISOString(), error: null };
-      if (i < 0) list.push(s); else list[i] = { ...list[i], ...s };
-    }, []);
-    await fetch(`${origin}/api/learn-run`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() },
-      body: JSON.stringify({ url: v.url, title: v.title }),
-    });
+  if (pathname.endsWith('/note')) {
+    const t = String(b.technique ?? '').slice(0, 60);
+    if (!t) return json({ error: 'technique?' }, 400);
+    const notes = await updateJSON(NOTES, (n) => { n[t] = String(b.text ?? '').slice(0, 3000); return n; }, {});
+    return json({ ok: true, notes });
   }
-  return json({ ok: true, started: videos.length });
+
+  if (!canAnalyze()) return json({ error: 'Needs GEMINI_VIDEO_KEY in Netlify.' }, 503);
+  const sources = await readJSON(SOURCES, []);
+  const done = new Set(sources.map((s) => s.videoId));
+  const videos = (Array.isArray(b.videos) ? b.videos : [])
+    .map((v) => ({ videoId: v?.videoId && /^[\w-]{11}$/.test(v.videoId) ? v.videoId : youtubeId(v?.url), title: String(v?.title ?? '').slice(0, 200), channel: String(v?.channel ?? '').slice(0, 80) }))
+    .filter((v) => v.videoId && !done.has(v.videoId));
+  if (!videos.length) return json({ ok: true, added: 0, note: 'Nothing new (already watched or no links).' });
+  const origin = new URL(req.url).origin;
+  if (b.now) {
+    for (const v of videos.slice(0, 12)) await startVideo(origin, v);
+    return json({ ok: true, started: Math.min(12, videos.length) });
+  }
+  let added = 0;
+  await updateJSON(QUEUE, (q) => {
+    const inQ = new Set(q.map((x) => x.videoId));
+    for (const v of videos) if (!inQ.has(v.videoId)) { q.push(v); added++; }
+  }, []);
+  return json({ ok: true, added });
 };
 
-export const config = { path: ['/api/admin/learn', '/api/admin/learn/review'] };
+export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note'] };

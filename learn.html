@@ -34,6 +34,15 @@
         <button class="pill" type="button" data-tab="rejected">Rejected <b data-count="rejected">0</b></button>
       </div>
       <p class="note" data-status>Loading…</p>
+      <label class="field lg__pick">Technique
+        <select data-tech></select>
+      </label>
+    </section>
+    <section class="adm-box lg__notes" data-notes-box hidden>
+      <h3>📝 Your notes — <span data-tech-name></span></h3>
+      <p class="note">Your own way of teaching this technique. The AI reads these first, before the points below, when it analyses your students.</p>
+      <textarea rows="5" data-tech-notes placeholder="e.g. Bandeja: racket prepared high and early, side-on, contact in front, finish towards the side glass — I care more about control than speed…"></textarea>
+      <div class="lg__actions"><button class="btn btn--lime" type="button" data-save-notes>Save my notes</button> <span class="note" data-notes-saved></span></div>
     </section>
     <div data-list></div>
     <details class="adm-box">

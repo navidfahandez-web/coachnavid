@@ -14,3 +14,6 @@
 .lg__card textarea, .lg__links { width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }
 .lg__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .lg__sources { margin: 12px 0 0; padding-left: 18px; font-size: 14px; }
+.lg__pick { display: block; margin-top: 12px; max-width: 420px; }
+.lg__pick select { width: 100%; }
+.lg__notes textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }

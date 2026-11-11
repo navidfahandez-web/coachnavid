@@ -67,7 +67,8 @@ export default async (req) => {
 
     const cut = (onPart) => cutParts(videoId, PART, onPart);
     const guide = (await readJSON('learn/candidates', [])).filter((c) => c.status === 'approved');
-    const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide },
+    const guideNotes = await readJSON('learn/notes', {});
+    const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide, guideNotes },
       (done) => setAi({ step: done === total ? 'Writing the draft from the moments…' : `Watched part ${done} of ${total}…` }));
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);

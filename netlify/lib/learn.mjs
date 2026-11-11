@@ -5,14 +5,35 @@ import { AREAS, SHOTS } from '../../shared/report.js';
 import { ask } from './video-ai.mjs';
 
 export const CANDIDATES = 'learn/candidates'; // [{ id, source, time, area, shot, kind, mistake, fix, why, status }]
-export const SOURCES = 'learn/sources'; // [{ videoId, title, status, at, error, found }]
+export const SOURCES = 'learn/sources'; // [{ videoId, title, channel, status, at, error, found }]
+export const QUEUE = 'learn/queue'; // [{ videoId, title, channel }] waiting to be watched (a few every 10 minutes)
+export const NOTES = 'learn/notes'; // { [technique]: Navid's own notes for that technique }
+
+// One "technique" per card group: the shot when there is one, else the area
+export const technique = (c) => (c.shot && c.shot !== 'general' ? c.shot : `area:${c.area}`);
+
+// Start the background job for one video (marks it running in SOURCES)
+export async function startVideo(origin, v) {
+  const { updateJSON } = await import('./store.mjs');
+  await updateJSON(SOURCES, (list) => {
+    const i = list.findIndex((x) => x.videoId === v.videoId);
+    const s = { videoId: v.videoId, title: v.title ?? '', channel: v.channel ?? '', status: 'running', startedAt: new Date().toISOString(), error: null };
+    if (i < 0) list.push(s); else list[i] = { ...list[i], ...s };
+  }, []);
+  await fetch(`${origin}/api/learn-run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() },
+    body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${v.videoId}`, title: v.title ?? '' }),
+  });
+}
 
 export const youtubeId = (url) => (String(url).match(/(?:v=|youtu\.be\/|shorts\/)([\w-]{11})/) ?? [])[1] ?? null;
 
 const S = (description) => ({ type: 'STRING', description });
 const SCHEMA = {
-  type: 'OBJECT', required: ['about', 'items'],
+  type: 'OBJECT', required: ['video_title', 'about', 'items'],
   properties: {
+    video_title: S('The title of the video as shown in it, or a short descriptive title'),
     about: S('One sentence: what this video teaches and who coaches in it'),
     items: {
       type: 'ARRAY',
