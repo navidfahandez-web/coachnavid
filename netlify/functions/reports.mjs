@@ -62,7 +62,11 @@ function blankReport(u) {
 }
 
 // Only keep the fields the builder may set, trimmed to sane sizes.
-function sanitize(r, b) {
+// A field left out of the save keeps its stored value (a partial save must never wipe the draft).
+function sanitize(r, given) {
+  const b = { ...given };
+  for (const k of ['kind', 'lang', 'headline', 'summary', 'strengths', 'closing', 'items', 'weeks', 'videoFileId', 'mediaFileId']) if (!(k in b)) b[k] = r[k];
+  const keepScores = !('scores' in b);
   const kind = KINDS[b.kind] ? b.kind : r.kind;
   const spec = KINDS[kind];
   const items = (Array.isArray(b.items) ? b.items : []).slice(0, spec.items).map((i) => ({
@@ -89,7 +93,7 @@ function sanitize(r, b) {
   return {
     ...r, kind, lang: b.lang === 'lt' ? 'lt' : 'en',
     headline: line(b.headline, 140), summary: str(b.summary, 1500), strengths: str(b.strengths, 800), closing: str(b.closing, 800),
-    items, scores, weeks, videoFileId: fileId(b.videoFileId), mediaFileId: fileId(b.mediaFileId),
+    items, scores: keepScores ? r.scores ?? {} : scores, weeks, videoFileId: fileId(b.videoFileId), mediaFileId: fileId(b.mediaFileId),
     // one voice-over line per fix (spoken in Navid's Higgsfield voice, then laid on the fix clip)
     voiceLines: (Array.isArray(b.voiceLines) ? b.voiceLines : r.voiceLines ?? []).slice(0, spec.items).map((t) => str(t, 300)),
     updatedAt: new Date().toISOString(),
