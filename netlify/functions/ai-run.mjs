@@ -66,7 +66,8 @@ export default async (req) => {
     const glasswall = (await readJSON(externalKey(phone), [])).slice(-2).map((g) => ({ date: g.date, focus: g.focus.map((f) => f.title), stats: g.metrics.map((m) => `${m.name}: ${m.value}${m.unit === '%' ? '%' : ` ${m.unit}`}`) }));
 
     const cut = (onPart) => cutParts(videoId, PART, onPart);
-    const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall },
+    const guide = (await readJSON('learn/candidates', [])).filter((c) => c.status === 'approved');
+    const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide },
       (done) => setAi({ step: done === total ? 'Writing the draft from the moments…' : `Watched part ${done} of ${total}…` }));
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);
