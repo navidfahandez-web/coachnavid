@@ -1,10 +1,10 @@
-// Every 10 minutes: start the next coaching videos from the queue (at most 6 running at once),
-// so hundreds of videos get watched over a few days without hitting Gemini's limits.
+// Slowly through the queue, as Navid asked: one coaching video per hour, 20 hours a day
+// (20 videos per day), so the Gemini bill stays small and steady.
 import { readJSON, updateJSON } from '../lib/store.mjs';
 import { QUEUE, SOURCES, startVideo } from '../lib/learn.mjs';
 import { SITE_URL } from '../lib/google.mjs';
 
-const AT_ONCE = 6;
+const AT_ONCE = 1;
 
 export default async () => {
   const sources = await readJSON(SOURCES, []);
@@ -18,4 +18,4 @@ export default async () => {
   return new Response(`started ${next.length}`);
 };
 
-export const config = { schedule: '*/10 * * * *' };
+export const config = { schedule: '0 3-22 * * *' }; // on the hour, 03:00–22:00 UTC = 20 runs a day
