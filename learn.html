@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Coaching guide · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+  <link rel="stylesheet" href="/assets/css/learn.css" />
+  <script type="module" src="/assets/js/learn.js"></script>
+</head>
+<body class="admin">
+  <header class="nav">
+    <a class="lockup" href="/admin">
+      <span class="lockup__pb"><img src="/assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Coaching guide</b><small>Coach Navid · private</small></span>
+    </a>
+    <nav class="nav__links"><a class="pill" href="/admin">← Admin</a></nav>
+  </header>
+
+  <main class="wrap admin__main">
+    <section class="adm-box">
+      <h3>What the AI learned from coaching videos</h3>
+      <p class="note">Approve the points you agree with — only approved points are used when the AI analyses your students’ videos. Edit the cue into your own words before approving if you like.</p>
+      <div class="lg__tabs" data-tabs>
+        <button class="pill is-on" type="button" data-tab="pending">To review <b data-count="pending">0</b></button>
+        <button class="pill" type="button" data-tab="approved">Approved <b data-count="approved">0</b></button>
+        <button class="pill" type="button" data-tab="rejected">Rejected <b data-count="rejected">0</b></button>
+      </div>
+      <p class="note" data-status>Loading…</p>
+    </section>
+    <div data-list></div>
+    <details class="adm-box">
+      <summary>＋ Learn from more videos</summary>
+      <p class="note">One YouTube link per line (public coaching videos). The AI watches each one in a minute or two.</p>
+      <textarea class="lg__links" rows="4" data-links placeholder="https://www.youtube.com/watch?v=…"></textarea>
+      <button class="btn btn--lime" type="button" data-learn>Watch these videos</button>
+      <ul class="lg__sources" data-sources></ul>
+    </details>
+  </main>
+</body>
+</html>

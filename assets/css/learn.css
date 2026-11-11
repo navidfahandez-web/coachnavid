@@ -1,0 +1,16 @@
+.lg__tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.lg__tabs .pill { background: transparent; color: var(--ink); cursor: pointer; }
+.lg__tabs .pill.is-on { background: var(--ink); color: var(--bg, #121212); }
+.lg__tabs .pill b { margin-left: 6px; opacity: .7; }
+.lg__src { margin: 22px 0 6px; font-size: 15px; font-weight: 700; }
+.lg__src small { display: block; font-weight: 400; opacity: .7; }
+.lg__card { margin-top: 10px; border: 1.5px solid var(--line-soft); border-radius: var(--radius-sm); padding: 14px 16px; background: var(--surface); }
+.lg__card.is-done { opacity: .55; }
+.lg__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .8; }
+.lg__meta span { border: 1px solid var(--line-soft); border-radius: 999px; padding: 2px 8px; }
+.lg__meta a { margin-left: auto; text-transform: none; letter-spacing: 0; }
+.lg__card p { margin: 8px 0 0; }
+.lg__card label { display: block; margin-top: 10px; font-size: 13px; opacity: .8; }
+.lg__card textarea, .lg__links { width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }
+.lg__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.lg__sources { margin: 12px 0 0; padding-left: 18px; font-size: 14px; }

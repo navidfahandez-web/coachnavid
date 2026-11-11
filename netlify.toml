@@ -68,6 +68,12 @@
   to = "/glasswall.html"
   status = 200
 
+# Coaching guide: approve what the AI learned from coaching videos (admin)
+[[redirects]]
+  from = "/admin/learn"
+  to = "/learn.html"
+  status = 200
+
 # Report builder (admin)
 [[redirects]]
   from = "/admin/report"
