@@ -18,6 +18,8 @@ const lvLabel = (ls) => {
   const l = (n) => LEVELS.find((x) => x.n === n)?.label ?? n;
   return !v.length ? '' : v.length === 1 ? l(v[0]) : `${l(v[0])}–${l(v.at(-1))}`;
 };
+const helps = (e) => [...new Map(e.padel_links.map((l) => [l.toLowerCase(), l])).values()].join(', ');
+const equip = (e) => (e.equipment && e.equipment !== 'none' ? `${esc(e.equipment)} · ` : '');
 const STATUS_TXT = { approved: '✓ approved', rejected: '✕ rejected', pending: 'waiting for you' };
 
 let data = { library: [], plans: {}, links: {}, status: { plans: {} }, raw: {} };
@@ -67,7 +69,7 @@ function exRow(it, i, ctx) {
     <div class="fx-ex">
       <b>${esc(e.name)}</b> <span class="fx-goal">${esc(goalLabel(e.goal))}</span>
       <small>${esc(e.how)}${e.caution ? ` · ⚠ ${esc(e.caution)}` : ''}</small>
-      <small>${e.equipment ? `${esc(e.equipment)} · ` : ''}helps: ${esc(e.padel_links.join(', '))}${e.videos > 1 ? ` · <i>in ${e.videos} videos</i>` : ''}</small>
+      <small>${equip(e)}helps: ${esc(helps(e))}${e.videos > 1 ? ` · <i>in ${e.videos} videos</i>` : ''}</small>
       <div class="fx-row">${play(e.moments[0])}
         <input class="fx-dose" value="${esc(it.dose)}" data-dose="${i}" ${ctx} aria-label="Dose" />
         <span class="fx-st">${STATUS_TXT[e.status]}</span>
@@ -151,7 +153,7 @@ function renderLibrary() {
       <div class="fx-ex">
         <b>${esc(e.name)}</b> <span class="fx-goal">${esc(goalLabel(e.goal))}</span> <span class="fx-goal">${esc(e.where.join(' / '))}</span>${lvLabel(e.levels) ? ` <span class="fx-goal">${esc(lvLabel(e.levels))}</span>` : ''}
         <small>${esc(e.how)}</small>
-        <small>${e.dose ? `${esc(e.dose)} · ` : ''}${e.equipment ? `${esc(e.equipment)} · ` : ''}helps: ${esc(e.padel_links.join(', '))}${e.caution ? ` · ⚠ ${esc(e.caution)}` : ''}</small>
+        <small>${e.dose ? `${esc(e.dose)} · ` : ''}${equip(e)}helps: ${esc(helps(e))}${e.caution ? ` · ⚠ ${esc(e.caution)}` : ''}</small>
         <div class="fx-row">${e.moments.map(play).join('')}${e.videos > 1 ? `<span class="fx-said">in ${e.videos} videos</span>` : ''}
           <span class="fx-st">${STATUS_TXT[e.status]}</span>
           ${e.status !== 'approved' ? `<button class="fx-ok" type="button" data-review="${esc(e.id)}" data-st="approved">✓ OK</button>` : ''}
