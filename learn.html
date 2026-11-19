@@ -35,9 +35,21 @@
       </div>
       <p class="lg__warn" data-credits hidden>⚠️ Your Gemini credits have run out, so the AI can’t watch videos (or make report drafts). Top up in Google AI Studio → Billing; the queue carries on by itself within the hour.</p>
       <p class="note" data-status>Loading…</p>
-      <label class="field lg__pick">Technique
-        <select data-tech></select>
-      </label>
+      <div class="lg__picks">
+        <label class="field lg__pick">Level
+          <select data-level><option value="">All levels</option></select>
+        </label>
+        <label class="field lg__pick">Technique
+          <select data-tech></select>
+        </label>
+      </div>
+      <p class="note" data-levels-status></p>
+    </section>
+    <section class="adm-box" data-goals-box hidden>
+      <h3>🎯 Goals of level <span data-goal-level></span></h3>
+      <p class="note">What a player must master to complete this level and move up. Approve, edit or reject — and add your own.</p>
+      <div data-goals></div>
+      <div class="lg__actions"><input class="lg__goal-new" data-goal-new placeholder="Add your own goal for this level…" /><button class="btn btn--ghost" type="button" data-goal-add>＋ Add</button></div>
     </section>
     <section class="adm-box lg__notes" data-notes-box hidden>
       <h3>📝 Your notes — <span data-tech-name></span></h3>

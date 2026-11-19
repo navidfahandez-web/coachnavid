@@ -63,10 +63,20 @@ export const AREAS = [
   ] },
 ];
 // Navid's methodology levels (amateur → high competition; professionals are out of scope)
+// desc = DRAFT descriptions for the AI to sort tips by level — Navid to correct them.
 export const LEVELS = [
-  { n: 1, label: 'D-' }, { n: 2, label: 'D' }, { n: 3, label: 'D+' }, { n: 4, label: 'C-' }, { n: 5, label: 'C' },
-  { n: 6, label: 'C+' }, { n: 7, label: 'B-' }, { n: 8, label: 'B' }, { n: 9, label: 'B+' }, { n: 10, label: 'A' },
+  { n: 1, label: 'D-', desc: 'First months: learning grips, basic forehand/backhand and serve; short rallies; avoids the walls.' },
+  { n: 2, label: 'D', desc: 'Keeps short rallies; lets easy balls come off the back wall; volleys are mostly blocks; positions by instinct.' },
+  { n: 3, label: 'D+', desc: 'Plays regular matches; basic back-wall exits; starts to lob; knows net vs back position; overheads mostly flat and hit hard.' },
+  { n: 4, label: 'C-', desc: 'Consistent rallies; learning the bandeja; returns with lobs; follows the lob to the net; side wall still difficult.' },
+  { n: 5, label: 'C', desc: 'Reliable bandeja; basic double-wall exits; volleys with direction; plays through the middle; the pair moves together.' },
+  { n: 6, label: 'C+', desc: 'Starts the víbora and chiquita; good defence off the walls; builds points with patience; consistent return.' },
+  { n: 7, label: 'B-', desc: 'Varies overheads (bandeja, víbora, first por 3); attacking bajadas; game plans; solid defence under pressure.' },
+  { n: 8, label: 'B', desc: 'League/tournament player: finishes high balls (por 3 / por 4), dominates the net, few unforced errors.' },
+  { n: 9, label: 'B+', desc: 'High regional competition: complete game, tactical and physical consistency under pressure.' },
+  { n: 10, label: 'A', desc: 'Top amateur / national competition level (below professional).' },
 ];
+export const levelsText = () => LEVELS.map((l) => `${l.n} ${l.label}: ${l.desc}`).join('\n');
 export const levelLabel = (n) => LEVELS.find((l) => l.n === Math.round(Number(n)))?.label ?? '';
 
 export const SHOTS = AREAS.flatMap((a) => a.shots.map((s) => ({ ...s, area: a.id })));

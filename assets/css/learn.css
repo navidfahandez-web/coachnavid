@@ -18,3 +18,13 @@
 .lg__pick select { width: 100%; }
 .lg__notes textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }
 .lg__warn { margin: 12px 0 0; padding: 10px 14px; border-radius: 8px; background: rgba(255, 91, 31, .15); border: 1.5px solid #ff5b1f; }
+.lg__picks { display: flex; flex-wrap: wrap; gap: 12px; }
+.lg__picks .lg__pick { flex: 1 1 220px; }
+.lg__lv { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.lg__lv button { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-soft); background: transparent; color: inherit; opacity: .45; cursor: pointer; }
+.lg__lv button.is-on { opacity: 1; background: #ff5b1f; border-color: #ff5b1f; color: #fff; }
+.lg__goal { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line-soft); }
+.lg__goal input { flex: 1 1 260px; font: inherit; padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }
+.lg__goal.is-approved input { border-color: #2fbf71; }
+.lg__goal.is-rejected { opacity: .45; }
+.lg__goal-new { flex: 1 1 260px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }

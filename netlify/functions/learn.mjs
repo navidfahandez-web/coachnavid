@@ -6,7 +6,7 @@
 // POST /api/admin/learn/note   { technique, text } → Navid's own notes on top of a technique
 import { json, requireAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, NOTES, QUEUE, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, NOTES, QUEUE, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
 import { canAnalyze } from '../lib/video-ai.mjs';
 
 export default async (req) => {
@@ -14,8 +14,8 @@ export default async (req) => {
   if (denied) return denied;
   const { pathname } = new URL(req.url);
   if (req.method === 'GET') {
-    const [sources, candidates, notes, queue] = await Promise.all([readJSON(SOURCES, []), readJSON(CANDIDATES, []), readJSON(NOTES, {}), readJSON(QUEUE, [])]);
-    return json({ sources, candidates, notes, queued: queue.length });
+    const [sources, candidates, notes, queue, goals, levelsStatus] = await Promise.all([readJSON(SOURCES, []), readJSON(CANDIDATES, []), readJSON(NOTES, {}), readJSON(QUEUE, []), readJSON(GOALS, []), readJSON('learn/levels-status', {})]);
+    return json({ sources, candidates, notes, queued: queue.length, goals, levelsStatus });
   }
   const b = await req.json().catch(() => ({}));
 
@@ -28,10 +28,30 @@ export default async (req) => {
       if (!c) return;
       c.status = status;
       if (typeof b.fix === 'string' && b.fix.trim()) c.fix = b.fix.trim().slice(0, 300);
+      if (Array.isArray(b.levels)) c.levels = [...new Set(b.levels.map(Number).filter((n) => n >= 1 && n <= 10))].sort((x, y) => x - y);
       c.reviewedAt = new Date().toISOString();
       found = c;
     }, []);
     return found ? json({ ok: true, candidate: found }) : json({ error: 'Not found' }, 404);
+  }
+
+  if (pathname.endsWith('/goal')) { // Navid approves / edits / rejects a level goal, or adds his own
+    let found = null;
+    await updateJSON(GOALS, (list) => {
+      let g = list.find((x) => x.id === b.id);
+      if (!g && b.add) { g = { id: `own-${Date.now()}`, source: 'navid', level: Number(b.level) || 1, area: String(b.area ?? 'tactics'), goal: '', status: 'approved' }; list.push(g); }
+      if (!g) return;
+      if (['approved', 'rejected', 'pending'].includes(b.status)) g.status = b.status;
+      if (typeof b.goal === 'string' && b.goal.trim()) g.goal = b.goal.trim().slice(0, 300);
+      if (Number(b.level) >= 1 && Number(b.level) <= 10) g.level = Number(b.level);
+      found = g;
+    }, []);
+    return found ? json({ ok: true, goal: found }) : json({ error: 'Not found' }, 404);
+  }
+
+  if (pathname.endsWith('/levels')) { // start sorting all tips by level + writing level goals
+    await fetch(`${new URL(req.url).origin}/api/learn-levels`, { method: 'POST', headers: { 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() } });
+    return json({ ok: true });
   }
 
   if (pathname.endsWith('/note')) {
@@ -70,4 +90,4 @@ export default async (req) => {
   return json({ ok: true, added });
 };
 
-export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note'] };
+export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note', '/api/admin/learn/goal', '/api/admin/learn/levels'] };
