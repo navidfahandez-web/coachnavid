@@ -6,7 +6,7 @@ import { isAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
 import { CANDIDATES, GOALS } from '../lib/learn.mjs';
 import { ask } from '../lib/video-ai.mjs';
-import { AREAS, LEVELS, levelsText } from '../../shared/report.js';
+import { AREAS, LEVELS, SHOTS, levelsText } from '../../shared/report.js';
 
 const BATCH = 80;
 const FAST = ['gemini-3.8-flash', 'gemini-3.1-pro-preview'];
@@ -18,10 +18,38 @@ const line = (c) => (c.type === 'fitness'
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
+  const { reshot = false } = await req.json().catch(() => ({}));
   const t0 = Date.now();
   const left = () => 13 * 60e3 - (Date.now() - t0);
   const status = (s) => updateJSON(STATUS, (x) => { Object.assign(x, s, { at: new Date().toISOString() }); }, {});
   try {
+    // 0) new shots were added to the framework: move tips of related shots to the right one
+    if (reshot) {
+      const RELATED = new Set(['lob', 'flat_smash', 'fh_volley', 'bh_volley', 'block_volley', 'half_volley', 'low_volley', 'bandeja', 'vibora', 'general', 'fh_after', 'bh_after']);
+      let moved = 0;
+      for (;;) {
+        if (left() < 60e3) { await status({ step: `Re-sorting shots paused (time limit) — run again.` }); return new Response('partial'); }
+        const todo = (await readJSON(CANDIDATES, [])).filter((c) => c.type !== 'fitness' && !c.reshot && RELATED.has(c.shot)).slice(0, BATCH);
+        if (!todo.length) break;
+        await status({ step: `Moving tips to the new shots… ${moved} checked` });
+        const { json } = await ask({
+          contents: [{ role: 'user', parts: [{ text: `Padel shot list (id: name):
+${SHOTS.map((x) => `${x.id}: ${x.en}`).join('\n')}
+
+For each numbered coaching point, give the id of the shot it is really about (keep its current shot if nothing fits better). New, more precise shots: lob_before, lob_after, lob_volley, back_block_volley, approach_volley, rulo, winner_smash.
+
+${todo.map((c, i) => `${i}. (now: ${c.shot}) ${line(c)}`).join('\n')}` }] }],
+          generationConfig: {
+            responseMimeType: 'application/json', temperature: 0.1,
+            responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 'shot'], properties: { i: { type: 'INTEGER' }, shot: { type: 'STRING', enum: [...SHOTS.map((x) => x.id), 'general'] } } } },
+          },
+        }, FAST);
+        const to = new Map((json ?? []).filter((r) => todo[r.i]).map((r) => [todo[r.i].id, r.shot]));
+        await updateJSON(CANDIDATES, (list) => { for (const c of list) if (todo.some((t) => t.id === c.id)) { if (to.get(c.id) && to.get(c.id) !== c.shot) { c.shotBefore = c.shot; c.shot = to.get(c.id); } c.reshot = true; } }, [], 12);
+        moved += todo.length;
+      }
+    }
+
     // 1) levels for every point
     let tagged = 0;
     for (;;) {
