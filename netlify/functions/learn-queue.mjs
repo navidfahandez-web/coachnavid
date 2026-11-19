@@ -17,7 +17,13 @@ export default async () => {
   // paused job — also while all video slots are busy (before, a full queue meant tags never resumed)
   const all = await readJSON('learn/candidates', []);
   const tips = all.filter((c) => c.type !== 'fitness');
-  const missing = { merge: all.some((c) => !c.point && c.status !== 'rejected'), transitions: tips.some((c) => !c.transition), time: tips.some((c) => !c.time_tag), fundamentals: tips.some((c) => !c.fundamental), levels: tips.some((c) => !(c.levels ?? []).length) };
+  // a technique with many unreviewed points left after merging gets the second merging pass
+  const [pts, cons] = await Promise.all([readJSON('learn/points', []), readJSON('learn/points-consolidated', {})]);
+  const used = new Set(all.map((c) => c.point).filter(Boolean));
+  const perTech = new Map();
+  for (const p of pts) if (p.status === 'pending' && used.has(p.id)) perTech.set(p.tech, (perTech.get(p.tech) ?? 0) + 1);
+  const crowded = [...perTech].some(([t, k]) => k > 25 && k > (cons[t] ?? 0) * 1.3);
+  const missing = { merge: crowded || all.some((c) => !c.point && c.status !== 'rejected'), transitions: tips.some((c) => !c.transition), time: tips.some((c) => !c.time_tag), fundamentals: tips.some((c) => !c.fundamental), levels: tips.some((c) => !(c.levels ?? []).length) };
   const ls = await readJSON('learn/levels-status', {});
   const busy = ls.step && Date.now() - Date.parse(ls.at) < 4 * 60e3; // a sorting job is still working
   if (Object.values(missing).some(Boolean) && !busy) {

@@ -132,6 +132,61 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
         done.forEach((r, k) => { if (r.status === 'fulfilled') n += r.value; else { console.error(`merge ${techs[k]}: ${r.reason?.message}`); failed.set(techs[k], (failed.get(techs[k]) ?? 0) + 1); } });
         if (done.every((r) => r.status === 'rejected') && done.some((r) => isBilling(r.reason?.message))) throw done[0].reason; // no credits: stop, retried later
       }
+
+      // 2nd pass: a technique that still has many points (tips merged in different batches) gets its
+      // unreviewed points merged with each other, so Navid reviews ~10-25 per shot. Navid's decided points stay.
+      const CONS = 'learn/points-consolidated'; // { [technique]: points left after the last pass }
+      for (let round = 0; round < 6; round++) {
+        if (left() < 5 * 60e3) { await status({ step: 'Second merging pass paused (time limit) — it carries on by itself.' }); return new Response('partial'); }
+        const [pts, cands, cons] = await Promise.all([readJSON(POINTS, []), readJSON(CANDIDATES, []), readJSON(CONS, {})]);
+        const size = new Map();
+        for (const c of cands) if (c.point) size.set(c.point, (size.get(c.point) ?? 0) + 1);
+        const byTech = new Map();
+        for (const p of pts) if (p.status === 'pending' && size.get(p.id)) { if (!byTech.has(p.tech)) byTech.set(p.tech, []); byTech.get(p.tech).push(p); }
+        const techs = [...byTech].filter(([t, ps]) => ps.length > 25 && ps.length > (cons[t] ?? 0) * 1.3 && (failed.get(t) ?? 0) < 2).map(([t]) => t).slice(0, 4);
+        if (!techs.length) break;
+        await status({ step: `Second merging pass… (now: ${techs.join(', ')})` });
+        const done = await Promise.allSettled(techs.map(async (t) => {
+          const ps = byTech.get(t).slice(0, 200);
+          const { json } = await ask({
+            contents: [{ role: 'user', parts: [{ text: `These are coaching points about one padel topic (${t}), each already merged from several videos. Some still say the same thing in different words.
+Group the points that teach the SAME correction / idea${t.startsWith('fit:') ? ' (or the same exercise)' : ''}. Aim for about 10-25 groups in total, but never put two different corrections in one group. Points that are unique stay alone (a group of one).
+For each group of 2+ points write the merged cue (fix, max ~15 words, simple coaching language), mistake (how it looks on video, empty if none) and why (one short sentence).${t.startsWith('fit:') ? '' : `
+${NAVID_METHOD}`}
+
+${ps.map((p) => `${p.id}: ${p.fix} [${size.get(p.id)} tips]`).join('\n')}` }] }],
+            generationConfig: {
+              responseMimeType: 'application/json', temperature: 0.1,
+              responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['ids', 'fix', 'mistake', 'why'], properties: { ids: { type: 'ARRAY', items: { type: 'STRING' } }, fix: S(''), mistake: S(''), why: S('') } } },
+            },
+          }, FAST, false, 150000);
+          const valid = new Set(ps.map((p) => p.id));
+          const seen = new Set();
+          const moves = new Map(); // merged point → kept point
+          const texts = new Map();
+          for (const g of json ?? []) {
+            const ids = (g.ids ?? []).filter((id) => valid.has(id) && !seen.has(id));
+            ids.forEach((id) => seen.add(id));
+            if (ids.length < 2 || !String(g.fix ?? '').trim()) continue;
+            const keep = ids.sort((a, b) => (size.get(b) ?? 0) - (size.get(a) ?? 0))[0];
+            for (const id of ids) if (id !== keep) moves.set(id, keep);
+            texts.set(keep, { fix: String(g.fix).trim().slice(0, 300), mistake: String(g.mistake ?? '').slice(0, 300), why: String(g.why ?? '').slice(0, 300) });
+          }
+          if (moves.size) {
+            await updateJSON(CANDIDATES, (list) => { for (const c of list) if (moves.has(c.point)) c.point = moves.get(c.point); }, [], 12);
+            await updateJSON(POINTS, (list) => {
+              const kept = list.filter((p) => !moves.has(p.id) || p.status !== 'pending');
+              for (const p of kept) if (texts.has(p.id) && p.status === 'pending') Object.assign(p, texts.get(p.id), { mergedFrom: [...(p.mergedFrom ?? []), ...[...moves].filter(([, k]) => k === p.id).map(([id]) => id)] });
+              list.splice(0, list.length, ...kept);
+            }, [], 12);
+          }
+          const left2 = ps.length - moves.size;
+          await updateJSON(CONS, (m) => { m[t] = left2; }, {}, 12);
+          return left2;
+        }));
+        done.forEach((r, k) => { if (r.status === 'rejected') { console.error(`consolidate ${techs[k]}: ${r.reason?.message}`); failed.set(techs[k], (failed.get(techs[k]) ?? 0) + 1); } });
+        if (done.every((r) => r.status === 'rejected') && done.some((r) => isBilling(r.reason?.message))) throw done[0].reason;
+      }
     }
 
     // 0b) Navid's principles on every technique tip: forced/wanted transition, earn/remove time
