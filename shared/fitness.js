@@ -43,6 +43,27 @@ export const goalLabel = (id) => GOALS.find((g) => g.id === id)?.label ?? id;
 export const INJURY_AREAS = ['shoulder', 'elbow', 'wrist', 'knee', 'ankle', 'lower back', 'calf'];
 export const PADEL_MOVES = ['split step', 'first step', 'staying low', 'footwork to the glass', 'recovering the net after a lob', 'overhead power'];
 
+// Movement problems the video analyser can flag → exercises that help (matched on the exercise's padel_links / name / body part).
+// Contract with the analyser: report.movement_issues = [{ move: <id below>, time: 'm:ss', note }]
+export const MOVES = [
+  { id: 'split_step', label: 'Split step', words: ['split step', 'split-step', 'reaction', 'ready position'] },
+  { id: 'first_step', label: 'First step', words: ['first step', 'acceleration', 'explosive start', 'sprint'] },
+  { id: 'staying_low', label: 'Staying low', words: ['low', 'low volley', 'knee bend', 'squat', 'lunge'] },
+  { id: 'footwork_glass', label: 'Footwork to the glass', words: ['glass', 'back wall', 'backward', 'retreat', 'crossover'] },
+  { id: 'recover_net', label: 'Recovering the net after a lob', words: ['recover', 'net', 'lob', 'forward', 'transition'] },
+  { id: 'overhead_power', label: 'Overhead power', words: ['overhead', 'smash', 'bandeja', 'vibora', 'víbora', 'rotation', 'rotational', 'serve'] },
+  { id: 'lateral', label: 'Lateral movement', words: ['lateral', 'side', 'shuffle', 'change of direction'] },
+  { id: 'balance', label: 'Balance & stability', words: ['balance', 'stability', 'single leg', 'landing', 'ankle'] },
+  { id: 'endurance', label: 'Endurance (tires late in the match)', words: ['endurance', 'conditioning', 'long rallies', 'stamina', 'interval'] },
+];
+export function exercisesForMove(moveId, library, level = 0) {
+  const m = MOVES.find((x) => x.id === moveId);
+  if (!m) return [];
+  const hit = (e) => m.words.some((w) => `${e.padel_links.join(' ')} ${e.name} ${e.body_part}`.toLowerCase().includes(w));
+  return library.filter((e) => e.status === 'approved' && hit(e) && (!level || !e.levels?.length || e.levels.some((l) => Math.abs(l - level) <= 1)))
+    .sort((a, b) => b.videos - a.videos);
+}
+
 export const SAFETY_NOTE = 'Train without pain. If something hurts (more than normal muscle tiredness) stop that exercise and see a physiotherapist before you go on.';
 
 // m:ss → seconds, for YouTube embeds

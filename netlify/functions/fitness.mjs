@@ -13,7 +13,7 @@ import { LIBRARY, LINKS, PLANS, STATUS, newToken, setStatus, studentPlan, syncMe
 import { CANDIDATES } from '../lib/learn.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
 import { canAnalyze } from '../lib/video-ai.mjs';
-import { BANDS, SAFETY_NOTE } from '../../shared/fitness.js';
+import { BANDS, MOVES, SAFETY_NOTE, exercisesForMove } from '../../shared/fitness.js';
 
 const startJob = (req, body) => fetch(`${new URL(req.url).origin}/api/fitness-run`, {
   method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify(body),
@@ -36,6 +36,13 @@ export default async (req) => {
   const denied = await requireAdmin(req);
   if (denied) return denied;
 
+  if (req.method === 'GET' && pathname.endsWith('/for')) { // movement problems → approved exercises (for the video analyser / report builder)
+    const q = new URL(req.url).searchParams;
+    const lib = await readJSON(LIBRARY, []);
+    const level = Number(q.get('level')) || 0;
+    const moves = String(q.get('moves') ?? '').split(',').filter((m) => MOVES.some((x) => x.id === m));
+    return json({ moves: moves.map((id) => ({ move: id, label: MOVES.find((x) => x.id === id).label, exercises: exercisesForMove(id, lib, level).slice(0, 4).map((e) => ({ id: e.id, name: e.name, how: e.how, dose: e.dose, where: e.where, moment: e.moments[0] ?? null })) })) });
+  }
   if (req.method === 'GET') {
     const [library, plans, links, status, candidates] = await Promise.all([readJSON(LIBRARY, []), readJSON(PLANS, {}), readJSON(LINKS, {}), readJSON(STATUS, { plans: {} }), readJSON(CANDIDATES, [])]);
     const fit = candidates.filter((c) => c.type === 'fitness');
@@ -121,4 +128,4 @@ export default async (req) => {
   return json({ error: 'Not found' }, 404);
 };
 
-export const config = { path: ['/api/admin/fitness', '/api/admin/fitness/merge', '/api/admin/fitness/plan', '/api/admin/fitness/plan-edit', '/api/admin/fitness/review', '/api/admin/fitness/link', '/api/fitness/:token'] };
+export const config = { path: ['/api/admin/fitness', '/api/admin/fitness/merge', '/api/admin/fitness/plan', '/api/admin/fitness/plan-edit', '/api/admin/fitness/review', '/api/admin/fitness/link', '/api/admin/fitness/for', '/api/fitness/:token'] };
