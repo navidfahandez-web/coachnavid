@@ -302,32 +302,40 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     const REAL = 5; const SLOW_FROM = 1; const SLOW_LEN = 2; const FACTOR = 4;
     const total = REAL + SLOW_LEN * FACTOR; // 13 s
     // anon: 'silhouette' = players as solid orange shapes on a dark court with its lines (frame minus
-    // the empty court); 'outline' = orange edges only; false = the real picture
+    // the empty court); 'outline' = orange edges only; false = the real picture.
+    // Step 1, one small ffmpeg run per shot (keeps memory low): real speed, then 0.25× around contact.
     const SIZE = `scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
     const look = anon === 'outline' ? 'gblur=sigma=1.6,edgedetect=low=0.06:high=0.18:mode=wires,lutrgb=r=val:g=val*0.36:b=val*0.12,' : '';
-    const BG0 = 2; // inputs 2,3 = empty-court images (silhouette mode)
-    const src = (i) => (anon === 'silhouette' ? [
-      `[${i}:v]fps=30,${SIZE},format=yuv420p,gblur=sigma=1.2[f${i}]`,
-      `[${BG0 + i}:v]${SIZE},format=yuv420p,gblur=sigma=1.2,split[b${i}][e${i}]`,
-      `[f${i}][b${i}]blend=all_mode=difference,format=gray,lut=y='if(gt(val,34),255,0)',erosion,dilation,dilation,dilation,erosion,gblur=sigma=1[m${i}]`,
-      `color=c=0xff5b1f:s=${W}x${CLIP_H}:r=30:d=${5}[o${i}]`,
-      `[o${i}][m${i}]alphamerge[sil${i}]`,
-      `[e${i}]loop=loop=-1:size=1,fps=30,trim=0:5,edgedetect=low=0.1:high=0.3:mode=wires,lutrgb=r=val*0.28:g=val*0.28:b=val*0.3,setpts=PTS-STARTPTS[court${i}]`,
-      `[court${i}][sil${i}]overlay=0:0:shortest=1,format=yuv420p,setsar=1,split[r${i}][s${i}]`,
-    ] : [`[${i}:v]fps=30,${look}${SIZE},split[r${i}][s${i}]`]);
-    const shot = (i) => [...src(i),
-      `[r${i}]trim=0:${REAL},setpts=PTS-STARTPTS[rr${i}]`,
-      `[s${i}]trim=${SLOW_FROM}:${SLOW_FROM + SLOW_LEN},setpts=${FACTOR}*(PTS-STARTPTS)[ss${i}]`,
-      `[rr${i}][ss${i}]concat=n=2:v=1:a=0[c${i}]`];
+    const shotFiles = [];
+    for (const [k, t] of [sa0, sb0].entries()) {
+      const pre = anon === 'silhouette' ? [
+        `[0:v]fps=30,${SIZE},format=yuv420p,gblur=sigma=1.2[f]`,
+        `[1:v]${SIZE},format=yuv420p,gblur=sigma=1.2,split[b][e]`,
+        `[f][b]blend=all_mode=difference,format=gray,lut=y='if(gt(val,34),255,0)',erosion,dilation,dilation,dilation,erosion,gblur=sigma=1[m]`,
+        `color=c=0xff5b1f:s=${W}x${CLIP_H}:r=30:d=${REAL}[o]`,
+        `[o][m]alphamerge[sil]`,
+        `[e]loop=loop=-1:size=1,fps=30,trim=0:${REAL},setpts=PTS-STARTPTS,edgedetect=low=0.1:high=0.3:mode=wires,lutrgb=r=val*0.28:g=val*0.28:b=val*0.3[court]`,
+        `[court][sil]overlay=0:0:shortest=1,format=yuv420p,setsar=1,split[r][s]`,
+      ] : [`[0:v]fps=30,${look}${SIZE},format=yuv420p,split[r][s]`];
+      const f = path.join(dir, `shot${k}.mp4`);
+      await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-ss', Math.max(0, t - 2).toFixed(2), '-t', String(REAL), '-i', proxy.url,
+        ...(anon === 'silhouette' ? ['-i', bgs[k]] : []),
+        '-filter_complex', [...pre, `[r]trim=0:${REAL},setpts=PTS-STARTPTS[rr]`, `[s]trim=${SLOW_FROM}:${SLOW_FROM + SLOW_LEN},setpts=${FACTOR}*(PTS-STARTPTS)[ss]`, '[rr][ss]concat=n=2:v=1:a=0[out]'].join(';'),
+        '-map', '[out]', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-an', f], 240000);
+      shotFiles.push(f);
+    }
+
+    // Step 2: the 9:16 page — title, the two shots, labels and the timed captions.
+    await onStep('Putting the reel together…');
+    proxy.close();
     const nPh = phases.length;
     const slot = (SLOW_LEN * FACTOR) / Math.max(1, nPh);
     const ov = []; let last = 'bg';
     const add = (input, x, y, from, to) => { const o = `o${ov.length}`; ov.push(`[${last}][${input}:v]overlay=${x}:${y}${from !== undefined ? `:enable='between(t,${from.toFixed(2)},${to.toFixed(2)})'` : ''}[${o}]`); last = o; };
-    const P = 2 + bgs.length; // first png input index (0,1 = the two shots, then the court images)
+    const P = 2; // inputs 0,1 = the two shots, then the caption images
     const graph = [
-      ...shot(0), ...shot(1),
       `color=c=0x0d0d0e:s=${W}x1920:r=30:d=${total}[base]`,
-      `[base][c0]overlay=0:${LAYOUT.aY}[ba]`, `[ba][c1]overlay=0:${LAYOUT.bY}[bg]`,
+      `[base][0:v]overlay=0:${LAYOUT.aY}[ba]`, `[ba][1:v]overlay=0:${LAYOUT.bY}[bg]`,
     ];
     add(P + 0, '(W-w)/2', LAYOUT.titleY);
     add(P + 1, 30, LAYOUT.aY + 20);
@@ -336,11 +344,8 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     phases.forEach((_, i) => add(P + 4 + i, 40, 1650, REAL + i * slot, REAL + (i + 1) * slot));
     add(P + 4 + nPh, '(W-w)/2', 1850);
     const out = path.join(dir, 'reel.mp4');
-    const sa = sa0; const sb = sb0;
     await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error',
-      '-seekable', '1', '-ss', Math.max(0, sa - 2).toFixed(2), '-t', String(REAL), '-i', proxy.url,
-      '-seekable', '1', '-ss', Math.max(0, sb - 2).toFixed(2), '-t', String(REAL), '-i', proxy.url,
-      ...bgs.flatMap((f) => ['-i', f]),
+      ...shotFiles.flatMap((f) => ['-i', f]),
       ...files.flatMap((f) => ['-i', f]),
       '-filter_complex', [...graph, ...ov].join(';'),
       '-map', `[${last}]`, '-t', String(total), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', '30', '-movflags', '+faststart', '-an', out], 300000);
