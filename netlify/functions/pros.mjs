@@ -38,8 +38,8 @@ export default async (req) => {
     await kick(origin);
     return json({ ok: true, title: info.title });
   }
-  if (body.action === 'verify' && player) { await addJobs([{ type: 'verify', player, refine: Boolean(body.refine) }, { type: 'profile', player }]); await kick(origin); return json({ ok: true }); }
-  if (body.action === 'profile' && player) { await addJobs([{ type: 'profile', player }]); await kick(origin); return json({ ok: true }); }
+  if (body.action === 'verify' && player) { await addJobs([{ type: 'verify', player, refine: Boolean(body.refine) }, { type: 'profile', player }], Boolean(body.first)); await kick(origin); return json({ ok: true }); }
+  if (body.action === 'profile' && player) { await addJobs([{ type: 'profile', player }], true); await kick(origin); return json({ ok: true }); }
   if (body.action === 'run') { await kick(origin); return json({ ok: true }); }
   if (body.action === 'clear-jobs') { await updateJSON(JOBS, (q) => { q.length = 0; }, []); await updateJSON(STATUS, (x) => { x.runner = null; x.step = null; x.error = null; }, {}); return json({ ok: true }); }
   if (body.action === 'trim' && body.source && Number(body.duration) > 0) { // real length known: drop moments past the end

@@ -191,13 +191,14 @@ export const setStatus = ({ log, ...s }) => updateJSON(STATUS, (x) => {
   if (log) x.log = [...(x.log ?? []).slice(-30), `${new Date().toISOString().slice(5, 16).replace('T', ' ')} ${log}`];
 }, {});
 
-export const addJobs = (jobs) => updateJSON(JOBS, (q) => {
-  for (const j of jobs) {
+export const addJobs = (jobs, front = false) => updateJSON(JOBS, (q) => {
+  for (const j of front ? jobs.slice().reverse() : jobs) {
     const same = q.find((x) => x.type === j.type && x.player === j.player && (x.source ?? null) === (j.source ?? null));
-    if (!same) { q.push(j); continue; }
+    if (!same) { if (front) q.unshift(j); else q.push(j); continue; }
     // already listed: keep its progress, move it to the end (so verify/profile run after new videos)
     q.splice(q.indexOf(same), 1);
-    q.push({ ...same, ...j, refine: Boolean(same.refine || j.refine) });
+    const merged = { ...same, ...j, refine: Boolean(same.refine || j.refine) };
+    if (front) q.unshift(merged); else q.push(merged);
   }
 }, []);
 

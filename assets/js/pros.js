@@ -190,7 +190,7 @@ document.addEventListener('click', async (e) => {
   }
   if (t.dataset.act) {
     t.disabled = true;
-    try { await api('POST', { action: t.dataset.act, player: player?.name, refine: t.dataset.refine === '1' }); await load(); } catch (err) { alert(err.message); t.disabled = false; }
+    try { await api('POST', { action: t.dataset.act, player: player?.name, refine: t.dataset.refine === '1', first: true }); await load(); } catch (err) { alert(err.message); t.disabled = false; }
   }
 });
 
