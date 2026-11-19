@@ -258,36 +258,82 @@ export async function cutShot(videoFileId, start, length) {
 }
 
 // ---------- Instagram reel: two shots compared, real speed then slow motion with phase captions ----------
-// 1080×1920 (9:16). Shot A on top, shot B below; title on top, captions at the bottom. No sound
-// (music is added in Instagram). Each shot: 5 s at real speed, then the 2 s around contact at 0.25×.
+// 1080×1920 (9:16), AceCue style: shot A left, shot B right, each zoomed in on the player (box from
+// the AI per moment, the crop follows the player), players as solid silhouettes on a dark court.
+// No sound (music is added in Instagram). Each shot: 5 s at real speed, then the 2 s around contact at 0.25×.
 const W = 1080;
-const CLIP_H = 608; // 16:9 at full width
-const LAYOUT = { titleY: 90, aY: 300, bY: 300 + CLIP_H + 110, capY: 1700 };
+const PW = 530; const PH = 940; // one panel (9:16-ish, a standing player fills it)
+const LAYOUT = { titleY: 70, labelY: 262, panelY: 330, aX: 7, bX: 543, capY: 1300, ctaY: 1790 };
+export const REEL = { REAL: 5, BEFORE: 2, SLOW_FROM: 1, SLOW_LEN: 2, FACTOR: 4, BOX_AT: [0, 2, 4.5] }; // BOX_AT: seconds into the shot where the AI boxes the player
 const box = (html, width = 1000, align = 'left') => `<div style="width:${width}px;text-align:${align};font:400 52px/1.08 Anton,sans-serif;color:#fff;letter-spacing:.01em">${html}</div>`;
 const clean2 = (t) => String(t ?? '').replace(/[<>&]/g, '');
 
+// Still frames (JPEG, 1280 wide) at these seconds — for the AI to find the player.
+export async function grabFrames(videoFileId, times) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'frames-'));
+  const proxy = await driveProxy(videoFileId);
+  try {
+    const out = [];
+    for (const [k, t] of times.entries()) {
+      const f = path.join(dir, `f${k}.jpg`);
+      await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-ss', Math.max(0, t).toFixed(2), '-i', proxy.url,
+        '-map', '0:v:0', '-vf', 'scale=1280:-2', '-frames:v', '1', '-q:v', '3', f]);
+      out.push(readFileSync(f));
+    }
+    return out;
+  } finally {
+    proxy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 // The empty court behind a moment: per-pixel median of frames sampled over ±40 s (the camera is fixed,
-// players move), so whatever differs from it in a frame is a player → silhouette.
+// players move), so whatever differs from it in a frame is a player → silhouette. Full frame, 1920 wide.
 async function courtBackground(url, dir, name, t) {
   const f = path.join(dir, `${name}.png`);
   await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-ss', Math.max(0, t - 40).toFixed(2), '-t', '80', '-i', url,
-    '-vf', `fps=1/3,scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,tmedian=radius=12`, '-update', '1', f], 240000); // keeps the last median frame
+    '-map', '0:v:0', '-vf', 'fps=1/3,scale=1920:-2,tmedian=radius=12', '-update', '1', f], 240000); // keeps the last median frame
   if (!existsSync(f)) throw new Error('Could not build the empty-court image');
   return f;
 }
 
-export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHNAVID.COM', anon = 'silhouette' }, onStep = async () => {}) {
+// AI boxes [ymin, xmin, ymax, xmax] (0–1000) at REEL.BOX_AT → an ffmpeg crop that follows the player.
+// Crop size fits the biggest box with room around it (racket overhead, the step into the shot).
+function followCrop(boxes) {
+  const ok = (boxes ?? []).filter((b) => Array.isArray(b) && b.length === 4 && b.every(Number.isFinite) && b[2] > b[0] && b[3] > b[1]);
+  if (!ok.length) return `scale=${PW}:${PH}:force_original_aspect_ratio=decrease,pad=${PW}:${PH}:(ow-iw)/2:(oh-ih)/2`; // no box: whole frame
+  const AR = 16 / 9; // club cameras film 16:9
+  const maxH = Math.max(...ok.map((b) => (b[2] - b[0]) / 1000));
+  const maxW = Math.max(...ok.map((b) => (b[3] - b[1]) / 1000));
+  const ch = Math.min(1, Math.max(0.14, maxH * 1.9, maxW * 1.5 * AR * PH / PW)); // crop height as a share of the frame height
+  const pts = (boxes ?? []).map((b, i) => (ok.includes(b) ? { t: REEL.BOX_AT[i], x: (b[1] + b[3]) / 2000, y: (b[0] + b[2]) / 2000 - 0.03 * (b[2] - b[0]) / 1000 } : null)).filter(Boolean);
+  const lerp = (k) => { // piecewise straight lines between the boxed moments, flat before/after
+    if (pts.length === 1) return pts[0][k].toFixed(4);
+    let e = pts[pts.length - 1][k].toFixed(4);
+    for (let i = pts.length - 2; i >= 0; i--) {
+      const a = pts[i]; const b = pts[i + 1];
+      e = `if(lt(t,${b.t}),${a[k].toFixed(4)}+(${(b[k] - a[k]).toFixed(4)})*max(0,(t-${a.t}))/${(b.t - a.t).toFixed(2)},${e})`;
+    }
+    return e;
+  };
+  return `crop=w='ih*${ch.toFixed(4)}*${PW}/${PH}':h='ih*${ch.toFixed(4)}':x='clip(iw*(${lerp('x')})-ow/2,0,iw-ow)':y='clip(ih*(${lerp('y')})-oh/2,0,ih-oh)':exact=1,scale=${PW}:${PH}`;
+}
+
+// a, b: { t, label, boxes }; phases: [{ name, a, b }]; color: silhouette colour
+export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHNAVID.COM', anon = 'silhouette', color = '0xff5b1f' }, onStep = async () => {}) {
   const dir = mkdtempSync(path.join(tmpdir(), 'reel-'));
   const proxy = await driveProxy(videoFileId);
   try {
     await onStep('Drawing the captions…');
-    const tag = (txt, bg) => `<span style="display:inline-block;padding:10px 22px 8px;background:${bg};color:#fff;font:400 44px Anton,sans-serif;border-radius:10px">${clean2(txt)}</span>`;
+    const tag = (txt, col) => `<span style="display:inline-block;width:${PW}px;text-align:center;color:${col};font:400 38px Anton,sans-serif;letter-spacing:.14em">${clean2(txt).toUpperCase()}</span>`;
     const snippets = [
       box(`<span style="color:#ff5b1f">${clean2(title)}</span>`, 1000, 'center'), // 0 title
-      tag(`A · ${a.label}`, '#ff5b1f'), // 1
-      tag(`B · ${b.label}`, '#0d0d0e'), // 2
-      box('REAL SPEED', 1000, 'center'), // 3
-      ...phases.map((ph, i) => box(`<span style="color:#ff5b1f">${i + 1} · ${clean2(ph.name).toUpperCase()}</span><br><span style="font-size:40px">A: ${clean2(ph.a)}<br>B: ${clean2(ph.b)}</span>`)), // 4…
+      tag(a.label, '#ffffff'), // 1
+      tag(b.label, '#ff5b1f'), // 2
+      box('<span style="letter-spacing:.14em">REAL SPEED</span>', 1000, 'center'), // 3
+      ...phases.map((ph, i) => `<div style="width:1060px;font:400 40px/1.12 Anton,sans-serif;color:#fff">
+        <div style="text-align:center;color:#ff5b1f;font-size:54px;letter-spacing:.06em;margin-bottom:14px">${i + 1} · ${clean2(ph.name).toUpperCase()}</div>
+        <div style="display:flex;gap:40px"><div style="flex:1;text-align:center">${clean2(ph.a)}</div><div style="flex:1;text-align:center;color:#ffd2bf">${clean2(ph.b)}</div></div></div>`), // 4…
       box(`<span style="color:#ff5b1f">COACH NAVID</span> · ${clean2(cta)}`, 1000, 'center'), // last
     ];
     const pngs = await renderPngs(snippets, { fontsCss: labelCss() });
@@ -299,34 +345,34 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
       await onStep('Finding the empty court (for the silhouettes)…');
       bgs = [await courtBackground(proxy.url, dir, 'bgA', sa0), await courtBackground(proxy.url, dir, 'bgB', sb0)];
     }
-    await onStep('Cutting and slowing down the two shots…');
-    const REAL = 5; const SLOW_FROM = 1; const SLOW_LEN = 2; const FACTOR = 4;
+    await onStep('Cutting, zooming in and slowing down the two shots…');
+    const { REAL, SLOW_FROM, SLOW_LEN, FACTOR } = REEL;
     const total = REAL + SLOW_LEN * FACTOR; // 13 s
-    // anon: 'silhouette' = players as solid orange shapes on a dark court with its lines (frame minus
-    // the empty court); 'outline' = orange edges only; false = the real picture.
     // Step 1, one small ffmpeg run per shot (keeps memory low): real speed, then 0.25× around contact.
-    const SIZE = `scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
-    const look = anon === 'outline' ? 'gblur=sigma=1.6,edgedetect=low=0.06:high=0.18:mode=wires,lutrgb=r=val:g=val*0.36:b=val*0.12,' : '';
+    // Silhouette: the player mask (frame minus empty court) is made on the full frame, then cropped and
+    // enlarged together with the court's lines, so the zoom stays clean.
     const shotFiles = [];
-    for (const [k, t] of [sa0, sb0].entries()) {
+    for (const [k, [t, m]] of [[sa0, a], [sb0, b]].entries()) {
+      const CROP = followCrop(m.boxes);
       const pre = anon === 'silhouette' ? [
-        `[0:v]fps=30,${SIZE},format=yuv420p,gblur=sigma=1.2[f]`,
-        `[1:v]${SIZE},format=yuv420p,gblur=sigma=1.2,split[b][e]`,
-        `[f][b]blend=all_mode=difference,format=gray,lut=y='if(gt(val,34),255,0)',erosion,dilation,dilation,dilation,erosion,gblur=sigma=1[m]`,
-        `color=c=0xff5b1f:s=${W}x${CLIP_H}:r=30:d=${REAL}[o]`,
+        `[0:v]fps=30,setpts=PTS-STARTPTS,scale=1920:-2,format=yuv420p,gblur=sigma=1.2[f]`,
+        `[1:v]loop=loop=-1:size=1,fps=30,trim=0:${REAL},setpts=PTS-STARTPTS,scale=1920:-2,format=yuv420p,split[b0][e0]`,
+        `[b0]gblur=sigma=1.2[b]`,
+        `[f][b]blend=all_mode=difference,format=gray,lut=y='if(gt(val,34),255,0)',erosion,dilation,dilation,dilation,erosion,${CROP},gblur=sigma=2.5,lut=y='if(gt(val,120),255,0)',gblur=sigma=1[m]`,
+        `color=c=${color}:s=${PW}x${PH}:r=30:d=${REAL}[o]`,
         `[o][m]alphamerge[sil]`,
-        `[e]loop=loop=-1:size=1,fps=30,trim=0:${REAL},setpts=PTS-STARTPTS,edgedetect=low=0.1:high=0.3:mode=wires,lutrgb=r=val*0.28:g=val*0.28:b=val*0.3[court]`,
+        `[e0]${CROP},edgedetect=low=0.1:high=0.3:mode=wires,lutrgb=r=val*0.3:g=val*0.3:b=val*0.34,vignette=PI/4[court]`,
         `[court][sil]overlay=0:0:shortest=1,format=yuv420p,setsar=1,split[r][s]`,
-      ] : [`[0:v]fps=30,${look}${SIZE},format=yuv420p,split[r][s]`];
+      ] : [`[0:v]fps=30,setpts=PTS-STARTPTS,${CROP},setsar=1,format=yuv420p,split[r][s]`];
       const f = path.join(dir, `shot${k}.mp4`);
-      await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-ss', Math.max(0, t - 2).toFixed(2), '-t', String(REAL), '-i', proxy.url,
+      await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-ss', Math.max(0, t - REEL.BEFORE).toFixed(2), '-t', String(REAL), '-i', proxy.url,
         ...(anon === 'silhouette' ? ['-i', bgs[k]] : []),
         '-filter_complex', [...pre, `[r]trim=0:${REAL},setpts=PTS-STARTPTS[rr]`, `[s]trim=${SLOW_FROM}:${SLOW_FROM + SLOW_LEN},setpts=${FACTOR}*(PTS-STARTPTS)[ss]`, '[rr][ss]concat=n=2:v=1:a=0[out]'].join(';'),
         '-map', '[out]', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-an', f], 240000);
       shotFiles.push(f);
     }
 
-    // Step 2: the 9:16 page — title, the two shots, labels and the timed captions.
+    // Step 2: the 9:16 page — title, the two panels with a thin divider, labels and the timed captions.
     await onStep('Putting the reel together…');
     const nPh = phases.length;
     const slot = (SLOW_LEN * FACTOR) / Math.max(1, nPh);
@@ -335,14 +381,15 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     const P = 2; // inputs 0,1 = the two shots, then the caption images
     const graph = [
       `color=c=0x0d0d0e:s=${W}x1920:r=30:d=${total}[base]`,
-      `[base][0:v]overlay=0:${LAYOUT.aY}[ba]`, `[ba][1:v]overlay=0:${LAYOUT.bY}[bg]`,
+      `[base][0:v]overlay=${LAYOUT.aX}:${LAYOUT.panelY}[ba]`, `[ba][1:v]overlay=${LAYOUT.bX}:${LAYOUT.panelY}[bb]`,
+      `color=c=0xff5b1f:s=4x${PH}:r=30:d=${total}[div]`, `[bb][div]overlay=${(LAYOUT.aX + PW + LAYOUT.bX) / 2 - 2}:${LAYOUT.panelY}[bg]`,
     ];
     add(P + 0, '(W-w)/2', LAYOUT.titleY);
-    add(P + 1, 30, LAYOUT.aY + 20);
-    add(P + 2, 30, LAYOUT.bY + 20);
+    add(P + 1, LAYOUT.aX, LAYOUT.labelY);
+    add(P + 2, LAYOUT.bX, LAYOUT.labelY);
     add(P + 3, '(W-w)/2', LAYOUT.capY, 0, REAL);
-    phases.forEach((_, i) => add(P + 4 + i, 40, 1650, REAL + i * slot, REAL + (i + 1) * slot));
-    add(P + 4 + nPh, '(W-w)/2', 1850);
+    phases.forEach((_, i) => add(P + 4 + i, '(W-w)/2', LAYOUT.capY, REAL + i * slot, REAL + (i + 1) * slot));
+    add(P + 4 + nPh, '(W-w)/2', LAYOUT.ctaY);
     const out = path.join(dir, 'reel.mp4');
     await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error',
       ...shotFiles.flatMap((f) => ['-i', f]),

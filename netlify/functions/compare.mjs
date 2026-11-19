@@ -17,7 +17,9 @@ export default async (req) => {
       await fetch(`${url.origin}/api/reel-run`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify(b) });
       return json({ ok: true, key: `reels/${b.ref}-${b.a?.t}-${b.b?.t}`.replace(/[^\w/-]/g, '_') });
     }
-    const key = url.searchParams.get('key') ?? '';
+    const key = (url.searchParams.get('key') ?? '').replace(/[^\w/-]/g, '');
+    const img = (url.searchParams.get('img') ?? '').replace(/[^AB]/g, '');
+    if (img) { const b = await store.get(`${key}/${img}.jpg`, { type: 'arrayBuffer' }); return b ? new Response(b, { headers: { 'Content-Type': 'image/jpeg' } }) : json({ error: 'none' }, 404); }
     if (url.searchParams.get('mp4')) {
       const mp4 = await store.get(`${key}.mp4`, { type: 'arrayBuffer' });
       return mp4 ? new Response(mp4, { headers: { 'Content-Type': 'video/mp4' } }) : json({ error: 'not ready' }, 404);

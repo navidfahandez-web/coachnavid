@@ -13,3 +13,12 @@
 .cp-phases { width: 100%; border-collapse: collapse; }
 .cp-phases th, .cp-phases td { text-align: left; vertical-align: top; padding: 8px 6px; border-top: 1px solid var(--line-soft); }
 .cp-phases th { width: 150px; }
+
+/* reel: approve the AI's captions and player boxes */
+.cp-frames { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 12px 0; }
+.cp-frames figure { margin: 0; }
+.cp-boxed { position: relative; line-height: 0; }
+.cp-boxed img { width: 100%; border-radius: 8px; }
+.cp-boxed span { position: absolute; border: 3px solid var(--accent); border-radius: 4px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .35); pointer-events: none; }
+.cp-reel-phases input { width: 100%; }
+.cp-reel-phases td:first-child { width: 22%; }

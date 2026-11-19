@@ -61,6 +61,31 @@
       <h3>The 5 phases — <span data-phase-pro></span></h3>
       <table class="cp-phases"><tbody data-phases></tbody></table>
     </section>
+
+    <section class="adm-box cp-reel" data-reel>
+      <h3>Instagram reel — same shot, side by side</h3>
+      <p class="note">Two moments of the student's own video. The players become silhouettes (not recognisable). Post only with the student's OK.</p>
+      <div class="cp-pick">
+        <label class="field">Moment A <input data-ra-t value="0:08" /></label>
+        <label class="field">Label A <input data-ra-l value="Serve 0:08" /></label>
+        <label class="field">Moment B <input data-rb-t value="0:27" /></label>
+        <label class="field">Label B <input data-rb-l value="Serve 0:27" /></label>
+      </div>
+      <p><button class="btn btn--lime" type="button" data-reel-draft>1 · Let the AI write the captions</button></p>
+      <div data-reel-edit hidden>
+        <p class="note">Check that the box is on the student in both shots (the video zooms in there), then fix the words. Max ~6 words per line.</p>
+        <div class="cp-frames">
+          <figure><div class="cp-boxed"><img data-reel-img="A" alt="Moment A" /><span data-reel-box="A"></span></div><figcaption>A at the shot</figcaption></figure>
+          <figure><div class="cp-boxed"><img data-reel-img="B" alt="Moment B" /><span data-reel-box="B"></span></div><figcaption>B at the shot</figcaption></figure>
+        </div>
+        <label class="field">Title <input data-reel-title /></label>
+        <table class="cp-phases cp-reel-phases"><thead><tr><th>Phase</th><th>A</th><th>B</th><th></th></tr></thead><tbody data-reel-phases></tbody></table>
+        <p><button class="btn btn--ghost" type="button" data-reel-add>+ Phase</button>
+           <button class="btn btn--lime" type="button" data-reel-render>2 · Make the video with these words</button></p>
+      </div>
+      <p class="note" data-reel-status></p>
+      <video data-reel-video controls playsinline hidden style="max-width:360px;width:100%"></video>
+    </section>
   </main>
 </body>
 </html>
