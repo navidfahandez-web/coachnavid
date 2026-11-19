@@ -68,6 +68,12 @@
   to = "/glasswall.html"
   status = 200
 
+# The Method: the methodology as a video book (admin)
+[[redirects]]
+  from = "/admin/book"
+  to = "/book.html"
+  status = 200
+
 # Coaching guide: approve what the AI learned from coaching videos (admin)
 [[redirects]]
   from = "/admin/learn"

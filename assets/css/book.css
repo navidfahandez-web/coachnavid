@@ -1,0 +1,28 @@
+.bk-cover h1 { margin: 4px 0 6px; font-size: clamp(34px, 6vw, 56px); letter-spacing: -.02em; }
+.bk-kicker { margin: 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #ff5b1f; font-weight: 700; }
+.bk-progress { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px 18px; margin-top: 16px; }
+.bk-bar { font-size: 14px; }
+.bk-bar span { display: flex; justify-content: space-between; gap: 8px; }
+.bk-bar i { display: block; height: 6px; margin-top: 4px; border-radius: 99px; background: var(--line-soft); overflow: hidden; }
+.bk-bar i b { display: block; height: 100%; background: #ff5b1f; border-radius: 99px; }
+.bk-drafts { display: inline-flex; gap: 8px; align-items: center; margin-top: 14px; font-size: 14px; cursor: pointer; }
+.bk-toc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.bk-toc a { font-size: 13px; padding: 4px 10px; border: 1px solid var(--line-soft); border-radius: 999px; text-decoration: none; color: inherit; }
+.bk-ch { margin-top: 26px; }
+.bk-ch > h2 { font-size: 26px; margin: 0 0 4px; }
+.bk-ch > p.note { margin: 0 0 10px; }
+.bk-sec { margin-top: 14px; border: 1.5px solid var(--line-soft); border-radius: var(--radius-sm); padding: 14px 16px; background: var(--surface); }
+.bk-sec h3 { margin: 0 0 6px; font-size: 19px; }
+.bk-sec h3 small { font-weight: 400; opacity: .65; font-size: 13px; margin-left: 6px; }
+.bk-text { margin: 0 0 8px; line-height: 1.55; }
+.bk-mine { margin: 8px 0; padding: 10px 12px; border-left: 3px solid #ff5b1f; background: rgba(255, 91, 31, .08); border-radius: 0 8px 8px 0; white-space: pre-wrap; }
+.bk-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.bk-list li { padding: 7px 0; border-top: 1px solid var(--line-soft); display: flex; gap: 10px; align-items: flex-start; }
+.bk-list li.is-draft { opacity: .55; }
+.bk-list li > div { flex: 1; }
+.bk-list small { display: block; opacity: .7; }
+.bk-lv { font-size: 11px; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--line-soft); white-space: nowrap; }
+.bk-play { flex: none; font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid #ff5b1f; background: transparent; color: #ff5b1f; cursor: pointer; }
+.bk-video { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; margin-top: 8px; }
+.bk-empty { opacity: .6; font-size: 14px; margin: 6px 0 0; }
+.bk-more { font: inherit; font-size: 13px; margin-top: 6px; background: none; border: 0; color: #ff5b1f; cursor: pointer; padding: 0; }
