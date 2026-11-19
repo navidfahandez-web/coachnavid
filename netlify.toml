@@ -68,6 +68,12 @@
   to = "/glasswall.html"
   status = 200
 
+# Pro library: a folder per top player → shots → checked YouTube clips + technique (admin)
+[[redirects]]
+  from = "/admin/pros"
+  to = "/pros.html"
+  status = 200
+
 # Compare a student's shot with a pro (admin)
 [[redirects]]
   from = "/admin/compare"
