@@ -11,6 +11,10 @@ export const GOALS = 'learn/goals'; // [{ id, level, area, goal, source, status 
 export const PROS = 'pros/clips'; // [{ id, source, player, shot, time, end, side, view, quality, phases{…} }] pro reference shots
 export const PRO_PLAYERS = ['Galán', 'Tapia', 'Chingotto', 'Coello', 'Lebrón', 'Augsburger', 'Di Nenno', 'Stupa', 'Navarro', 'Yanguas', 'Garrido', 'Sanyo', 'Bela', 'Paquito', 'Ruiz', 'González', 'Josemaría', 'Sánchez', 'Triay', 'Brea', 'Ortega', 'other'];
 export const NOTES = 'learn/notes'; // { [technique]: Navid's own notes for that technique }
+// Merged points: near-identical tips from different videos become ONE point ("said in N videos").
+// The original tips stay in CANDIDATES with c.point = the point id (members); approving a point approves its members.
+export const POINTS = 'learn/points'; // [{ id, tech, fix, mistake, why, status, at }]
+export const SHOT_LEVELS = 'learn/shot-levels'; // { [shot]: { from, mastered } } — Navid's scale: when a shot first appears / is mastered
 
 // Gemini said the account has no money left (prepaid credits / billing / quota): not the video's fault
 export const isBillingError = (msg) => /prepayment|credits are depleted|billing|quota|RESOURCE_EXHAUSTED/i.test(String(msg ?? ''));

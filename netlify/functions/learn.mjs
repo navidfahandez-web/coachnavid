@@ -6,7 +6,7 @@
 // POST /api/admin/learn/note   { technique, text } → Navid's own notes on top of a technique
 import { json, requireAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, GOALS, NOTES, PROS, QUEUE, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, NOTES, POINTS, PROS, QUEUE, SHOT_LEVELS, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
 import { canAnalyze } from '../lib/video-ai.mjs';
 
 export default async (req) => {
@@ -15,8 +15,8 @@ export default async (req) => {
   const { pathname } = new URL(req.url);
   if (req.method === 'GET' && pathname.endsWith('/pros')) return json({ pros: await readJSON(PROS, []) });
   if (req.method === 'GET') {
-    const [sources, candidates, notes, queue, goals, levelsStatus] = await Promise.all([readJSON(SOURCES, []), readJSON(CANDIDATES, []), readJSON(NOTES, {}), readJSON(QUEUE, []), readJSON(GOALS, []), readJSON('learn/levels-status', {})]);
-    return json({ sources, candidates, notes, queued: queue.length, goals, levelsStatus });
+    const [sources, candidates, notes, queue, goals, levelsStatus, points, shotLevels] = await Promise.all([readJSON(SOURCES, []), readJSON(CANDIDATES, []), readJSON(NOTES, {}), readJSON(QUEUE, []), readJSON(GOALS, []), readJSON('learn/levels-status', {}), readJSON(POINTS, []), readJSON(SHOT_LEVELS, {})]);
+    return json({ sources, candidates, notes, queued: queue.length, goals, levelsStatus, points, shotLevels });
   }
   const b = await req.json().catch(() => ({}));
 
@@ -36,6 +36,43 @@ export default async (req) => {
     return found ? json({ ok: true, candidate: found }) : json({ error: 'Not found' }, 404);
   }
 
+  if (pathname.endsWith('/point')) { // a merged point: the decision (and levels) go to every tip in it
+    const status = ['approved', 'rejected', 'pending'].includes(b.status) ? b.status : null;
+    let found = null;
+    await updateJSON(POINTS, (list) => {
+      const p = list.find((x) => x.id === b.id);
+      if (!p) return;
+      if (status) p.status = status;
+      if (typeof b.fix === 'string' && b.fix.trim()) p.fix = b.fix.trim().slice(0, 300);
+      if (Array.isArray(b.levels)) p.levels = [...new Set(b.levels.map(Number).filter((n) => n >= 1 && n <= 10))].sort((x, y) => x - y);
+      p.reviewedAt = new Date().toISOString();
+      found = p;
+    }, []);
+    if (!found) return json({ error: 'Not found' }, 404);
+    let members = [];
+    await updateJSON(CANDIDATES, (list) => {
+      for (const c of list) {
+        if (c.point !== found.id) continue;
+        if (status) c.status = status;
+        if (found.levels) c.levels = found.levels;
+        c.reviewedAt = found.reviewedAt;
+        members.push(c);
+      }
+    }, [], 12);
+    return json({ ok: true, point: found, members });
+  }
+
+  if (pathname.endsWith('/shot-levels')) { // Navid: when each shot first appears / is mastered (1-10)
+    const shotLevels = await updateJSON(SHOT_LEVELS, (m) => {
+      for (const [k, v] of Object.entries(b.levels ?? {})) {
+        const from = Math.round(Number(v?.from)); const mastered = Math.round(Number(v?.mastered));
+        if (from >= 1 && from <= 10 && mastered >= from && mastered <= 10) m[String(k).slice(0, 40)] = { from, mastered };
+      }
+      return m;
+    }, {});
+    return json({ ok: true, shotLevels });
+  }
+
   if (pathname.endsWith('/goal')) { // Navid approves / edits / rejects a level goal, or adds his own
     let found = null;
     await updateJSON(GOALS, (list) => {
@@ -51,7 +88,7 @@ export default async (req) => {
   }
 
   if (pathname.endsWith('/levels')) { // start sorting all tips by level + writing level goals
-    await fetch(`${new URL(req.url).origin}/api/learn-levels`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify({ reshot: Boolean(b.reshot), transitions: Boolean(b.transitions), time: Boolean(b.time), fundamentals: Boolean(b.fundamentals), retag: Array.isArray(b.retag) ? b.retag : [] }) });
+    await fetch(`${new URL(req.url).origin}/api/learn-levels`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify({ reshot: Boolean(b.reshot), merge: Boolean(b.merge), relevel: Boolean(b.relevel), transitions: Boolean(b.transitions), time: Boolean(b.time), fundamentals: Boolean(b.fundamentals), retag: Array.isArray(b.retag) ? b.retag : [] }) });
     return json({ ok: true });
   }
 
@@ -91,4 +128,4 @@ export default async (req) => {
   return json({ ok: true, added });
 };
 
-export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note', '/api/admin/learn/goal', '/api/admin/learn/levels', '/api/admin/learn/pros'] };
+export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note', '/api/admin/learn/goal', '/api/admin/learn/levels', '/api/admin/learn/pros', '/api/admin/learn/point', '/api/admin/learn/shot-levels'] };

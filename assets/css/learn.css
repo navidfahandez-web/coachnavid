@@ -28,3 +28,10 @@
 .lg__goal.is-approved input { border-color: #2fbf71; }
 .lg__goal.is-rejected { opacity: .45; }
 .lg__goal-new { flex: 1 1 260px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }
+.lg__point { border-color: rgba(255, 91, 31, .5); }
+.lg__said { background: #ff5b1f; border-color: #ff5b1f !important; color: #fff; font-weight: 700; }
+.lg__members { margin-top: 10px; font-size: 14px; }
+.lg__members summary { cursor: pointer; opacity: .8; }
+.lg__members ul { margin: 8px 0 0; padding-left: 18px; }
+.lg__members li { margin: 6px 0; }
+.lg__members small { opacity: .7; }

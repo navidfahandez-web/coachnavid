@@ -4,11 +4,13 @@
 // Text only (no video), so it is cheap. Started from /api/admin/learn/levels.
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, GOALS, NAVID_METHOD } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, NAVID_METHOD, POINTS, technique } from '../lib/learn.mjs';
 import { ask } from '../lib/video-ai.mjs';
 import { AREAS, LEVELS, SHOTS, levelsText } from '../../shared/report.js';
 
 const BATCH = 40;
+const MERGE_BATCH = 60;
+const S = (description) => ({ type: 'STRING', ...(description ? { description } : {}) });
 const FAST = ['gemini-3.8-flash', 'gemini-3.1-pro-preview'];
 const STATUS = 'learn/levels-status';
 
@@ -18,7 +20,7 @@ const line = (c) => (c.type === 'fitness'
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { reshot = false, transitions = false, time = false, fundamentals = false, retag = [] } = await req.json().catch(() => ({}));
+  const { reshot = false, merge = false, transitions = false, time = false, fundamentals = false, retag = [] } = await req.json().catch(() => ({}));
   if (Array.isArray(retag) && retag.length) { // clear these tags first so they are done again with the newest rules
     await updateJSON(CANDIDATES, (list) => { for (const c of list) for (const f of retag) if (['transition', 'time_tag', 'fundamental'].includes(f)) delete c[f]; }, [], 12);
   }
@@ -50,6 +52,70 @@ ${todo.map((c, i) => `${i}. (now: ${c.shot}) ${line(c)}`).join('\n')}` }] }],
         const to = new Map((json ?? []).filter((r) => todo[r.i]).map((r) => [todo[r.i].id, r.shot]));
         await updateJSON(CANDIDATES, (list) => { for (const c of list) if (todo.some((t) => t.id === c.id)) { if (to.get(c.id) && to.get(c.id) !== c.shot) { c.shotBefore = c.shot; c.shot = to.get(c.id); } c.reshot = true; } }, [], 12);
         moved += todo.length;
+      }
+    }
+
+    // 0c) merge near-identical tips of the same technique into one point (members keep all sources/times)
+    if (merge) {
+      let n = 0;
+      for (;;) {
+        if (left() < 90e3) { await status({ step: `Merging duplicate tips paused after ${n} (time limit) — it carries on by itself.` }); return new Response('partial'); }
+        const all = await readJSON(CANDIDATES, []);
+        const open = all.filter((c) => !c.point && c.status !== 'rejected');
+        if (!open.length) break;
+        const t = technique(open[0]); // one technique at a time, the existing points of it as the list to join
+        const todo = open.filter((c) => technique(c) === t).slice(0, MERGE_BATCH);
+        const points = (await readJSON(POINTS, [])).filter((p) => p.tech === t);
+        await status({ step: `Merging duplicate tips… ${n} done, ${open.length} left (now: ${t})` });
+        const fit = t.startsWith('fit:');
+        const { json } = await ask({
+          contents: [{ role: 'user', parts: [{ text: `A padel coach collected ${fit ? 'fitness exercises' : 'coaching tips'} from many videos about one topic: ${t}. Many say the same thing in different words.
+Group the NEW items below: each new item either joins an EXISTING point (same ${fit ? 'exercise, or the same exercise with small variations' : 'correction / idea, even if worded differently'}) or starts a NEW point together with the other new items that say the same.
+Merge generously — a technique usually ends up with 10-25 points, not one per video — but never put two different corrections in one point.
+For each NEW point write: fix = the cue, short and direct (max ~15 words), in simple coaching language; mistake = how the error looks on video (empty if none); why = one short sentence.${fit ? ' For fitness, fix = exercise name: how to do it.' : `
+${NAVID_METHOD}`}
+
+EXISTING points:
+${points.length ? points.map((p) => `${p.id}: ${p.fix}`).join('\n') : '(none yet)'}
+
+NEW items:
+${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
+          generationConfig: {
+            responseMimeType: 'application/json', temperature: 0.1,
+            responseSchema: { type: 'OBJECT', required: ['join', 'new_points'], properties: {
+              join: { type: 'ARRAY', description: 'New items that join an existing point', items: { type: 'OBJECT', required: ['i', 'point'], properties: { i: { type: 'INTEGER' }, point: { type: 'STRING', description: 'id of the existing point' } } } },
+              new_points: { type: 'ARRAY', items: { type: 'OBJECT', required: ['members', 'fix', 'mistake', 'why'], properties: { members: { type: 'ARRAY', items: { type: 'INTEGER' } }, fix: S(''), mistake: S(''), why: S('') } } },
+            } },
+          },
+        }, FAST, false, 120000);
+        const ids = new Set(points.map((p) => p.id));
+        const to = new Map();
+        for (const r of json?.join ?? []) if (todo[r.i] && ids.has(r.point)) to.set(todo[r.i].id, r.point);
+        const fresh = [];
+        const now = Date.now();
+        (json?.new_points ?? []).forEach((p, k) => {
+          const mem = (p.members ?? []).map((i) => todo[i]).filter((c) => c && !to.has(c.id));
+          if (!mem.length || !String(p.fix ?? '').trim()) return;
+          const id = `p${now}-${k}`;
+          for (const c of mem) to.set(c.id, id);
+          fresh.push({ id, tech: t, fix: String(p.fix).trim().slice(0, 300), mistake: String(p.mistake ?? '').slice(0, 300), why: String(p.why ?? '').slice(0, 300), status: 'pending', at: new Date().toISOString() });
+        });
+        for (const c of todo) if (!to.has(c.id)) { // the AI skipped it: its own point, so nothing loops forever
+          const id = `p${now}-x${c.id}`;
+          to.set(c.id, id);
+          fresh.push({ id, tech: t, fix: c.fix, mistake: c.mistake ?? '', why: c.why ?? '', status: 'pending', at: new Date().toISOString() });
+        }
+        await updateJSON(POINTS, (list) => { list.push(...fresh); }, [], 12);
+        // a tip that joins a point Navid already decided on gets the same decision (and his levels)
+        const decided = new Map((await readJSON(POINTS, [])).filter((p) => p.status !== 'pending').map((p) => [p.id, p]));
+        await updateJSON(CANDIDATES, (list) => {
+          for (const c of list) if (to.has(c.id)) {
+            c.point = to.get(c.id);
+            const p = decided.get(c.point);
+            if (p && c.status === 'pending') { c.status = p.status; if (p.levels) c.levels = p.levels; }
+          }
+        }, [], 12);
+        n += todo.length;
       }
     }
 
