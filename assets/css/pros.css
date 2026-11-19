@@ -15,7 +15,7 @@
 .pl-jump a:hover { border-color: var(--accent); }
 .pl-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 12px; }
 .pl-add .field { flex: 1 1 280px; }
-.pl-playerbox { position: sticky; top: 76px; z-index: 5; }
+.pl-playerbox { scroll-margin-top: 80px; }
 .pl-frame { position: relative; aspect-ratio: 16 / 9; max-height: 52vh; margin: 0 auto; background: #000; border-radius: 10px; overflow: hidden; }
 .pl-frame iframe, .pl-frame #pl-yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .pl-speeds { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 4px; }

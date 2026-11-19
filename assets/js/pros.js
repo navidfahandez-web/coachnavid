@@ -94,7 +94,7 @@ function play(c) {
     });
   };
   if (window.YT?.Player) make(); else window.onYouTubeIframeAPIReady = make;
-  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 setInterval(() => { if (cur && yt?.getPlayerState?.() === 1 && yt.getCurrentTime() > end()) yt.seekTo(start(), true); }, 100);
 
