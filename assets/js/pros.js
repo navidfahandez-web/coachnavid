@@ -30,7 +30,7 @@ const playersOf = () => {
   return [...data.players, ...others];
 };
 const clipsOf = (p) => data.clips.filter((c) => c.player === p.name);
-const good = (c) => c.verified === true && data.videos?.[c.source]?.embeddable !== false;
+const good = (c) => c.verified === true && data.videos?.[c.source]?.embeddable !== false && !data.videos?.[c.source]?.blocked;
 
 // ---------- status ----------
 function renderStatus() {
@@ -137,6 +137,7 @@ function renderPlayer(p) {
       <p class="note">${ok.length} checked clips · ${todo} still to check · ${dropped} dropped (not ${esc(p.name)}, or not that shot)</p>
       ${shots.length ? `<p class="pl-jump">${shots.map((s) => `<a href="#${encodeURIComponent(p.id)}/${s}" data-jump="${s}">${esc(shotName(s))} (${byShot[s].length})</a>`).join('')}</p>` : ''}
       ${missing.length ? `<p class="note"><b>No clips yet:</b> ${missing.map(shotName).map(esc).join(' · ')}</p>` : ''}
+      <details class="pl-sources"><summary>Videos used (${new Set(list.map((c) => c.source)).size})</summary><ul>${[...new Set(list.map((c) => c.source))].map((src) => { const v = data.videos?.[src] ?? {}; const n = list.filter((c) => c.source === src); return `<li><a href="https://www.youtube.com/watch?v=${esc(src)}" target="_blank" rel="noopener">${esc(v.title || n[0]?.sourceTitle || src)}</a> — ${n.filter(good).length} checked of ${n.length}${v.blocked ? ' · <b>blocked</b>' : ` <button type="button" class="pl-mini" data-block="${esc(src)}">Don't trust this video</button>`}</li>`; }).join('')}</ul></details>
       <form class="pl-add" data-add>
         <label class="field">Add a YouTube video of ${esc(p.name)} <input name="url" placeholder="https://www.youtube.com/watch?v=…" required /></label>
         <button class="btn btn--lime" type="submit">Watch &amp; add shots</button>
@@ -144,7 +145,7 @@ function renderPlayer(p) {
       <p class="note">Costs roughly 10–25 US cents of AI Studio credit per 10-minute video (finding + checking every shot).</p>
       <p class="pl-row">
         ${todo ? `<button class="btn btn--ghost" type="button" data-act="verify">Check the ${todo} new shots</button>` : ''}
-        ${ok.some((c) => !c.timed) ? `<button class="btn btn--ghost" type="button" data-act="verify" data-refine="1">Fix the timing of ${ok.filter((c) => !c.timed).length} clips</button>` : ''}
+        ${ok.some((c) => !c.blind && c.navid !== 'ok') ? `<button class="btn btn--ghost" type="button" data-act="verify" data-refine="1">Second check + exact timing for ${ok.filter((c) => !c.blind && c.navid !== 'ok').length} clips</button>` : ''}
         ${ok.length ? '<button class="btn btn--ghost" type="button" data-act="profile">Rewrite the technique profile</button>' : ''}
       </p>
     </section>
@@ -176,6 +177,11 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.step) { yt?.pauseVideo?.(); yt?.seekTo?.(Math.max(0, yt.getCurrentTime() + Number(t.dataset.step)), true); return; }
   if (t.hasAttribute('data-contact') && cur) { yt?.pauseVideo?.(); yt?.seekTo?.(sec(cur.time), true); return; }
   if (t.hasAttribute('data-pause')) { if (yt?.getPlayerState?.() === 1) yt.pauseVideo(); else yt?.playVideo?.(); return; }
+  if (t.dataset.block) {
+    if (!confirm('Hide every clip from this video (the AI got it wrong)?')) return;
+    try { await api('POST', { action: 'block-source', source: t.dataset.block }); await load(); } catch (err) { alert(err.message); }
+    return;
+  }
   if (t.dataset.mark) {
     const ok = t.dataset.ok === '1';
     if (!ok && !confirm('Hide this clip everywhere (library and compare page)?')) return;

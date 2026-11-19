@@ -18,6 +18,7 @@ const dropJob = (job) => updateJSON(JOBS, (q) => { const i = q.findIndex((y) => 
 async function indexJob(job, left) {
   const v = (await readJSON(VIDEOS, {}))[job.source] ?? {};
   if (v.embeddable === undefined || !v.title) Object.assign(v, await embedInfo(job.source));
+  if (v.blocked) return true;
   if (v.embeddable === false) {
     await updateJSON(VIDEOS, (all) => { all[job.source] = { ...all[job.source], ...v }; }, {});
     await setStatus({ log: `${job.source}: YouTube doesn't allow embedding — skipped` });
@@ -57,7 +58,7 @@ async function verifyJob(job, left) {
   for (;;) {
     if (left() < 2 * 60e3) return false;
     const todo = (await readJSON(PROS, [])).filter((c) => c.player === job.player && (c.verifyTries ?? 0) < 2
-      && (c.verified === undefined || (job.refine && c.verified === true && !c.timed))).slice(0, 6);
+      && (c.verified === undefined || (job.refine && c.verified === true && !c.blind && c.navid !== 'ok'))).slice(0, 6);
     if (!todo.length) break;
     await setStatus({ step: `${job.player}: checking shots one by one… ${n} done, ${real} real` });
     const results = await Promise.all(todo.map((c) => verifyShot(c).then((r) => ({ id: c.id, ...r }), (err) => ({ id: c.id, error: err.message.slice(0, 120) }))));
@@ -66,7 +67,7 @@ async function verifyJob(job, left) {
         const c = list.find((x) => x.id === r.id);
         if (!c) continue;
         if (r.error) c.verifyTries = (c.verifyTries ?? 0) + 1;
-        if (job.refine && c.verified === true && !r.error && !r.ok) { c.timed = true; c.recheck = 'unsure'; continue; } // 2nd look disagreed: keep it, ranked lower
+        if (job.refine && c.verified === true && !r.error && !r.ok) { c.blind = true; c.recheck = 'unsure'; continue; } // 2nd look disagreed: keep it, ranked lower
         applyVerify(c, r);
       }
     }, [], 12);

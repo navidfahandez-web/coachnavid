@@ -93,31 +93,38 @@ For each: the time of CONTACT as m:ss.s of the FULL video (between ${fmt(from)} 
   return (json.shots ?? []).map((s) => ({ ...s, t: inClip(sec(s.time), from, to) })).filter((s) => s.t !== null);
 }
 
-// VERIFY: one shot on its own 3-second clip at 10 frames/s
+// VERIFY: one shot on its own 3-second clip at 10 frames/s. Blind on purpose: the AI is NOT told which
+// shot or second to expect (it agreed too easily before) — it lists every ball contact it sees and who hits
+// it; the clip is real only if one of them is the player.
 export async function verifyShot(c) {
   const t = sec(c.time);
   const from = Math.max(0, t - 1.5), to = t + 1.5;
   const { json } = await ask({
     contents: [{ role: 'user', parts: [
       { fileData: { fileUri: yt(c.source) }, videoMetadata: { startOffset: `${from.toFixed(1)}s`, endOffset: `${to.toFixed(1)}s`, fps: 10 } },
-      { text: `This 3-second clip (${fmt(from)}–${fmt(to)} of the video) should show ${c.player} (professional padel player) hitting a ${shotName(c.shot)} at about ${fmt(t)}.
-First answer honestly: is that player clearly visible hitting a shot in this clip, which shot is it really, and at which exact moment does the racket touch the ball (m:ss.s of the full video)? Then describe THIS swing in the 5 phases — what you actually see in these frames (body, feet, racket, non-hitting arm, contact height and position), not a textbook description. Add 1-3 details that are special about how this player does it.` },
+      { text: `A 3-second clip (${fmt(from)}–${fmt(to)}) of the padel video "${c.sourceTitle || ''}".
+1. List EVERY moment a racket touches the ball in these frames: the time (m:ss.s of the full video), who hits it (a name only if you can really tell — caption, commentary, the video is about that player and he/she is the one clearly featured — else "unknown") and what the hitter looks like, and which shot. If nobody hits the ball, the list is empty.
+2. Is one of them ${c.player}? Give its index (-1 if none or not sure).
+3. For that contact only: describe the swing in the 5 phases — what you actually see in these frames (body, feet, racket, non-hitting arm, contact height and position), not a textbook description — and 1-3 details that are special about how this player does it.` },
     ] }],
     generationConfig: {
       responseMimeType: 'application/json', temperature: 0.1,
-      responseSchema: { type: 'OBJECT', required: ['visible', 'is_player', 'shot', 'contact', 'phases', 'details'], properties: {
-        visible: { type: 'BOOLEAN', description: 'a player clearly hits the ball in this clip' },
-        is_player: { type: 'BOOLEAN', description: `it is ${c.player} who hits it (as far as you can tell)` },
-        shot: { type: 'STRING', enum: [...SHOTS.map((s) => s.id), 'none'] },
-        contact: S('m:ss.s of the full video when the racket touches the ball'),
+      responseSchema: { type: 'OBJECT', required: ['contacts', 'player_index', 'clearly_visible', 'phases', 'details'], properties: {
+        contacts: { type: 'ARRAY', items: { type: 'OBJECT', required: ['time', 'hitter', 'looks', 'shot'], properties: {
+          time: S('m:ss.s of the full video'), hitter: S('name, or "unknown"'), looks: S('clothes, side of court'),
+          shot: { type: 'STRING', enum: SHOTS.map((s) => s.id) },
+        } } },
+        player_index: { type: 'INTEGER', description: `index in contacts of ${c.player}'s shot, -1 if none / not sure` },
+        clearly_visible: { type: 'BOOLEAN', description: 'that swing can be seen clearly enough to study the technique' },
         phases: { type: 'OBJECT', required: ['preparation', 'load', 'drop', 'contact', 'finish'], properties: { preparation: S('what you see'), load: S('what you see'), drop: S('what you see'), contact: S('what you see'), finish: S('what you see') } },
         details: { type: 'ARRAY', items: { type: 'STRING' }, description: '1-3 signature details of this swing' },
       } },
     },
   }, VERIFY_MODELS, false, 90000);
-  const ok = Boolean(json.visible && json.is_player && json.shot !== 'none');
-  const hit = inClip(sec(json.contact), from, to);
-  return { ok, shot: json.shot, phases: json.phases, details: json.details ?? [], contact: hit };
+  const hit = json.contacts?.[json.player_index];
+  const at = hit ? inClip(sec(hit.time), from, to) : null;
+  const ok = Boolean(hit && json.clearly_visible && at !== null);
+  return { ok, shot: hit?.shot, phases: json.phases, details: json.details ?? [], contact: at, contacts: (json.contacts ?? []).length };
 }
 
 // Save a verify result on the clip (keeps the original listing in shotListed / phasesListed)
@@ -126,6 +133,7 @@ export function applyVerify(c, r) {
   delete c.verifyError;
   c.verified = r.ok;
   c.checkedAt = new Date().toISOString();
+  c.blind = true; // checked with the blind question (not told which shot to expect)
   if (!r.ok) return;
   if (c.shotListed === undefined) { c.shotListed = c.shot; c.phasesListed = c.phases; }
   c.shot = r.shot; c.phases = r.phases; c.details = r.details;

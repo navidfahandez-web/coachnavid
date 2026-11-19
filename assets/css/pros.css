@@ -43,3 +43,6 @@
   .pl-phases td { border-top: 0; padding-top: 2px; }
   .pl-phases td:empty { display: none; }
 }
+.pl-sources ul { margin: 6px 0; padding-left: 18px; font-size: 14px; }
+.pl-sources li { margin: 4px 0; }
+.pl-mini { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-soft); background: transparent; color: inherit; cursor: pointer; }

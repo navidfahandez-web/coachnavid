@@ -4,6 +4,7 @@
 //   verify { player, refine? }  check unchecked shots (refine: also re-time already-checked ones)
 //   profile { player }          (re)write the technique profile
 //   mark { id, ok }             Navid's own yes/no on a clip (no = hidden everywhere)
+//   block-source { source }     a video that can't be trusted: hide all its clips
 //   run                         restart the job runner
 import { requireAdmin, json } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
@@ -40,6 +41,12 @@ export default async (req) => {
   if (body.action === 'profile' && player) { await addJobs([{ type: 'profile', player }]); await kick(origin); return json({ ok: true }); }
   if (body.action === 'run') { await kick(origin); return json({ ok: true }); }
   if (body.action === 'clear-jobs') { await updateJSON(JOBS, (q) => { q.length = 0; }, []); await updateJSON(STATUS, (x) => { x.runner = null; x.step = null; x.error = null; }, {}); return json({ ok: true }); }
+  if (body.action === 'block-source' && body.source) { // a video whose shots can't be trusted: hide all its clips
+    const source = String(body.source);
+    await updateJSON(VIDEOS, (all) => { all[source] = { ...all[source], blocked: true }; }, {});
+    const n = await updateJSON(PROS, (list) => { let k = 0; for (const c of list) if (c.source === source && c.navid !== 'ok') { c.verified = false; c.blocked = true; k += 1; } return k; }, []);
+    return json({ ok: true, hidden: n });
+  }
   if (body.action === 'mark' && body.id) {
     const ok = Boolean(body.ok);
     const found = await updateJSON(PROS, (list) => {
