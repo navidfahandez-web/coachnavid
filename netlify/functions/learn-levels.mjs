@@ -33,6 +33,12 @@ export default async (req) => {
     await updateJSON(GOALS, (list) => { list.splice(0, list.length, ...list.filter((g) => !(g.source === 'derived' && g.status === 'pending'))); }, [], 12);
   }
   const t0 = Date.now();
+  // out of time (a background run stops at 15 min): start the next run right away with the same work
+  // (not the one-off clearing of relevel / retag), so nothing waits for the 5-minute queue
+  const carryOn = async () => {
+    await fetch(`${new URL(req.url).origin}/api/learn-levels`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify({ reshot, merge, transitions, time, fundamentals }) }).catch(() => {});
+    return new Response('partial');
+  };
   const left = () => 13 * 60e3 - (Date.now() - t0);
   const status = (s) => updateJSON(STATUS, (x) => { Object.assign(x, s, { at: new Date().toISOString() }); }, {});
   try {
@@ -41,7 +47,7 @@ export default async (req) => {
       const RELATED = new Set(['lob', 'flat_smash', 'fh_volley', 'bh_volley', 'block_volley', 'half_volley', 'low_volley', 'bandeja', 'vibora', 'general', 'fh_after', 'bh_after']);
       let moved = 0;
       for (;;) {
-        if (left() < 60e3) { await status({ step: `Re-sorting shots paused (time limit) — run again.` }); return new Response('partial'); }
+        if (left() < 60e3) { await status({ step: `Re-sorting shots paused (time limit) — run again.` }); return carryOn(); }
         const todo = (await readJSON(CANDIDATES, [])).filter((c) => c.type !== 'fitness' && !c.reshot && RELATED.has(c.shot)).slice(0, BATCH);
         if (!todo.length) break;
         await status({ step: `Moving tips to the new shots… ${moved} checked` });
@@ -68,12 +74,12 @@ ${todo.map((c, i) => `${i}. (now: ${c.shot}) ${line(c)}`).join('\n')}` }] }],
       let n = 0;
       const failed = new Map(); // technique → failed calls in this run (skipped after 2)
       for (;;) {
-        if (left() < 5 * 60e3) { await status({ step: `Merging duplicate tips paused after ${n} (time limit) — it carries on by itself.` }); return new Response('partial'); }
+        if (left() < 5 * 60e3) { await status({ step: `Merging duplicate tips paused after ${n} (time limit) — it carries on by itself.` }); return carryOn(); }
         const all = await readJSON(CANDIDATES, []);
         const open = all.filter((c) => !c.point && c.status !== 'rejected');
         if (!open.length) break;
-        // 4 techniques at once (each call takes 1-3 min); within a technique, batches go one after another
-        const techs = [...new Set(open.map(technique))].filter((t) => (failed.get(t) ?? 0) < 2).slice(0, 4);
+        // 8 techniques at once (each call takes 1-3 min); within a technique, batches go one after another
+        const techs = [...new Set(open.map(technique))].filter((t) => (failed.get(t) ?? 0) < 2).slice(0, 8);
         if (!techs.length) throw new Error(`Merging failed twice for ${[...failed.keys()].slice(0, 3).join(', ')} — it tries again on the next run.`);
         await status({ step: `Merging duplicate tips… ${n} done, ${open.length} left (now: ${techs.join(', ')})` });
         const done = await Promise.allSettled(techs.map(async (t) => {
@@ -137,7 +143,7 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
       // unreviewed points merged with each other, so Navid reviews ~10-25 per shot. Navid's decided points stay.
       const CONS = 'learn/points-consolidated'; // { [technique]: points left after the last pass }
       for (let round = 0; round < 6; round++) {
-        if (left() < 5 * 60e3) { await status({ step: 'Second merging pass paused (time limit) — it carries on by itself.' }); return new Response('partial'); }
+        if (left() < 5 * 60e3) { await status({ step: 'Second merging pass paused (time limit) — it carries on by itself.' }); return carryOn(); }
         const [pts, cands, cons] = await Promise.all([readJSON(POINTS, []), readJSON(CANDIDATES, []), readJSON(CONS, {})]);
         const size = new Map();
         for (const c of cands) if (c.point) size.set(c.point, (size.get(c.point) ?? 0) + 1);
@@ -208,7 +214,7 @@ Answer timing, contact, deception or none (the point is about something else).` 
     for (const T of TAGS) {
       let n = 0;
       for (;;) {
-        if (left() < 60e3) { await status({ step: `Tagging ${T.label} paused (time limit) — run again.` }); return new Response('partial'); }
+        if (left() < 60e3) { await status({ step: `Tagging ${T.label} paused (time limit) — run again.` }); return carryOn(); }
         const todo = (await readJSON(CANDIDATES, [])).filter((c) => c.type !== 'fitness' && !c[T.field]).slice(0, BATCH);
         if (!todo.length) break;
         await status({ step: `Tagging ${T.label}… ${n} checked` });
@@ -232,7 +238,7 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
     // 1) levels for every point
     let tagged = 0;
     for (;;) {
-      if (left() < 60e3) { await status({ step: `Paused after ${tagged} points (time limit) — run again to continue.` }); return new Response('partial'); }
+      if (left() < 60e3) { await status({ step: `Paused after ${tagged} points (time limit) — run again to continue.` }); return carryOn(); }
       const todo = (await readJSON(CANDIDATES, [])).filter((c) => !Array.isArray(c.levels) || !c.levels.length).slice(0, BATCH);
       if (!todo.length) break;
       await status({ step: `Sorting tips by level… ${tagged} done` });
@@ -267,7 +273,7 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
     const all = await readJSON(CANDIDATES, []);
     for (const L of LEVELS) {
       if (goals.some((g) => g.source === 'derived' && g.level === L.n)) continue;
-      if (left() < 60e3) { await status({ step: `Goals written up to level ${L.n - 1} — run again to continue.` }); return new Response('partial'); }
+      if (left() < 60e3) { await status({ step: `Goals written up to level ${L.n - 1} — run again to continue.` }); return carryOn(); }
       await status({ step: `Writing the goals of level ${L.n} ${L.label}…` });
       const pts = all.filter((c) => c.type !== 'fitness' && c.status !== 'rejected' && (c.levels ?? []).includes(L.n)).slice(0, 250);
       if (!pts.length) continue;
