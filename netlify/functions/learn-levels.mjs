@@ -69,6 +69,52 @@ ${todo.map((c, i) => `${i}. (now: ${c.shot}) ${line(c)}`).join('\n')}` }] }],
       }
     }
 
+    // 0b) Navid's principles on every technique tip: forced/wanted transition, earn/remove time
+    const TAGS = [
+      transitions && { field: 'transition', values: ['forced', 'wanted', 'none'], label: 'forced / wanted transitions', rule: `Coach Navid: padel is about transitions between defence (back of the court) and attack (net).
+FORCED transition = the opponent makes the player change zone (lobbed at the net → bandeja/víbora to keep the net, or back to play the ball after the glass; pushed back by a hard/deep ball).
+WANTED transition = the player chooses to change zone (a lob or a chiquita to take the net, moving in after a weak ball).
+Answer forced, wanted or none (not about changing zone).` },
+      time && { field: 'time_tag', values: ['earn', 'remove', 'none'], label: 'earning / removing time', rule: `Coach Navid: padel is about time.
+EARN time = gain time for yourself or your partner to defend, get in position or reach the net (high lob, slow ball when far from your position, time to cover).
+REMOVE time = take time away from the opponent so he is not ready for the next shot (fast lob so he can't prepare the smash or a comfortable bandeja, lob down the line because the distance is shorter, moving in and playing closer / earlier).
+Answer earn, remove or none (not about time).` },
+      fundamentals && { field: 'fundamental', values: ['timing', 'contact', 'deception', 'none'], label: 'timing / contact point / hiding the shot', rule: `Coach Navid: these fundamentals matter at every level.
+TIMING = the right moment: squeezing the fingers slightly at the moment of contact (like a high five that makes a sound), the moment you hit, rhythm with the ball.
+CONTACT = the contact point: where the ball meets the racket (sweet spot, in front of the body, height of contact).
+DECEPTION = changing the timing of contact to hide the shot and be unexpected (hitting earlier/later, disguise, same preparation for different shots) so the opponent can't time his split step.
+Answer timing, contact, deception or none (the point is about something else).` },
+    ].filter(Boolean);
+    for (const T of TAGS) {
+      let n = 0;
+      for (;;) {
+        if (left() < 60e3) { await status({ step: `Tagging ${T.label} paused (time limit) — run again.` }); return carryOn(); }
+        const all = (await readJSON(CANDIDATES, [])).filter((c) => c.type !== 'fitness' && !c[T.field]).slice(0, BATCH * 4);
+        if (!all.length) break;
+        await status({ step: `Tagging ${T.label}… ${n} checked, ${all.length >= BATCH * 4 ? 'more' : all.length} left` });
+        const chunks = [0, 1, 2, 3].map((k) => all.slice(k * BATCH, (k + 1) * BATCH)).filter((x) => x.length); // 4 calls at once
+        const tag = new Map();
+        const res = await Promise.allSettled(chunks.map(async (todo) => {
+          const { json } = await ask({
+            contents: [{ role: 'user', parts: [{ text: `${T.rule}
+For each numbered coaching point:
+
+${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
+            generationConfig: {
+              responseMimeType: 'application/json', temperature: 0.1,
+              responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 't'], properties: { i: { type: 'INTEGER' }, t: { type: 'STRING', enum: T.values } } } },
+            },
+          }, FAST, false, 90000); // a slow reply must not freeze the job
+          for (const r of json ?? []) if (todo[r.i]) tag.set(todo[r.i].id, r.t);
+          return todo;
+        }));
+        if (res.every((r) => r.status === 'rejected')) throw res[0].reason;
+        const ids = new Set(res.flatMap((r) => (r.status === 'fulfilled' ? r.value.map((c) => c.id) : [])));
+        await updateJSON(CANDIDATES, (list) => { for (const c of list) if (ids.has(c.id)) c[T.field] = tag.get(c.id) ?? 'none'; }, [], 12);
+        n += ids.size;
+      }
+    }
+
     // 0c) merge near-identical tips of the same technique into one point (members keep all sources/times)
     if (merge) {
       let n = 0;
@@ -193,46 +239,6 @@ ${ps.map((p) => `${p.id}: ${p.fix} [${size.get(p.id)} tips]`).join('\n')}` }] }]
         }));
         done.forEach((r, k) => { if (r.status === 'rejected') { console.error(`consolidate ${techs[k]}: ${r.reason?.message}`); failed.set(techs[k], (failed.get(techs[k]) ?? 0) + 1); } });
         if (done.every((r) => r.status === 'rejected') && done.some((r) => isBilling(r.reason?.message))) throw done[0].reason;
-      }
-    }
-
-    // 0b) Navid's principles on every technique tip: forced/wanted transition, earn/remove time
-    const TAGS = [
-      transitions && { field: 'transition', values: ['forced', 'wanted', 'none'], label: 'forced / wanted transitions', rule: `Coach Navid: padel is about transitions between defence (back of the court) and attack (net).
-FORCED transition = the opponent makes the player change zone (lobbed at the net → bandeja/víbora to keep the net, or back to play the ball after the glass; pushed back by a hard/deep ball).
-WANTED transition = the player chooses to change zone (a lob or a chiquita to take the net, moving in after a weak ball).
-Answer forced, wanted or none (not about changing zone).` },
-      time && { field: 'time_tag', values: ['earn', 'remove', 'none'], label: 'earning / removing time', rule: `Coach Navid: padel is about time.
-EARN time = gain time for yourself or your partner to defend, get in position or reach the net (high lob, slow ball when far from your position, time to cover).
-REMOVE time = take time away from the opponent so he is not ready for the next shot (fast lob so he can't prepare the smash or a comfortable bandeja, lob down the line because the distance is shorter, moving in and playing closer / earlier).
-Answer earn, remove or none (not about time).` },
-      fundamentals && { field: 'fundamental', values: ['timing', 'contact', 'deception', 'none'], label: 'timing / contact point / hiding the shot', rule: `Coach Navid: these fundamentals matter at every level.
-TIMING = the right moment: squeezing the fingers slightly at the moment of contact (like a high five that makes a sound), the moment you hit, rhythm with the ball.
-CONTACT = the contact point: where the ball meets the racket (sweet spot, in front of the body, height of contact).
-DECEPTION = changing the timing of contact to hide the shot and be unexpected (hitting earlier/later, disguise, same preparation for different shots) so the opponent can't time his split step.
-Answer timing, contact, deception or none (the point is about something else).` },
-    ].filter(Boolean);
-    for (const T of TAGS) {
-      let n = 0;
-      for (;;) {
-        if (left() < 60e3) { await status({ step: `Tagging ${T.label} paused (time limit) — run again.` }); return carryOn(); }
-        const todo = (await readJSON(CANDIDATES, [])).filter((c) => c.type !== 'fitness' && !c[T.field]).slice(0, BATCH);
-        if (!todo.length) break;
-        await status({ step: `Tagging ${T.label}… ${n} checked` });
-        const { json } = await ask({
-          contents: [{ role: 'user', parts: [{ text: `${T.rule}
-For each numbered coaching point:
-
-${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
-          generationConfig: {
-            responseMimeType: 'application/json', temperature: 0.1,
-            responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 't'], properties: { i: { type: 'INTEGER' }, t: { type: 'STRING', enum: T.values } } } },
-          },
-        }, FAST, false, 90000); // a slow reply must not freeze the job
-        const tag = new Map((json ?? []).filter((r) => todo[r.i]).map((r) => [todo[r.i].id, r.t]));
-        const ids = new Set(todo.map((t) => t.id));
-        await updateJSON(CANDIDATES, (list) => { for (const c of list) if (ids.has(c.id)) c[T.field] = tag.get(c.id) ?? 'none'; }, [], 12);
-        n += todo.length;
       }
     }
 
