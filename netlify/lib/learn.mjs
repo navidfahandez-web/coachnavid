@@ -129,9 +129,9 @@ export async function learnFromVideo(url, title, mode = 'technique') {
   if (mode === 'pro') {
     const { json, model } = await ask({
       contents: [{ role: 'user', parts: [
-        { fileData: { fileUri: url } },
+        { fileData: { fileUri: url }, videoMetadata: { fps: 5 } }, // 5 frames/s: exact contact moments and phases
         { text: `This is footage of professional padel players ("${title || 'untitled'}"). A coach is building a library of pro reference shots to compare his students' technique with.
-List every shot where one player's technique is clearly visible (skip blocked, far or blurry ones). For each: who hits it (by name if you can recognise them — shirt, side, commentary, captions; else "other"), which shot, the exact second of CONTACT, and how the 5 phases look. Max 40 shots, best quality first.` },
+List every shot where one player's technique is clearly visible (skip blocked, far or blurry ones). For each: who hits it (by name if you can recognise them — shirt, side, commentary, captions; else "other"), which shot, the exact second of CONTACT, and how the 5 phases look. Max 40 shots, best quality first. Only list shots you actually see — never fill in a pattern; if a player or second is uncertain, leave the shot out.` },
       ] }],
       generationConfig: { responseMimeType: 'application/json', responseSchema: PRO_SCHEMA, temperature: 0.2 }, // full resolution: technique details matter here
     }, undefined, false, 600000);
