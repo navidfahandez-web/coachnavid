@@ -188,7 +188,7 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
 
       // 2nd pass: a technique that still has many points (tips merged in different batches) gets its
       // unreviewed points merged with each other, so Navid reviews ~10-25 per shot. Navid's decided points stay.
-      const CONS = 'learn/points-consolidated'; // { [technique]: points left after the last pass }
+      const CONS = 'learn/points-consolidated-v2'; // { [technique]: points left after the last pass }
       for (let round = 0; round < 6; round++) {
         if (left() < 5 * 60e3) { await status({ step: 'Second merging pass paused (time limit) — it carries on by itself.' }); return carryOn(); }
         const [pts, cands, cons] = await Promise.all([readJSON(POINTS, []), readJSON(CANDIDATES, []), readJSON(CONS, {})]);
@@ -196,14 +196,14 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
         for (const c of cands) if (c.point) size.set(c.point, (size.get(c.point) ?? 0) + 1);
         const byTech = new Map();
         for (const p of pts) if (p.status === 'pending' && size.get(p.id)) { if (!byTech.has(p.tech)) byTech.set(p.tech, []); byTech.get(p.tech).push(p); }
-        const techs = [...byTech].filter(([t, ps]) => ps.length > 25 && ps.length > (cons[t] ?? 0) * 1.3 && (failed.get(t) ?? 0) < 2).map(([t]) => t).slice(0, 4);
+        const techs = [...byTech].filter(([t, ps]) => ps.length > 25 && ps.length > (cons[t] ?? 0) * 1.15 && (failed.get(t) ?? 0) < 2).map(([t]) => t).slice(0, 4);
         if (!techs.length) break;
         await status({ step: `Second merging pass… (now: ${techs.join(', ')})` });
         const done = await Promise.allSettled(techs.map(async (t) => {
           const ps = byTech.get(t).slice(0, 200);
           const { json } = await ask({
             contents: [{ role: 'user', parts: [{ text: `These are coaching points about one padel topic (${t}), each already merged from several videos. Some still say the same thing in different words.
-Group the points that teach the SAME correction / idea${t.startsWith('fit:') ? ' (or the same exercise)' : ''}. Aim for about 10-25 groups in total, but never put two different corrections in one group. Points that are unique stay alone (a group of one).
+The coach must review a SHORT list: group them into AT MOST ${t.startsWith('area:') || t === 'shot_selection' ? 30 : 22} groups in total. Put together points that teach the same correction / idea${t.startsWith('fit:') ? ' (or the same exercise / variations of it)' : ', and close points about the same part of the shot (preparation, footwork, contact point, direction, decision)'}; the merged cue may name 2 closely related cues. Never mix opposite advice. Every point must be in exactly one group.
 For each group of 2+ points write the merged cue (fix, max ~15 words, simple coaching language), mistake (how it looks on video, empty if none) and why (one short sentence).${t.startsWith('fit:') ? '' : `
 ${NAVID_METHOD}`}
 
