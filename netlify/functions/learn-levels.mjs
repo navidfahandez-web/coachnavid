@@ -8,7 +8,7 @@ import { CANDIDATES, GOALS } from '../lib/learn.mjs';
 import { ask } from '../lib/video-ai.mjs';
 import { AREAS, LEVELS, SHOTS, levelsText } from '../../shared/report.js';
 
-const BATCH = 80;
+const BATCH = 40;
 const FAST = ['gemini-3.8-flash', 'gemini-3.1-pro-preview'];
 const STATUS = 'learn/levels-status';
 
@@ -18,7 +18,7 @@ const line = (c) => (c.type === 'fitness'
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { reshot = false, transitions = false, time = false } = await req.json().catch(() => ({}));
+  const { reshot = false, transitions = false, time = false, fundamentals = false } = await req.json().catch(() => ({}));
   const t0 = Date.now();
   const left = () => 13 * 60e3 - (Date.now() - t0);
   const status = (s) => updateJSON(STATUS, (x) => { Object.assign(x, s, { at: new Date().toISOString() }); }, {});
@@ -43,7 +43,7 @@ ${todo.map((c, i) => `${i}. (now: ${c.shot}) ${line(c)}`).join('\n')}` }] }],
             responseMimeType: 'application/json', temperature: 0.1,
             responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 'shot'], properties: { i: { type: 'INTEGER' }, shot: { type: 'STRING', enum: [...SHOTS.map((x) => x.id), 'general'] } } } },
           },
-        }, FAST);
+        }, FAST, false, 90000); // a slow reply must not freeze the job
         const to = new Map((json ?? []).filter((r) => todo[r.i]).map((r) => [todo[r.i].id, r.shot]));
         await updateJSON(CANDIDATES, (list) => { for (const c of list) if (todo.some((t) => t.id === c.id)) { if (to.get(c.id) && to.get(c.id) !== c.shot) { c.shotBefore = c.shot; c.shot = to.get(c.id); } c.reshot = true; } }, [], 12);
         moved += todo.length;
@@ -60,6 +60,10 @@ Answer forced, wanted or none (not about changing zone).` },
 EARN time = gain time for yourself or your partner to defend, get in position or reach the net (high lob, slow ball when far from your position, time to cover).
 REMOVE time = take time away from the opponent so he is not ready for the next shot (fast lob so he can't prepare the smash or a comfortable bandeja, lob down the line because the distance is shorter, moving in and playing closer / earlier).
 Answer earn, remove or none (not about time).` },
+      fundamentals && { field: 'fundamental', values: ['timing', 'contact', 'none'], label: 'timing / contact point', rule: `Coach Navid: two fundamentals matter at every level.
+TIMING = the right moment: squeezing the fingers slightly at the moment of contact (like a high five that makes a sound), the moment you hit, rhythm with the ball.
+CONTACT = the contact point: where the ball meets the racket (sweet spot, in front of the body, height of contact).
+Answer timing, contact or none (the point is about something else).` },
     ].filter(Boolean);
     for (const T of TAGS) {
       let n = 0;
@@ -77,7 +81,7 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
             responseMimeType: 'application/json', temperature: 0.1,
             responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 't'], properties: { i: { type: 'INTEGER' }, t: { type: 'STRING', enum: T.values } } } },
           },
-        }, FAST);
+        }, FAST, false, 90000); // a slow reply must not freeze the job
         const tag = new Map((json ?? []).filter((r) => todo[r.i]).map((r) => [todo[r.i].id, r.t]));
         const ids = new Set(todo.map((t) => t.id));
         await updateJSON(CANDIDATES, (list) => { for (const c of list) if (ids.has(c.id)) c[T.field] = tag.get(c.id) ?? 'none'; }, [], 12);
@@ -103,7 +107,7 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
           responseMimeType: 'application/json', temperature: 0.1,
           responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 'levels'], properties: { i: { type: 'INTEGER' }, levels: { type: 'ARRAY', items: { type: 'INTEGER' } } } } },
         },
-      }, FAST);
+      }, FAST, false, 90000); // a slow reply must not freeze the job
       const byId = new Map();
       for (const r of json ?? []) {
         const c = todo[r.i];

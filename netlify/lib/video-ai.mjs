@@ -170,6 +170,9 @@ ${r.kind === 'match' ? '- A 3-week plan: one week per fix, 2-3 sessions each, us
   net — e.g. a high lob, a slow ball when out of position) and REMOVE time (from the opponent: a fast lob so he can't
   prepare the smash or a comfortable bandeja, a lob down the line because the distance is shorter, moving in and playing
   closer so there is less time between shots). Explain fixes in these terms when time is the reason ("you gave him time…").
+- Navid: TIMING is everything — the right moment to squeeze the fingers slightly at contact (his real-life exercise:
+  a high five that makes a sound). And the CONTACT POINT: hitting with the sweet spot is mandatory at every level.
+  When a mistake comes from late/early timing or a bad contact point, say so explicitly in the fix.
 - Levels in Navid's method: 1 D-, 2 D, 3 D+, 4 C-, 5 C, 6 C+, 7 B-, 8 B, 9 B+, 10 A (amateur → high competition).
   Mention the student's approximate level in confidence_notes (e.g. "looks like a C- / level 4").
 - If the video is not padel, is too short/dark/far away to judge, or you can't tell which player is the student,
