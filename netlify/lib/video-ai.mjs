@@ -162,6 +162,10 @@ ${r.kind === 'match' ? '- A 3-week plan: one week per fix, 2-3 sessions each, us
 - Navid's method for every fix: START from the decision / tactical mistake (what the student chose to do and why it
   was the wrong choice in that situation), THEN the technique behind it (why the mistake happened), THEN how to avoid
   it. Write "detail" and "fix" in that order.
+- Navid: padel is about TRANSITIONS between defence (back) and attack (net). Name the transition in each fix when there
+  is one: FORCED (the opponent makes the student change zone — e.g. lobbed at the net → bandeja/víbora, or let it pass
+  and play after the glass) or WANTED (the student chooses to change zone — e.g. a lob or a chiquita to take the net).
+  Score the "transition" area and its shots when you saw transitions.
 - Levels in Navid's method: 1 D-, 2 D, 3 D+, 4 C-, 5 C, 6 C+, 7 B-, 8 B, 9 B+, 10 A (amateur → high competition).
   Mention the student's approximate level in confidence_notes (e.g. "looks like a C- / level 4").
 - If the video is not padel, is too short/dark/far away to judge, or you can't tell which player is the student,

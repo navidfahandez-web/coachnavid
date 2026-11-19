@@ -18,7 +18,7 @@ const line = (c) => (c.type === 'fitness'
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { reshot = false } = await req.json().catch(() => ({}));
+  const { reshot = false, transitions = false } = await req.json().catch(() => ({}));
   const t0 = Date.now();
   const left = () => 13 * 60e3 - (Date.now() - t0);
   const status = (s) => updateJSON(STATUS, (x) => { Object.assign(x, s, { at: new Date().toISOString() }); }, {});
@@ -47,6 +47,33 @@ ${todo.map((c, i) => `${i}. (now: ${c.shot}) ${line(c)}`).join('\n')}` }] }],
         const to = new Map((json ?? []).filter((r) => todo[r.i]).map((r) => [todo[r.i].id, r.shot]));
         await updateJSON(CANDIDATES, (list) => { for (const c of list) if (todo.some((t) => t.id === c.id)) { if (to.get(c.id) && to.get(c.id) !== c.shot) { c.shotBefore = c.shot; c.shot = to.get(c.id); } c.reshot = true; } }, [], 12);
         moved += todo.length;
+      }
+    }
+
+    // 0b) forced / wanted transition tag on every technique tip
+    if (transitions) {
+      let n = 0;
+      for (;;) {
+        if (left() < 60e3) { await status({ step: 'Tagging transitions paused (time limit) — run again.' }); return new Response('partial'); }
+        const todo = (await readJSON(CANDIDATES, [])).filter((c) => c.type !== 'fitness' && !c.transition).slice(0, BATCH);
+        if (!todo.length) break;
+        await status({ step: `Tagging forced / wanted transitions… ${n} checked` });
+        const { json } = await ask({
+          contents: [{ role: 'user', parts: [{ text: `Coach Navid: padel is about transitions between defence (back of the court) and attack (net).
+FORCED transition = the opponent makes the player change zone (lobbed at the net → bandeja/víbora to keep the net, or back to play the ball after the glass; pushed back by a hard/deep ball).
+WANTED transition = the player chooses to change zone (a lob or a chiquita to take the net, moving in after a weak ball).
+For each numbered coaching point answer forced, wanted or none (not about changing zone).
+
+${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
+          generationConfig: {
+            responseMimeType: 'application/json', temperature: 0.1,
+            responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 't'], properties: { i: { type: 'INTEGER' }, t: { type: 'STRING', enum: ['forced', 'wanted', 'none'] } } } },
+          },
+        }, FAST);
+        const tag = new Map((json ?? []).filter((r) => todo[r.i]).map((r) => [todo[r.i].id, r.t]));
+        const ids = new Set(todo.map((t) => t.id));
+        await updateJSON(CANDIDATES, (list) => { for (const c of list) if (ids.has(c.id)) c.transition = tag.get(c.id) ?? 'none'; }, [], 12);
+        n += todo.length;
       }
     }
 

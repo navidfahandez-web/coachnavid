@@ -19,25 +19,27 @@ const inLevel = (c) => !level || (c.levels ?? []).includes(Number(level));
 $('[data-level]').innerHTML += LEVELS.map((l) => `<option value="${l.n}">${l.n} · ${l.label}</option>`).join('');
 let tab = 'pending';
 let tech = '';
+const TR = { 'tr:forced': '🔄 Forced transitions (all shots)', 'tr:wanted': '🔄 Wanted transitions (all shots)' };
+const inTech = (c, t) => (TR[t] ? c.transition === t.slice(3) : techOf(c) === t);
 const techOf = (c) => (c.shot && c.shot !== 'general' ? c.shot : `area:${c.area}`);
 const FIT = { injury_prevention: 'Injury prevention', strength: 'Strength', power: 'Power', speed_agility: 'Speed & agility', endurance: 'Endurance', mobility: 'Mobility', warmup: 'Warm-up', recovery: 'Recovery' };
-const techName = (t) => (t.startsWith('fit:') ? `💪 Fitness — ${FIT[t.slice(4)] ?? t.slice(4)}` : t.startsWith('area:') ? `${AREAS.find((a) => a.id === t.slice(5))?.en ?? t.slice(5)} — general` : SHOTS.find((x) => x.id === t)?.en ?? t);
-const ORDER = [...SHOTS.map((x) => x.id), ...AREAS.map((a) => `area:${a.id}`), ...Object.keys(FIT).map((k) => `fit:${k}`)];
+const techName = (t) => (TR[t] ? TR[t] : t.startsWith('fit:') ? `💪 Fitness — ${FIT[t.slice(4)] ?? t.slice(4)}` : t.startsWith('area:') ? `${AREAS.find((a) => a.id === t.slice(5))?.en ?? t.slice(5)} — general` : SHOTS.find((x) => x.id === t)?.en ?? t);
+const ORDER = ['tr:forced', 'tr:wanted', ...SHOTS.map((x) => x.id), ...AREAS.map((a) => `area:${a.id}`), ...Object.keys(FIT).map((k) => `fit:${k}`)];
 
 function render() {
   for (const s of ['pending', 'approved', 'rejected']) $(`[data-count="${s}"]`).textContent = data.candidates.filter((c) => c.status === s).length;
   // technique picker: every technique with points, "(n to review)"
   const pool = data.candidates.filter(inLevel);
-  const techs = [...new Set(pool.map(techOf))].sort((a, b) => (ORDER.indexOf(a) + 999 * (ORDER.indexOf(a) < 0)) - (ORDER.indexOf(b) + 999 * (ORDER.indexOf(b) < 0)));
+  const techs = [...Object.keys(TR).filter((t) => pool.some((c) => inTech(c, t))), ...new Set(pool.map(techOf))].sort((a, b) => (ORDER.indexOf(a) + 999 * (ORDER.indexOf(a) < 0)) - (ORDER.indexOf(b) + 999 * (ORDER.indexOf(b) < 0)));
   if (!tech || !techs.includes(tech)) tech = techs[0] ?? '';
   $('[data-tech]').innerHTML = techs.map((t) => {
-    const n = pool.filter((c) => techOf(c) === t && c.status === tab).length;
+    const n = pool.filter((c) => inTech(c, t) && c.status === tab).length;
     return `<option value="${esc(t)}"${t === tech ? ' selected' : ''}>${esc(techName(t))} (${n})${data.notes[t] ? ' 📝' : ''}</option>`;
   }).join('');
   $('[data-notes-box]').hidden = !tech;
   $('[data-tech-name]').textContent = tech ? techName(tech) : '';
   if (document.activeElement !== $('[data-tech-notes]')) $('[data-tech-notes]').value = data.notes[tech] ?? '';
-  const shown = pool.filter((c) => c.status === tab && techOf(c) === tech);
+  const shown = pool.filter((c) => c.status === tab && inTech(c, tech));
   // level goals
   $('[data-goals-box]').hidden = !level;
   if (level) {

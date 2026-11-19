@@ -39,6 +39,15 @@ export const AREAS = [
     { id: 'por4', en: 'Smash out over the back (por 4)', lt: 'Smash per galą (por 4)' },
     { id: 'winner_smash', en: 'Winner smash (put-away)', lt: 'Baigiamasis smash' },
   ] },
+  // Navid: "padel is about transitions". Forced = the opponent makes us change zone; wanted = we choose to.
+  { id: 'transition', en: 'Transitions', lt: 'Perėjimai', shots: [
+    { id: 'forced_overhead', en: 'Forced: lobbed at the net → overhead (bandeja / víbora) to keep the net', lt: 'Priverstinis: lobas prie tinklo → smūgis virš galvos' },
+    { id: 'forced_glass', en: 'Forced: lobbed at the net → back to play it after the glass', lt: 'Priverstinis: lobas → atgal, smūgis po sienos' },
+    { id: 'forced_pushed', en: 'Forced: pushed back by a hard / deep ball', lt: 'Priverstinis: atstumtas stipriu ar giliu kamuoliu' },
+    { id: 'wanted_lob', en: 'Wanted: lob to take the net', lt: 'Norimas: lobas, kad užimtum tinklą' },
+    { id: 'wanted_chiquita', en: 'Wanted: chiquita to take the net', lt: 'Norimas: chiquita, kad užimtum tinklą' },
+    { id: 'wanted_approach', en: 'Wanted: moving in after a weak ball', lt: 'Norimas: ėjimas į priekį po silpno kamuolio' },
+  ] },
   { id: 'position', en: 'Positioning & movement', lt: 'Pozicija ir judėjimas', shots: [
     { id: 'split_step', en: 'Split step', lt: 'Split step' },
     { id: 'wall_footwork', en: 'Turning & footwork to the wall', lt: 'Pasisukimas ir kojų darbas prie sienos' },

@@ -50,7 +50,7 @@ export default async (req) => {
   }
 
   if (pathname.endsWith('/levels')) { // start sorting all tips by level + writing level goals
-    await fetch(`${new URL(req.url).origin}/api/learn-levels`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify({ reshot: Boolean(b.reshot) }) });
+    await fetch(`${new URL(req.url).origin}/api/learn-levels`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify({ reshot: Boolean(b.reshot), transitions: Boolean(b.transitions) }) });
     return json({ ok: true });
   }
 
