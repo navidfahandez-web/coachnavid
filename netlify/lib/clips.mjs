@@ -51,6 +51,32 @@ function run(args, timeoutMs = 240000) {
   });
 }
 
+// Key frames only, with their true times: the in-between frames are dropped BEFORE decoding (packet
+// level, no decoding) and the key frames are piped into a second ffmpeg. Decoding with
+// "-skip_frame nokey" instead is fast too, but on videos whose frames are stored out of order
+// (B-frames, e.g. club cameras) the decoder then gives the key frames wrong times — the AI's moments
+// came out minutes off. outArgs: the second ffmpeg's filters/outputs.
+function runKeyframes(url, outArgs, timeoutMs, inArgs = []) {
+  return new Promise((resolve, reject) => {
+    const a = spawn(ffmpegPath, ['-hide_banner', '-nostdin', '-loglevel', 'error', '-seekable', '0', ...inArgs, '-i', url,
+      '-map', '0:v:0', '-c', 'copy', '-bsf:v', 'noise=drop=not(key)', '-f', 'nut', 'pipe:1'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const b = spawn(ffmpegPath, ['-hide_banner', '-nostdin', '-y', '-f', 'nut', '-i', 'pipe:0', ...outArgs], { stdio: ['pipe', 'ignore', 'pipe'] });
+    a.stdout.pipe(b.stdin);
+    b.stdin.on('error', () => {}); // b may stop reading first (e.g. -frames:v)
+    let errA = ''; let errB = '';
+    a.stderr.on('data', (d) => { errA = (errA + d).slice(-3000); });
+    b.stderr.on('data', (d) => { errB = (errB + d).slice(-20000); });
+    const timer = setTimeout(() => { a.kill('SIGKILL'); b.kill('SIGKILL'); reject(new Error(`ffmpeg took longer than ${timeoutMs / 1000} s`)); }, timeoutMs);
+    a.on('error', reject); b.on('error', reject);
+    b.on('close', (code) => {
+      clearTimeout(timer);
+      a.kill('SIGKILL');
+      if (code === 0) resolve(errB);
+      else reject(new Error(`ffmpeg failed (${code}): ${clean(`${errA} ${errB}`.split('\n').filter(Boolean).slice(-3).join(' | '))}`));
+    });
+  });
+}
+
 // Returns the finished MP4 as a Buffer.
 // A tiny local server in front of the Drive file, so ffmpeg can jump around in it quickly.
 // Drive's own replies don't let ffmpeg seek, and some phone/camera videos spread their index
@@ -219,11 +245,10 @@ export async function cutParts(videoFileId, partSec, onPart) {
   const timer = setInterval(() => { try { flush(false); } catch { /* next tick */ } }, 2000);
   try {
     // decoding every frame of a 30-minute phone video is too slow for a function (~2.5 min per
-    // 5 minutes), so only the key frames are decoded (phones put one every ~0.5-1 s)
+    // 5 minutes), so only the key frames are decoded (phones put one every ~0.5-1 s) — see runKeyframes
     // -seekable 0: one straight pass from start to end (with seeking, ffmpeg first scans the
     // whole fragmented file for its index, which downloads it twice)
-    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '0', '-skip_frame', 'nokey', '-i', proxy.url,
-      '-map', '0:v:0', '-an', '-vf', 'fps=2,scale=-2:480', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '30', '-pix_fmt', 'yuv420p',
+    await runKeyframes(proxy.url, ['-loglevel', 'error', '-an', '-vf', 'fps=2,scale=-2:480', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '30', '-pix_fmt', 'yuv420p',
       '-force_key_frames', `expr:gte(t,n_forced*${partSec})`,
       '-f', 'segment', '-segment_time', String(partSec), '-reset_timestamps', '1', '-segment_format', 'mp4',
       path.join(dir, 'p%03d.mp4')], 11 * 60 * 1000);
@@ -423,8 +448,8 @@ export async function probeTimes(videoFileId, times, inOpts = []) {
       seek.push({ t, jpg: readFileSync(f), shown: (/pts_time:\s*([\d.]+)/.exec(log) ?? [])[1] ?? null });
     }
     const sel = times.map((t) => `between(t,${t.toFixed(2)},${(t + 0.45).toFixed(2)})`).join('+');
-    const log = await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'info', '-seekable', '0', ...inOpts, '-skip_frame', 'nokey', '-t', (Math.max(...times) + 2).toFixed(2), '-i', proxy.url,
-      '-map', '0:v:0', '-vf', `fps=2,select='${sel}',showinfo,scale=640:-2`, '-vsync', '0', '-q:v', '4', path.join(dir, 'p%02d.jpg')], 11 * 60 * 1000);
+    const log = await runKeyframes(proxy.url, ['-loglevel', 'info', '-t', (Math.max(...times) + 2).toFixed(2),
+      '-vf', `fps=2,select='${sel}',showinfo,scale=640:-2`, '-vsync', '0', '-q:v', '4', path.join(dir, 'p%02d.jpg')], 11 * 60 * 1000, inOpts);
     const shownPass = [...log.matchAll(/pts_time:\s*([\d.]+)/g)].map((m) => m[1]);
     const pass = times.map((t, k) => { const f = path.join(dir, `p${String(k + 1).padStart(2, '0')}.jpg`); return { t, jpg: existsSync(f) ? readFileSync(f) : null, shown: shownPass[k] ?? null }; });
     return { info, seek, pass };
