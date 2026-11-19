@@ -211,5 +211,6 @@ async function load() {
 load();
 setInterval(async () => { // refresh the status while the AI works
   if (!data || !(data.status?.step || data.jobs?.length)) return;
-  try { const d = await api(); const changed = d.clips.length !== data.clips.length || d.clips.filter((c) => c.verified !== undefined).length !== data.clips.filter((c) => c.verified !== undefined).length; data = d; if (changed && !cur) route(); else renderStatus(); } catch { /* next time */ }
+  try { const d = await api(); const sig = (x) => `${x.clips.length}|${x.clips.filter((c) => c.verified !== undefined).length}|${Object.values(x.profiles ?? {}).map((p) => p?.at).join()}`;
+    const changed = sig(d) !== sig(data); data = d; if (changed && !cur) route(); else renderStatus(); } catch { /* next time */ }
 }, 20000);
