@@ -266,7 +266,16 @@ const LAYOUT = { titleY: 90, aY: 300, bY: 300 + CLIP_H + 110, capY: 1700 };
 const box = (html, width = 1000, align = 'left') => `<div style="width:${width}px;text-align:${align};font:400 52px/1.08 Anton,sans-serif;color:#fff;letter-spacing:.01em">${html}</div>`;
 const clean2 = (t) => String(t ?? '').replace(/[<>&]/g, '');
 
-export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHNAVID.COM', anon = true }, onStep = async () => {}) {
+// The empty court behind a moment: per-pixel median of frames sampled over ±40 s (the camera is fixed,
+// players move), so whatever differs from it in a frame is a player → silhouette.
+async function courtBackground(url, dir, name, t) {
+  const f = path.join(dir, `${name}.png`);
+  await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-ss', Math.max(0, t - 40).toFixed(2), '-t', '80', '-i', url,
+    '-vf', `fps=1/3,scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,tmedian=radius=12,select=eq(n\\,12)`, '-frames:v', '1', f], 240000);
+  return f;
+}
+
+export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHNAVID.COM', anon = 'silhouette' }, onStep = async () => {}) {
   const dir = mkdtempSync(path.join(tmpdir(), 'reel-'));
   const proxy = await driveProxy(videoFileId);
   try {
@@ -283,12 +292,30 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     const pngs = await renderPngs(snippets, { fontsCss: labelCss() });
     const files = pngs.map((buf, i) => { const f = path.join(dir, `t${i}.png`); writeFileSync(f, buf); return f; });
 
+    const sa0 = toSecondsSafe(a.t); const sb0 = toSecondsSafe(b.t);
+    let bgs = [];
+    if (anon === 'silhouette') {
+      await onStep('Finding the empty court (for the silhouettes)…');
+      bgs = [await courtBackground(proxy.url, dir, 'bgA', sa0), await courtBackground(proxy.url, dir, 'bgB', sb0)];
+    }
     await onStep('Cutting and slowing down the two shots…');
     const REAL = 5; const SLOW_FROM = 1; const SLOW_LEN = 2; const FACTOR = 4;
     const total = REAL + SLOW_LEN * FACTOR; // 13 s
-    // anon: players drawn as orange outlines only (soften first so faces / names on shirts vanish)
-    const look = anon ? 'gblur=sigma=1.6,edgedetect=low=0.06:high=0.18:mode=wires,lutrgb=r=val:g=val*0.36:b=val*0.12,' : '';
-    const shot = (i) => [`[${i}:v]fps=30,${look}scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,setsar=1,split[r${i}][s${i}]`,
+    // anon: 'silhouette' = players as solid orange shapes on a dark court with its lines (frame minus
+    // the empty court); 'outline' = orange edges only; false = the real picture
+    const SIZE = `scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+    const look = anon === 'outline' ? 'gblur=sigma=1.6,edgedetect=low=0.06:high=0.18:mode=wires,lutrgb=r=val:g=val*0.36:b=val*0.12,' : '';
+    const BG0 = 2; // inputs 2,3 = empty-court images (silhouette mode)
+    const src = (i) => (anon === 'silhouette' ? [
+      `[${i}:v]fps=30,${SIZE},format=yuv420p,gblur=sigma=1.2[f${i}]`,
+      `[${BG0 + i}:v]${SIZE},format=yuv420p,gblur=sigma=1.2,split[b${i}][e${i}]`,
+      `[f${i}][b${i}]blend=all_mode=difference,format=gray,lut=y='if(gt(val,34),255,0)',erosion,dilation,dilation,dilation,erosion,gblur=sigma=1[m${i}]`,
+      `color=c=0xff5b1f:s=${W}x${CLIP_H}:r=30:d=${5}[o${i}]`,
+      `[o${i}][m${i}]alphamerge[sil${i}]`,
+      `[e${i}]loop=loop=-1:size=1,fps=30,trim=0:5,edgedetect=low=0.1:high=0.3:mode=wires,lutrgb=r=val*0.28:g=val*0.28:b=val*0.3,setpts=PTS-STARTPTS[court${i}]`,
+      `[court${i}][sil${i}]overlay=0:0:shortest=1,format=yuv420p,setsar=1,split[r${i}][s${i}]`,
+    ] : [`[${i}:v]fps=30,${look}${SIZE},split[r${i}][s${i}]`]);
+    const shot = (i) => [...src(i),
       `[r${i}]trim=0:${REAL},setpts=PTS-STARTPTS[rr${i}]`,
       `[s${i}]trim=${SLOW_FROM}:${SLOW_FROM + SLOW_LEN},setpts=${FACTOR}*(PTS-STARTPTS)[ss${i}]`,
       `[rr${i}][ss${i}]concat=n=2:v=1:a=0[c${i}]`];
@@ -296,7 +323,7 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     const slot = (SLOW_LEN * FACTOR) / Math.max(1, nPh);
     const ov = []; let last = 'bg';
     const add = (input, x, y, from, to) => { const o = `o${ov.length}`; ov.push(`[${last}][${input}:v]overlay=${x}:${y}${from !== undefined ? `:enable='between(t,${from.toFixed(2)},${to.toFixed(2)})'` : ''}[${o}]`); last = o; };
-    const P = 2; // first png input index (0,1 = the two shots)
+    const P = 2 + bgs.length; // first png input index (0,1 = the two shots, then the court images)
     const graph = [
       ...shot(0), ...shot(1),
       `color=c=0x0d0d0e:s=${W}x1920:r=30:d=${total}[base]`,
@@ -309,10 +336,11 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     phases.forEach((_, i) => add(P + 4 + i, 40, 1650, REAL + i * slot, REAL + (i + 1) * slot));
     add(P + 4 + nPh, '(W-w)/2', 1850);
     const out = path.join(dir, 'reel.mp4');
-    const sa = toSecondsSafe(a.t); const sb = toSecondsSafe(b.t);
+    const sa = sa0; const sb = sb0;
     await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error',
       '-seekable', '1', '-ss', Math.max(0, sa - 2).toFixed(2), '-t', String(REAL), '-i', proxy.url,
       '-seekable', '1', '-ss', Math.max(0, sb - 2).toFixed(2), '-t', String(REAL), '-i', proxy.url,
+      ...bgs.flatMap((f) => ['-i', f]),
       ...files.flatMap((f) => ['-i', f]),
       '-filter_complex', [...graph, ...ov].join(';'),
       '-map', `[${last}]`, '-t', String(total), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', '30', '-movflags', '+faststart', '-an', out], 300000);
