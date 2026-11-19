@@ -6,6 +6,7 @@
 // Needs GEMINI_VIDEO_KEY in Netlify (aistudio.google.com → Get API key, on a paid/billing-enabled
 // project so student videos aren't used for training). The Netlify AI Gateway can't take big files.
 import { AREAS, DRILLS, KINDS, SHOTS } from '../../shared/report.js';
+import { MOVES } from '../../shared/fitness.js';
 import { downloadRange, drive } from './google.mjs';
 
 const API = 'https://generativelanguage.googleapis.com';
@@ -111,6 +112,12 @@ function schema(kind) {
             fix: S('The correction, as a coaching cue'), drill: { type: 'STRING', enum: DRILLS.map((d) => d.name) },
           },
         },
+      },
+      movement_issues: {
+        type: 'ARRAY', description: 'Optional, 0–3: only PHYSICAL/MOVEMENT problems you saw several times (late split step, standing tall at the net, slow back to the glass after a lob, arm-only overhead, tired late in the match) — not technique. Each with the time of a clear example.',
+        items: { type: 'OBJECT', required: ['move', 'time', 'note'], properties: {
+          move: { type: 'STRING', enum: MOVES.map((m) => m.id) }, time: S('m:ss of a clear example'), note: S('One line: what you see'),
+        } },
       },
       ...(spec.scores ? {
         scores: {
@@ -337,6 +344,8 @@ export function draftToReport(r, d) {
     items: (d.items ?? []).map((i) => ({ time: i.time ?? '', confirmed: false, title: i.title ?? '', detail: i.detail ?? '', fix: i.fix ?? '', drillName: drill(i.drill).name, drillHow: drill(i.drill).how })),
     scores: KINDS[r.kind].scores ? scores : r.scores,
     weeks: KINDS[r.kind].weeks ? (d.weeks ?? []).slice(0, 3) : r.weeks,
+    // for the fitness program (shared/fitness.js MOVES → exercises)
+    movementIssues: (d.movement_issues ?? []).filter((m) => MOVES.some((x) => x.id === m.move)).slice(0, 3).map((m) => ({ move: m.move, time: m.time ?? '', note: m.note ?? '' })),
   };
 }
 
