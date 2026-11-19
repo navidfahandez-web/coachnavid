@@ -266,7 +266,7 @@ const LAYOUT = { titleY: 90, aY: 300, bY: 300 + CLIP_H + 110, capY: 1700 };
 const box = (html, width = 1000, align = 'left') => `<div style="width:${width}px;text-align:${align};font:400 52px/1.08 Anton,sans-serif;color:#fff;letter-spacing:.01em">${html}</div>`;
 const clean2 = (t) => String(t ?? '').replace(/[<>&]/g, '');
 
-export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHNAVID.COM' }, onStep = async () => {}) {
+export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHNAVID.COM', anon = true }, onStep = async () => {}) {
   const dir = mkdtempSync(path.join(tmpdir(), 'reel-'));
   const proxy = await driveProxy(videoFileId);
   try {
@@ -286,7 +286,9 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     await onStep('Cutting and slowing down the two shots…');
     const REAL = 5; const SLOW_FROM = 1; const SLOW_LEN = 2; const FACTOR = 4;
     const total = REAL + SLOW_LEN * FACTOR; // 13 s
-    const shot = (i) => [`[${i}:v]fps=30,scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,setsar=1,split[r${i}][s${i}]`,
+    // anon: players drawn as orange outlines only (soften first so faces / names on shirts vanish)
+    const look = anon ? 'gblur=sigma=1.6,edgedetect=low=0.06:high=0.18:mode=wires,lutrgb=r=val:g=val*0.36:b=val*0.12,' : '';
+    const shot = (i) => [`[${i}:v]fps=30,${look}scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,setsar=1,split[r${i}][s${i}]`,
       `[r${i}]trim=0:${REAL},setpts=PTS-STARTPTS[rr${i}]`,
       `[s${i}]trim=${SLOW_FROM}:${SLOW_FROM + SLOW_LEN},setpts=${FACTOR}*(PTS-STARTPTS)[ss${i}]`,
       `[rr${i}][ss${i}]concat=n=2:v=1:a=0[c${i}]`];
