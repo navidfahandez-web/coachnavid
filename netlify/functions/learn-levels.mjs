@@ -18,7 +18,7 @@ const line = (c) => (c.type === 'fitness'
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { reshot = false, transitions = false } = await req.json().catch(() => ({}));
+  const { reshot = false, transitions = false, time = false } = await req.json().catch(() => ({}));
   const t0 = Date.now();
   const left = () => 13 * 60e3 - (Date.now() - t0);
   const status = (s) => updateJSON(STATUS, (x) => { Object.assign(x, s, { at: new Date().toISOString() }); }, {});
@@ -50,29 +50,37 @@ ${todo.map((c, i) => `${i}. (now: ${c.shot}) ${line(c)}`).join('\n')}` }] }],
       }
     }
 
-    // 0b) forced / wanted transition tag on every technique tip
-    if (transitions) {
-      let n = 0;
-      for (;;) {
-        if (left() < 60e3) { await status({ step: 'Tagging transitions paused (time limit) — run again.' }); return new Response('partial'); }
-        const todo = (await readJSON(CANDIDATES, [])).filter((c) => c.type !== 'fitness' && !c.transition).slice(0, BATCH);
-        if (!todo.length) break;
-        await status({ step: `Tagging forced / wanted transitions… ${n} checked` });
-        const { json } = await ask({
-          contents: [{ role: 'user', parts: [{ text: `Coach Navid: padel is about transitions between defence (back of the court) and attack (net).
+    // 0b) Navid's principles on every technique tip: forced/wanted transition, earn/remove time
+    const TAGS = [
+      transitions && { field: 'transition', values: ['forced', 'wanted', 'none'], label: 'forced / wanted transitions', rule: `Coach Navid: padel is about transitions between defence (back of the court) and attack (net).
 FORCED transition = the opponent makes the player change zone (lobbed at the net → bandeja/víbora to keep the net, or back to play the ball after the glass; pushed back by a hard/deep ball).
 WANTED transition = the player chooses to change zone (a lob or a chiquita to take the net, moving in after a weak ball).
-For each numbered coaching point answer forced, wanted or none (not about changing zone).
+Answer forced, wanted or none (not about changing zone).` },
+      time && { field: 'time_tag', values: ['earn', 'remove', 'none'], label: 'earning / removing time', rule: `Coach Navid: padel is about time.
+EARN time = gain time for yourself or your partner to defend, get in position or reach the net (high lob, slow ball when far from your position, time to cover).
+REMOVE time = take time away from the opponent so he is not ready for the next shot (fast lob so he can't prepare the smash or a comfortable bandeja, lob down the line because the distance is shorter, moving in and playing closer / earlier).
+Answer earn, remove or none (not about time).` },
+    ].filter(Boolean);
+    for (const T of TAGS) {
+      let n = 0;
+      for (;;) {
+        if (left() < 60e3) { await status({ step: `Tagging ${T.label} paused (time limit) — run again.` }); return new Response('partial'); }
+        const todo = (await readJSON(CANDIDATES, [])).filter((c) => c.type !== 'fitness' && !c[T.field]).slice(0, BATCH);
+        if (!todo.length) break;
+        await status({ step: `Tagging ${T.label}… ${n} checked` });
+        const { json } = await ask({
+          contents: [{ role: 'user', parts: [{ text: `${T.rule}
+For each numbered coaching point:
 
 ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
           generationConfig: {
             responseMimeType: 'application/json', temperature: 0.1,
-            responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 't'], properties: { i: { type: 'INTEGER' }, t: { type: 'STRING', enum: ['forced', 'wanted', 'none'] } } } },
+            responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 't'], properties: { i: { type: 'INTEGER' }, t: { type: 'STRING', enum: T.values } } } },
           },
         }, FAST);
         const tag = new Map((json ?? []).filter((r) => todo[r.i]).map((r) => [todo[r.i].id, r.t]));
         const ids = new Set(todo.map((t) => t.id));
-        await updateJSON(CANDIDATES, (list) => { for (const c of list) if (ids.has(c.id)) c.transition = tag.get(c.id) ?? 'none'; }, [], 12);
+        await updateJSON(CANDIDATES, (list) => { for (const c of list) if (ids.has(c.id)) c[T.field] = tag.get(c.id) ?? 'none'; }, [], 12);
         n += todo.length;
       }
     }

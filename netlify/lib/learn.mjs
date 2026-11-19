@@ -46,9 +46,10 @@ const SCHEMA = {
     items: {
       type: 'ARRAY',
       items: {
-        type: 'OBJECT', required: ['time', 'area', 'shot', 'kind', 'mistake', 'fix', 'why', 'levels', 'transition'],
+        type: 'OBJECT', required: ['time', 'area', 'shot', 'kind', 'mistake', 'fix', 'why', 'levels', 'transition', 'time_tag'],
         properties: {
           levels: { type: 'ARRAY', items: { type: 'INTEGER' }, description: 'Every level (1-10) of players who typically make this mistake / need this point — usually 2-4 consecutive levels' },
+          time_tag: { type: 'STRING', enum: ['earn', 'remove', 'none'], description: 'earn = the point is about gaining time for yourself/partner (high lob, slow ball when out of position, time to reach the net); remove = taking time away from the opponent (fast lob, lob down the line, playing closer/earlier); none = not about time' },
           transition: { type: 'STRING', enum: ['forced', 'wanted', 'none'], description: 'forced = the opponent makes the player change zone (lobbed at the net → overhead or back to play after the glass; pushed back); wanted = the player chooses to change zone (lob or chiquita to take the net, moving in after a weak ball); none = not about a transition' },
           time: S('m:ss where it is shown or explained'),
           area: { type: 'STRING', enum: AREAS.map((a) => a.id) },

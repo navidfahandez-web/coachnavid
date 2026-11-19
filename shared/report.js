@@ -57,6 +57,8 @@ export const AREAS = [
   ] },
   { id: 'tactics', en: 'Tactics & decisions', lt: 'Taktika ir sprendimai', shots: [
     { id: 'shot_selection', en: 'Shot selection', lt: 'Smūgių pasirinkimas' },
+    { id: 'time_earn', en: 'Earning time (high lob, slow ball when out of position)', lt: 'Laiko laimėjimas (aukštas lobas, lėtas kamuolys)' },
+    { id: 'time_remove', en: 'Removing time (fast lob, lob down the line, playing closer)', lt: 'Laiko atėmimas (greitas lobas, lobas lygiagrečiai, žaidimas arčiau)' },
     { id: 'lob_or_chiquita', en: 'Lob or chiquita — the right choice', lt: 'Lobas ar chiquita – teisingas pasirinkimas' },
     { id: 'middle', en: 'Playing through the middle', lt: 'Žaidimas per vidurį' },
     { id: 'patience', en: 'Patience & building the point', lt: 'Kantrybė ir taško kūrimas' },

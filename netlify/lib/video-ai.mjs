@@ -166,6 +166,10 @@ ${r.kind === 'match' ? '- A 3-week plan: one week per fix, 2-3 sessions each, us
   is one: FORCED (the opponent makes the student change zone — e.g. lobbed at the net → bandeja/víbora, or let it pass
   and play after the glass) or WANTED (the student chooses to change zone — e.g. a lob or a chiquita to take the net).
   Score the "transition" area and its shots when you saw transitions.
+- Navid: padel is also about TIME. EARN time (for yourself or your partner: to defend, to get in position, to reach the
+  net — e.g. a high lob, a slow ball when out of position) and REMOVE time (from the opponent: a fast lob so he can't
+  prepare the smash or a comfortable bandeja, a lob down the line because the distance is shorter, moving in and playing
+  closer so there is less time between shots). Explain fixes in these terms when time is the reason ("you gave him time…").
 - Levels in Navid's method: 1 D-, 2 D, 3 D+, 4 C-, 5 C, 6 C+, 7 B-, 8 B, 9 B+, 10 A (amateur → high competition).
   Mention the student's approximate level in confidence_notes (e.g. "looks like a C- / level 4").
 - If the video is not padel, is too short/dark/far away to judge, or you can't tell which player is the student,
