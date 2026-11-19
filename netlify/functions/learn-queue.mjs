@@ -17,10 +17,16 @@ export default async () => {
   // a background run stops after 15 min: older "running" ones failed silently, retry them later
   const running = sources.filter((s) => s.status === 'running' && Date.now() - Date.parse(s.startedAt) < 16 * 60e3).length;
   const free = AT_ONCE - running;
-  if (free <= 0) return new Response('busy');
+  if (free <= 0) return new Response('busy'); // (sorting catch-up runs on the next free hour)
   let next = [];
   await updateJSON(QUEUE, (q) => { next = q.splice(0, free); }, []);
   for (const v of next) await startVideo(process.env.URL || SITE_URL, v);
+  // finish any unfinished sorting (levels, transition / time / timing tags) left by a paused job
+  const tips = (await readJSON('learn/candidates', [])).filter((c) => c.type !== 'fitness');
+  const missing = { transitions: tips.some((c) => !c.transition), time: tips.some((c) => !c.time_tag), fundamentals: tips.some((c) => !c.fundamental), levels: tips.some((c) => !(c.levels ?? []).length) };
+  if (Object.values(missing).some(Boolean)) {
+    await fetch(`${process.env.URL || SITE_URL}/api/learn-levels`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify(missing) });
+  }
   return new Response(`started ${next.length}`);
 };
 
