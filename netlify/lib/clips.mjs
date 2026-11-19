@@ -45,9 +45,9 @@ function run(args, timeoutMs = 240000) {
     }, timeoutMs);
     p.on('exit', () => clearTimeout(timer));
     let err = '';
-    p.stderr.on('data', (d) => { err = (err + d).slice(-3000); });
+    p.stderr.on('data', (d) => { err = (err + d).slice(-20000); });
     p.on('error', reject);
-    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg failed (${code}): ${clean(err.split('\n').filter(Boolean).slice(-3).join(' | '))}`))));
+    p.on('close', (code) => (code === 0 ? resolve(err) : reject(new Error(`ffmpeg failed (${code}): ${clean(err.split('\n').filter(Boolean).slice(-3).join(' | '))}`))));
   });
 }
 
@@ -356,3 +356,31 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
   }
 }
 const toSecondsSafe = (t) => { const v = toSeconds(t); if (v === null) throw new Error(`Bad time ${t}`); return v; };
+
+// Diagnosis: is a moment at the same place whether ffmpeg jumps to it (-ss before -i, as the clip
+// cutters do) or reads straight through to it with key frames only (as the AI's parts are cut)?
+// times: seconds. Returns { info, seek: [{ t, jpg, shown }], pass: [{ t, jpg }] }.
+export async function probeTimes(videoFileId, times) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'probe-'));
+  const proxy = await driveProxy(videoFileId);
+  try {
+    const seek = [];
+    let info = '';
+    for (const [k, t] of times.entries()) {
+      const f = path.join(dir, `s${k}.jpg`);
+      const log = await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'info', '-seekable', '1', '-ss', t.toFixed(2), '-i', proxy.url,
+        '-map', '0:v:0', '-vf', 'showinfo,scale=640:-2', '-frames:v', '1', '-q:v', '4', f]);
+      if (!k) info = log.split('\n').filter((l) => /Duration|Stream|start:|creation|encoder|handler|major_brand/i.test(l)).join('\n').slice(0, 2500);
+      seek.push({ t, jpg: readFileSync(f), shown: (/pts_time:\s*([\d.]+)/.exec(log) ?? [])[1] ?? null });
+    }
+    const sel = times.map((t) => `between(t,${t.toFixed(2)},${(t + 0.45).toFixed(2)})`).join('+');
+    const log = await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'info', '-seekable', '0', '-skip_frame', 'nokey', '-t', (Math.max(...times) + 2).toFixed(2), '-i', proxy.url,
+      '-map', '0:v:0', '-vf', `fps=2,select='${sel}',showinfo,scale=640:-2`, '-vsync', '0', '-q:v', '4', path.join(dir, 'p%02d.jpg')], 11 * 60 * 1000);
+    const shownPass = [...log.matchAll(/pts_time:\s*([\d.]+)/g)].map((m) => m[1]);
+    const pass = times.map((t, k) => { const f = path.join(dir, `p${String(k + 1).padStart(2, '0')}.jpg`); return { t, jpg: existsSync(f) ? readFileSync(f) : null, shown: shownPass[k] ?? null }; });
+    return { info, seek, pass };
+  } finally {
+    proxy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}

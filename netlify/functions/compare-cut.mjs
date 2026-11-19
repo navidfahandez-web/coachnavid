@@ -3,7 +3,7 @@
 import { getStore } from '@netlify/blobs';
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON } from '../lib/store.mjs';
-import { cutShot } from '../lib/clips.mjs';
+import { cutShot, probeTimes } from '../lib/clips.mjs';
 import { toSeconds } from '../../shared/report.js';
 
 export const clipStore = () => getStore({ name: 'compare-clips', consistency: 'strong' });
@@ -11,8 +11,23 @@ export const clipKey = (ref, t) => `${ref}/${String(t).replace(/[^\d:.]/g, '')}`
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { ref, t } = await req.json();
+  const { ref, t, probe } = await req.json();
   const store = clipStore();
+  if (probe) { // timestamp diagnosis: frames at these times, by jumping vs by reading straight through
+    const key = `probe/${ref}`;
+    try {
+      const r = await readJSON(`reports/by-ref/${ref}`);
+      const times = probe.map(toSeconds).filter((x) => x !== null);
+      await store.setJSON(`${key}.json`, { step: 'running', times: probe });
+      const out = await probeTimes(r.videoFileId, times);
+      for (const [k, x] of out.seek.entries()) await store.set(`${key}/seek${k}.jpg`, x.jpg);
+      for (const [k, x] of out.pass.entries()) if (x.jpg) await store.set(`${key}/pass${k}.jpg`, x.jpg);
+      await store.setJSON(`${key}.json`, { done: true, times: probe, info: out.info, seek: out.seek.map((x) => x.shown), pass: out.pass.map((x) => x.shown) });
+    } catch (err) {
+      await store.setJSON(`${key}.json`, { error: err.message.replace(/https?:\/\/\S+/g, '<link>').slice(0, 400) });
+    }
+    return new Response('done');
+  }
   try {
     const r = await readJSON(`reports/by-ref/${ref}`);
     const sec = toSeconds(t);

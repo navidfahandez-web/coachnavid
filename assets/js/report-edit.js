@@ -1,6 +1,6 @@
 // Report builder: coachnavid.com/admin/report?ref=VA0001
 import { request } from './api.js';
-import { AREAS, DRILLS, KINDS, areaScore } from '../../shared/report.js';
+import { AREAS, DRILLS, KINDS, areaScore, SHOTS } from '../../shared/report.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -66,6 +66,7 @@ function renderKind() {
         <label class="field">Drill name <input data-k="drillName" value="${esc(it.drillName)}" /></label>
       </div>
       <label class="field">How to do the drill <textarea data-k="drillHow" rows="2">${esc(it.drillHow)}</textarea></label>
+      <p><button type="button" class="pill" data-compare-pro="${i}" title="Opens this moment next to a pro's shot, both in slow motion">🎾 Compare with a pro ↗</button></p>
     </fieldset>`).join('');
 
   $('[data-scores]').innerHTML = AREAS.map((a) => {
@@ -384,3 +385,22 @@ $('[data-ai-run]').addEventListener('click', async () => {
 if (!password) location.href = '/admin';
 else if (!ref) $('[data-status]').textContent = 'No upload selected — open a report from the admin page.';
 else api('GET').then(render).catch((err) => { $('[data-status]').textContent = err.message; });
+
+// "Compare with a pro": this fix's moment next to a pro shot of the same kind (shot from the AI moment
+// at that time, else guessed from the fix title)
+function shotFor(time, title) {
+  const m = (report.ai?.moments ?? []).find((x) => x.time === time && x.shot && x.shot !== 'none');
+  if (m) return m.shot;
+  const t = String(title ?? '').toLowerCase();
+  const hit = SHOTS.find((s) => t.includes(s.id.replace(/_/g, ' ')) || t.includes(s.en.toLowerCase().split(/[ (:]/)[0]));
+  return hit?.id ?? '';
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-compare-pro]');
+  if (!b) return;
+  const box = b.closest('[data-item]');
+  const time = box.querySelector('[data-k=time]').value.trim();
+  if (!time) { toast('Give this fix a time first.'); return; }
+  const shot = shotFor(time, box.querySelector('[data-k=title]').value);
+  window.open(`/admin/compare?ref=${encodeURIComponent(report.ref)}&t=${encodeURIComponent(time)}${shot ? `&shot=${encodeURIComponent(shot)}` : ''}`, '_blank', 'noopener');
+});

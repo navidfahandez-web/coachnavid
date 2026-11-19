@@ -24,6 +24,18 @@ export default async (req) => {
     }
     return json((await store.get(`${key}.json`, { type: 'json' })) ?? { step: 'starting…' });
   }
+  if (url.pathname.endsWith('/probe')) { // timestamp diagnosis: POST { ref, probe: ['0:27', …] }; GET ?ref= → status, &img=seek0 → frame
+    const store = clipStore();
+    if (req.method === 'POST') {
+      const b = await req.json();
+      await fetch(`${url.origin}/api/compare-cut`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify(b) });
+      return json({ ok: true });
+    }
+    const pref = `probe/${(url.searchParams.get('ref') ?? '').replace(/[^\w-]/g, '')}`;
+    const img = (url.searchParams.get('img') ?? '').replace(/[^\w]/g, '');
+    if (img) { const b = await store.get(`${pref}/${img}.jpg`, { type: 'arrayBuffer' }); return b ? new Response(b, { headers: { 'Content-Type': 'image/jpeg' } }) : json({ error: 'none' }, 404); }
+    return json((await store.get(`${pref}.json`, { type: 'json' })) ?? { step: 'not started' });
+  }
   const ref = (url.searchParams.get('ref') ?? '').replace(/[^\w-]/g, '');
   const t = url.searchParams.get('t') ?? '';
   if (!ref || !t) return json({ error: 'ref and t?' }, 400);
@@ -39,4 +51,4 @@ export default async (req) => {
   return json({ status: 'cutting' }, 202);
 };
 
-export const config = { path: ['/api/admin/compare/clip', '/api/admin/compare/reel'] };
+export const config = { path: ['/api/admin/compare/clip', '/api/admin/compare/reel', '/api/admin/compare/probe'] };
