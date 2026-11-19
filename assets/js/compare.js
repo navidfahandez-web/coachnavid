@@ -13,6 +13,7 @@ let pros = [];
 let speed = 0.25;
 let yt = null;
 let proClip = null;
+const noEmbed = new Set(); // YouTube ids whose owner blocks embedding
 const student = $('[data-student]');
 const params = new URLSearchParams(location.search);
 if (params.get('ref')) $('[data-ref]').value = params.get('ref');
@@ -47,7 +48,8 @@ function loadPro() {
   $('[data-pro-label]').textContent = `${proClip.player} · ${SHOTS.find((s) => s.id === proClip.shot)?.en ?? proClip.shot}`;
   $('[data-phases-box]').hidden = false;
   $('[data-phase-pro]').textContent = proClip.player;
-  $('[data-phases]').innerHTML = PHASES.map(([k, label]) => `<tr><th>${label}</th><td>${esc(proClip.phases?.[k])}</td></tr>`).join('');
+  $('[data-phases]').innerHTML = PHASES.map(([k, label]) => `<tr><th>${label}</th><td>${esc(proClip.phases?.[k])}</td></tr>`).join('')
+    + (proClip.details?.length ? `<tr><th>Details</th><td><ul>${proClip.details.map((d) => `<li>${esc(d)}</li>`).join('')}</ul></td></tr>` : '');
   const opts = { videoId: proClip.source, startSeconds: proStart(), endSeconds: proEnd() };
   if (yt) yt.cueVideoById(opts);
   else {
@@ -56,6 +58,12 @@ function loadPro() {
       playerVars: { start: Math.floor(proStart()), rel: 0, modestbranding: 1, playsinline: 1, mute: 1 },
       events: {
         onReady: () => { yt.mute(); yt.setPlaybackRate(speed); },
+        onError: (e) => { // 101/150: the owner doesn't allow embedding → drop this clip, show the next one
+          if (![101, 150].includes(e.data) || !proClip) return;
+          noEmbed.add(proClip.source);
+          $('[data-status]').textContent = `${proClip.player}'s clip can't be played here (YouTube doesn't allow embedding) — showing the next one.`;
+          fillPros();
+        },
         onStateChange: (e) => { if (e.data === window.YT.PlayerState.ENDED || (e.data === 1 && yt.getCurrentTime() > proEnd())) yt.seekTo(proStart(), true); },
       },
     });
@@ -67,8 +75,10 @@ setInterval(() => { // loop the pro clip on its swing
 
 function fillPros() {
   const shot = $('[data-shot]').value;
-  const list = pros.filter((p) => !shot || p.shot === shot).sort((a, b) => (b.quality ?? 0) - (a.quality ?? 0));
-  $('[data-pro]').innerHTML = list.map((p) => `<option value="${esc(p.id)}">${esc(p.player)} · ${esc(p.shot)} · ${esc(p.time)} · ${'★'.repeat(p.quality ?? 0)}</option>`).join('') || '<option value="">No pro shots of this kind yet</option>';
+  // checked pro shots first; ones the check found wrong, or that YouTube won't embed, are left out
+  const list = pros.filter((p) => (!shot || p.shot === shot) && p.verified !== false && !noEmbed.has(p.source))
+    .sort((a, b) => (b.verified === true) - (a.verified === true) || (b.quality ?? 0) - (a.quality ?? 0));
+  $('[data-pro]').innerHTML = list.map((p) => `<option value="${esc(p.id)}">${p.verified ? '✓ ' : ''}${esc(p.player)} · ${esc(p.shot)} · ${esc(p.time)} · ${'★'.repeat(p.quality ?? 0)}</option>`).join('') || '<option value="">No pro shots of this kind yet</option>';
   loadPro();
 }
 

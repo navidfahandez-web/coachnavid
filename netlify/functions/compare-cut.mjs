@@ -11,7 +11,7 @@ export const clipKey = (ref, t) => `${ref}/${String(t).replace(/[^\d:.]/g, '')}`
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { ref, t, probe } = await req.json();
+  const { ref, t, probe, inOpts } = await req.json();
   const store = clipStore();
   if (probe) { // timestamp diagnosis: frames at these times, by jumping vs by reading straight through
     const key = `probe/${ref}`;
@@ -19,7 +19,7 @@ export default async (req) => {
       const r = await readJSON(`reports/by-ref/${ref}`);
       const times = probe.map(toSeconds).filter((x) => x !== null);
       await store.setJSON(`${key}.json`, { step: 'running', times: probe });
-      const out = await probeTimes(r.videoFileId, times);
+      const out = await probeTimes(r.videoFileId, times, (inOpts ?? []).filter((x) => /^-?[\w.]+$/.test(x)).slice(0, 6));
       for (const [k, x] of out.seek.entries()) await store.set(`${key}/seek${k}.jpg`, x.jpg);
       for (const [k, x] of out.pass.entries()) if (x.jpg) await store.set(`${key}/pass${k}.jpg`, x.jpg);
       await store.setJSON(`${key}.json`, { done: true, times: probe, info: out.info, seek: out.seek.map((x) => x.shown), pass: out.pass.map((x) => x.shown) });
