@@ -26,3 +26,6 @@
 .bk-video { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; margin-top: 8px; }
 .bk-empty { opacity: .6; font-size: 14px; margin: 6px 0 0; }
 .bk-more { font: inherit; font-size: 13px; margin-top: 6px; background: none; border: 0; color: #ff5b1f; cursor: pointer; padding: 0; }
+.bk-moments { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.bk-said { font-size: 12px; font-weight: 700; color: #ff5b1f; }
+.bk-range { margin: 0 0 6px; font-size: 13px; opacity: .8; }
