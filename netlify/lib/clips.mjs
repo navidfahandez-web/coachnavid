@@ -305,8 +305,8 @@ function followCrop(boxes) {
   const AR = 16 / 9; // club cameras film 16:9
   const maxH = Math.max(...ok.map((b) => (b[2] - b[0]) / 1000));
   const maxW = Math.max(...ok.map((b) => (b[3] - b[1]) / 1000));
-  const ch = Math.min(1, Math.max(0.14, maxH * 1.35, maxW * 0.75 * AR * PH / PW)); // crop height as a share of the frame height (an outstretched racket may touch the edge)
-  const pts = (boxes ?? []).map((b, i) => (ok.includes(b) ? { t: REEL.BOX_AT[i], x: (b[1] + b[3]) / 2000, y: (b[0] + b[2]) / 2000 - 0.03 * (b[2] - b[0]) / 1000 } : null)).filter(Boolean);
+  const ch = Math.min(1, Math.max(0.14, maxH * 1.6, maxW * 0.8 * AR * PH / PW)); // crop height as a share of the frame height (an outstretched racket may touch the edge)
+  const pts = (boxes ?? []).map((b, i) => (ok.includes(b) ? { t: REEL.BOX_AT[i], x: (b[1] + b[3]) / 2000, y: (b[0] + b[2]) / 2000 } : null)).filter(Boolean);
   const lerp = (k) => { // piecewise straight lines between the boxed moments, flat before/after
     if (pts.length === 1) return pts[0][k].toFixed(4);
     let e = pts[pts.length - 1][k].toFixed(4);
@@ -428,6 +428,22 @@ export async function probeTimes(videoFileId, times, inOpts = []) {
     const shownPass = [...log.matchAll(/pts_time:\s*([\d.]+)/g)].map((m) => m[1]);
     const pass = times.map((t, k) => { const f = path.join(dir, `p${String(k + 1).padStart(2, '0')}.jpg`); return { t, jpg: existsSync(f) ? readFileSync(f) : null, shown: shownPass[k] ?? null }; });
     return { info, seek, pass };
+  } finally {
+    proxy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// Diagnosis: raw timestamps of the first n video packets (no decoding), optionally after a jump to ss.
+export async function packetDump(videoFileId, ss, n, inOpts = []) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'pk-'));
+  const proxy = await driveProxy(videoFileId);
+  try {
+    const f = path.join(dir, 'p.txt');
+    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', ss ? '1' : '0', ...inOpts, ...(ss ? ['-ss', String(ss)] : []), '-i', proxy.url,
+      '-map', '0:v:0', '-c', 'copy', '-frames:v', String(n), '-copyts', '-f', 'framecrc', f], 300000);
+    const rows = readFileSync(f, 'utf8').split('\n').filter((l) => /^\d/.test(l)).map((l) => l.split(',').map((x) => x.trim()));
+    return rows.filter((_, i) => i < 30 || i % 100 === 0 || i === rows.length - 1).map((r, i) => r.slice(1, 4).join(' ') + (r[5] ? ` ${r[5]}` : '')).join('\n'); // dts pts duration flags
   } finally {
     proxy.close();
     rmSync(dir, { recursive: true, force: true });

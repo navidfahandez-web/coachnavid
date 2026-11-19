@@ -76,8 +76,9 @@ setInterval(() => { // loop the pro clip on its swing
 function fillPros() {
   const shot = $('[data-shot]').value;
   // checked pro shots first; ones the check found wrong, or that YouTube won't embed, are left out
-  const list = pros.filter((p) => (!shot || p.shot === shot) && p.verified !== false && !noEmbed.has(p.source))
-    .sort((a, b) => (b.verified === true) - (a.verified === true) || (b.quality ?? 0) - (a.quality ?? 0));
+  // order: Navid checked it, then AI-verified, then contact re-timed, then quality
+  const list = pros.filter((p) => (!shot || p.shot === shot) && p.verified !== false && p.navid !== 'wrong' && !noEmbed.has(p.source))
+    .sort((a, b) => (b.navid === 'ok') - (a.navid === 'ok') || (b.verified === true) - (a.verified === true) || (b.timed === true) - (a.timed === true) || (b.quality ?? 0) - (a.quality ?? 0));
   $('[data-pro]').innerHTML = list.map((p) => `<option value="${esc(p.id)}">${p.verified ? '✓ ' : ''}${esc(p.player)} · ${esc(p.shot)} · ${esc(p.time)} · ${'★'.repeat(p.quality ?? 0)}</option>`).join('') || '<option value="">No pro shots of this kind yet</option>';
   loadPro();
 }

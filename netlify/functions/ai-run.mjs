@@ -65,7 +65,12 @@ export default async (req) => {
     }
     const glasswall = (await readJSON(externalKey(phone), [])).slice(-2).map((g) => ({ date: g.date, focus: g.focus.map((f) => f.title), stats: g.metrics.map((m) => `${m.name}: ${m.value}${m.unit === '%' ? '%' : ` ${m.unit}`}`) }));
 
-    const cut = (onPart) => cutParts(videoId, PART, onPart);
+    // Safety: a video whose internal clock is broken comes out much longer than it really is (the AI
+    // would then get repeated frames and wrong times) — stop before spending AI credits on it.
+    const cut = (onPart) => cutParts(videoId, PART, async (k, buf) => {
+      if (ms && k * PART > ms / 1000 + 30) throw new Error(`The video’s timing looks broken (part ${k + 1} starts after the real end at ${Math.round(ms / 60000)} min), so the AI’s times would be wrong. Your report wasn’t changed — tell Claude which video this is.`);
+      return onPart(k, buf);
+    });
     const guide = (await readJSON('learn/candidates', [])).filter((c) => c.status === 'approved');
     const guideNotes = await readJSON('learn/notes', {});
     const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide, guideNotes },
