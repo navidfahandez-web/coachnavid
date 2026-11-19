@@ -62,6 +62,13 @@ export const AREAS = [
     { id: 'recovery', en: 'Recovery between points', lt: 'Atsigavimas tarp taškų' },
   ] },
 ];
+// Navid's methodology levels (amateur → high competition; professionals are out of scope)
+export const LEVELS = [
+  { n: 1, label: 'D-' }, { n: 2, label: 'D' }, { n: 3, label: 'D+' }, { n: 4, label: 'C-' }, { n: 5, label: 'C' },
+  { n: 6, label: 'C+' }, { n: 7, label: 'B-' }, { n: 8, label: 'B' }, { n: 9, label: 'B+' }, { n: 10, label: 'A' },
+];
+export const levelLabel = (n) => LEVELS.find((l) => l.n === Math.round(Number(n)))?.label ?? '';
+
 export const SHOTS = AREAS.flatMap((a) => a.shots.map((s) => ({ ...s, area: a.id })));
 
 // Area score = what Navid typed, else the average of the shots he scored.
