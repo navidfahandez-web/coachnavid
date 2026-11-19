@@ -52,6 +52,8 @@ function render() {
         </div>
       </article>`).join('')}`;
   }).join('');
+  const noCredits = data.sources.some((s) => s.status === 'waiting');
+  $('[data-credits]').hidden = !noCredits;
   const running = data.sources.filter((s) => s.status === 'running').length;
   const watched = data.sources.filter((s) => s.status === 'ready').length;
   $('[data-status]').textContent += ` · ${watched} videos watched${running ? `, ${running} being watched now` : ''}${data.queued ? `, ${data.queued} in the queue` : ''}`;

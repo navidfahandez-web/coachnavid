@@ -9,6 +9,9 @@ export const SOURCES = 'learn/sources'; // [{ videoId, title, channel, status, a
 export const QUEUE = 'learn/queue'; // [{ videoId, title, channel }] waiting to be watched (a few every 10 minutes)
 export const NOTES = 'learn/notes'; // { [technique]: Navid's own notes for that technique }
 
+// Gemini said the account has no money left (prepaid credits / billing / quota): not the video's fault
+export const isBillingError = (msg) => /prepayment|credits are depleted|billing|quota|RESOURCE_EXHAUSTED/i.test(String(msg ?? ''));
+
 // One "technique" per card group: the shot when there is one, else the area
 export const technique = (c) => (c.shot && c.shot !== 'general' ? c.shot : `area:${c.area}`);
 

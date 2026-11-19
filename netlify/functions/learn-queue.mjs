@@ -1,12 +1,18 @@
 // Slowly through the queue, as Navid asked: one coaching video per hour, 20 hours a day
 // (20 videos per day), so the Gemini bill stays small and steady.
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { QUEUE, SOURCES, startVideo } from '../lib/learn.mjs';
+import { QUEUE, SOURCES, isBillingError, startVideo } from '../lib/learn.mjs';
 import { SITE_URL } from '../lib/google.mjs';
 
 const AT_ONCE = 1;
 
 export default async () => {
+  // videos that failed only because the Gemini credits ran out go back to the front of the queue
+  const stuck = (await readJSON(SOURCES, [])).filter((x) => x.status === 'failed' && isBillingError(x.error));
+  if (stuck.length) {
+    await updateJSON(QUEUE, (q) => { const inQ = new Set(q.map((x) => x.videoId)); q.unshift(...stuck.filter((x) => !inQ.has(x.videoId)).map((x) => ({ videoId: x.videoId, title: x.title ?? '', channel: x.channel ?? '' }))); }, []);
+    await updateJSON(SOURCES, (list) => { for (const x of list) if (x.status === 'failed' && isBillingError(x.error)) x.status = 'waiting'; }, []);
+  }
   const sources = await readJSON(SOURCES, []);
   // a background run stops after 15 min: older "running" ones failed silently, retry them later
   const running = sources.filter((s) => s.status === 'running' && Date.now() - Date.parse(s.startedAt) < 16 * 60e3).length;

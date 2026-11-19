@@ -2,7 +2,7 @@
 // candidates for Navid to approve — { url, title }.
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, SOURCES, learnFromVideo, youtubeId } from '../lib/learn.mjs';
+import { CANDIDATES, QUEUE, SOURCES, isBillingError, learnFromVideo, youtubeId } from '../lib/learn.mjs';
 
 // several videos finish at the same time: wait a moment and try again on write clashes
 async function withRetry(fn) {
@@ -32,6 +32,11 @@ export default async (req) => {
     await setSource({ status: 'ready', about, ...(title ? {} : { title: seenTitle }), found: items.length, model, at: new Date().toISOString(), error: null });
   } catch (err) {
     console.error(`Learn ${videoId} failed: ${err.message}`);
+    if (isBillingError(err.message)) { // no credits: back to the front of the queue, retried next hour
+      await updateJSON(QUEUE, (q) => { if (!q.some((x) => x.videoId === videoId)) q.unshift({ videoId, title, channel: '' }); }, []);
+      await setSource({ status: 'waiting', error: err.message.slice(0, 300), at: new Date().toISOString() });
+      return new Response('waiting for credits');
+    }
     await setSource({ status: 'failed', error: err.message.slice(0, 300), at: new Date().toISOString() });
   }
   return new Response('done');

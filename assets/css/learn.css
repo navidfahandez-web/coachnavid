@@ -17,3 +17,4 @@
 .lg__pick { display: block; margin-top: 12px; max-width: 420px; }
 .lg__pick select { width: 100%; }
 .lg__notes textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }
+.lg__warn { margin: 12px 0 0; padding: 10px 14px; border-radius: 8px; background: rgba(255, 91, 31, .15); border: 1.5px solid #ff5b1f; }
