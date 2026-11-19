@@ -6,13 +6,14 @@
 // POST /api/admin/learn/note   { technique, text } → Navid's own notes on top of a technique
 import { json, requireAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, GOALS, NOTES, QUEUE, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, NOTES, PROS, QUEUE, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
 import { canAnalyze } from '../lib/video-ai.mjs';
 
 export default async (req) => {
   const denied = await requireAdmin(req);
   if (denied) return denied;
   const { pathname } = new URL(req.url);
+  if (req.method === 'GET' && pathname.endsWith('/pros')) return json({ pros: await readJSON(PROS, []) });
   if (req.method === 'GET') {
     const [sources, candidates, notes, queue, goals, levelsStatus] = await Promise.all([readJSON(SOURCES, []), readJSON(CANDIDATES, []), readJSON(NOTES, {}), readJSON(QUEUE, []), readJSON(GOALS, []), readJSON('learn/levels-status', {})]);
     return json({ sources, candidates, notes, queued: queue.length, goals, levelsStatus });
@@ -65,7 +66,7 @@ export default async (req) => {
   const sources = await readJSON(SOURCES, []);
   const done = new Set(sources.map((s) => s.videoId));
   const videos = (Array.isArray(b.videos) ? b.videos : [])
-    .map((v) => ({ videoId: v?.videoId && /^[\w-]{11}$/.test(v.videoId) ? v.videoId : youtubeId(v?.url), title: String(v?.title ?? '').slice(0, 200), channel: String(v?.channel ?? '').slice(0, 80), mode: v?.mode === 'fitness' ? 'fitness' : 'technique' }))
+    .map((v) => ({ videoId: v?.videoId && /^[\w-]{11}$/.test(v.videoId) ? v.videoId : youtubeId(v?.url), title: String(v?.title ?? '').slice(0, 200), channel: String(v?.channel ?? '').slice(0, 80), mode: ['fitness', 'pro'].includes(v?.mode) ? v.mode : 'technique' }))
     .filter((v) => v.videoId && !done.has(v.videoId));
   if (!videos.length) return json({ ok: true, added: 0, note: 'Nothing new (already watched or no links).' });
   const origin = new URL(req.url).origin;
@@ -90,4 +91,4 @@ export default async (req) => {
   return json({ ok: true, added });
 };
 
-export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note', '/api/admin/learn/goal', '/api/admin/learn/levels'] };
+export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note', '/api/admin/learn/goal', '/api/admin/learn/levels', '/api/admin/learn/pros'] };

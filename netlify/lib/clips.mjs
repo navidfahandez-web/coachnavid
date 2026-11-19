@@ -239,3 +239,20 @@ export async function cutParts(videoFileId, partSec, onPart) {
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+// One student shot for the pro comparison: full frame rate and 720p so it can be slowed down
+// in the browser (no labels, no sound). Returns the MP4 as a Buffer.
+export async function cutShot(videoFileId, start, length) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'shot-'));
+  const proxy = await driveProxy(videoFileId);
+  try {
+    const f = path.join(dir, 'shot.mp4');
+    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1',
+      '-ss', Math.max(0, start).toFixed(2), '-t', length.toFixed(2), '-i', proxy.url,
+      '-vf', 'scale=-2:720', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', f]);
+    return readFileSync(f);
+  } finally {
+    proxy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}

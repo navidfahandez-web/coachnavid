@@ -8,6 +8,8 @@ export const CANDIDATES = 'learn/candidates'; // [{ id, source, time, area, shot
 export const SOURCES = 'learn/sources'; // [{ videoId, title, channel, status, at, error, found }]
 export const QUEUE = 'learn/queue'; // [{ videoId, title, channel }] waiting to be watched (a few every 10 minutes)
 export const GOALS = 'learn/goals'; // [{ id, level, area, goal, source, status }] what a player must master to reach a level
+export const PROS = 'pros/clips'; // [{ id, source, player, shot, time, end, side, view, quality, phases{…} }] pro reference shots
+export const PRO_PLAYERS = ['Galán', 'Tapia', 'Chingotto', 'Coello', 'Lebrón', 'Augsburger', 'Di Nenno', 'Stupa', 'Navarro', 'Yanguas', 'Garrido', 'Sanyo', 'Bela', 'Paquito', 'Ruiz', 'González', 'Josemaría', 'Sánchez', 'Triay', 'Brea', 'Ortega', 'other'];
 export const NOTES = 'learn/notes'; // { [technique]: Navid's own notes for that technique }
 
 // Gemini said the account has no money left (prepaid credits / billing / quota): not the video's fault
@@ -96,7 +98,45 @@ const FITNESS_SCHEMA = {
   },
 };
 
+const PHASE = (what) => S(`${what} — what the player does in this phase, short and concrete (body, racket, feet)`);
+const PRO_SCHEMA = {
+  type: 'OBJECT', required: ['video_title', 'about', 'items'],
+  properties: {
+    video_title: S('The title of the video as shown in it, or a short descriptive title'),
+    about: S('One sentence: which match / players / camera'),
+    items: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT', required: ['player', 'shot', 'time', 'end', 'view', 'quality', 'phases'],
+        properties: {
+          player: { type: 'STRING', enum: PRO_PLAYERS },
+          shot: { type: 'STRING', enum: SHOTS.map((s) => s.id) },
+          time: S('m:ss.s — the moment of CONTACT with the ball (tenths of a second)'),
+          end: S('m:ss.s — when the follow-through ends'),
+          view: { type: 'STRING', enum: ['behind', 'side', 'front', 'above', 'court-level'], description: 'Camera angle on this player' },
+          quality: { type: 'INTEGER', description: '1-5: how clearly the technique can be seen (close, unblocked, good angle = 5)' },
+          phases: {
+            type: 'OBJECT', required: ['preparation', 'load', 'drop', 'contact', 'finish'],
+            properties: { preparation: PHASE('Preparation / unit turn'), load: PHASE('Load'), drop: PHASE('Racket drop / acceleration'), contact: PHASE('Contact point'), finish: PHASE('Finish / follow-through') },
+          },
+        },
+      },
+    },
+  },
+};
+
 export async function learnFromVideo(url, title, mode = 'technique') {
+  if (mode === 'pro') {
+    const { json, model } = await ask({
+      contents: [{ role: 'user', parts: [
+        { fileData: { fileUri: url } },
+        { text: `This is footage of professional padel players ("${title || 'untitled'}"). A coach is building a library of pro reference shots to compare his students' technique with.
+List every shot where one player's technique is clearly visible (skip blocked, far or blurry ones). For each: who hits it (by name if you can recognise them — shirt, side, commentary, captions; else "other"), which shot, the exact second of CONTACT, and how the 5 phases look. Max 40 shots, best quality first.` },
+      ] }],
+      generationConfig: { responseMimeType: 'application/json', responseSchema: PRO_SCHEMA, temperature: 0.2 }, // full resolution: technique details matter here
+    }, undefined, false, 600000);
+    return { ...json, model };
+  }
   if (mode === 'fitness') {
     const { json, model } = await ask({
       contents: [{ role: 'user', parts: [

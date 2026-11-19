@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Compare with a pro · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+  <link rel="stylesheet" href="/assets/css/compare.css" />
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script type="module" src="/assets/js/compare.js"></script>
+</head>
+<body class="admin">
+  <header class="nav">
+    <a class="lockup" href="/admin">
+      <span class="lockup__pb"><img src="/assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Compare with a pro</b><small>Coach Navid · private</small></span>
+    </a>
+    <nav class="nav__links"><a class="pill" href="/admin/book">📖 The Method</a> <a class="pill" href="/admin">← Admin</a></nav>
+  </header>
+
+  <main class="wrap admin__main">
+    <section class="adm-box">
+      <div class="cp-pick">
+        <label class="field">Student report <input data-ref value="VA0002" /></label>
+        <label class="field">Moment (m:ss) <input data-t value="20:26" /></label>
+        <label class="field">Shot <select data-shot></select></label>
+        <label class="field">Pro <select data-pro></select></label>
+      </div>
+      <p class="note" data-status></p>
+    </section>
+
+    <section class="cp-stage">
+      <figure class="cp-side">
+        <figcaption data-student-label>Student</figcaption>
+        <div class="cp-frame"><video data-student muted playsinline loop></video></div>
+      </figure>
+      <figure class="cp-side">
+        <figcaption data-pro-label>Pro</figcaption>
+        <div class="cp-frame"><div id="pro-player"></div></div>
+      </figure>
+    </section>
+
+    <section class="adm-box cp-controls">
+      <button class="btn btn--lime" type="button" data-both>▶ Play both from the start</button>
+      <span class="cp-speeds">Speed
+        <button type="button" data-speed="1">1×</button>
+        <button type="button" data-speed="0.5">0.5×</button>
+        <button type="button" data-speed="0.25" class="is-on">0.25×</button>
+      </span>
+      <button class="btn btn--ghost" type="button" data-pause>⏸ Pause</button>
+    </section>
+
+    <section class="adm-box" data-phases-box hidden>
+      <h3>The 5 phases — <span data-phase-pro></span></h3>
+      <table class="cp-phases"><tbody data-phases></tbody></table>
+    </section>
+  </main>
+</body>
+</html>

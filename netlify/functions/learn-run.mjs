@@ -2,7 +2,7 @@
 // candidates for Navid to approve — { url, title }.
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, GOALS, QUEUE, SOURCES, isBillingError, learnFromVideo, youtubeId } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, PROS, QUEUE, SOURCES, isBillingError, learnFromVideo, youtubeId } from '../lib/learn.mjs';
 
 // several videos finish at the same time: wait a moment and try again on write clashes
 async function withRetry(fn) {
@@ -25,6 +25,14 @@ export default async (req) => {
   try {
     const { about, items = [], goals = [], model, video_title: seenTitle } = await learnFromVideo(`https://www.youtube.com/watch?v=${videoId}`, title, mode);
     const now = Date.now();
+    if (mode === 'pro') { // pro reference shots go to their own library
+      await withRetry(() => updateJSON(PROS, (list) => {
+        list.splice(0, list.length, ...list.filter((c) => c.source !== videoId));
+        items.forEach((it, k) => list.push({ id: `${videoId}-${k}`, source: videoId, sourceTitle: title || seenTitle, ...it }));
+      }, [], 12));
+      await setSource({ status: 'ready', about, mode, ...(title ? {} : { title: seenTitle }), found: items.length, model, at: new Date().toISOString(), error: null });
+      return new Response('done');
+    }
     await withRetry(() => updateJSON(CANDIDATES, (list) => {
       list.splice(0, list.length, ...list.filter((c) => c.source !== videoId || c.status !== 'pending')); // a re-run replaces its unreviewed points
       items.forEach((it, k) => list.push({ id: `${videoId}-${now}-${k}`, source: videoId, sourceTitle: title || seenTitle, ...it, status: 'pending' }));

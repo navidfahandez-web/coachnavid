@@ -68,6 +68,12 @@
   to = "/glasswall.html"
   status = 200
 
+# Compare a student's shot with a pro (admin)
+[[redirects]]
+  from = "/admin/compare"
+  to = "/compare.html"
+  status = 200
+
 # The Method: the methodology as a video book (admin)
 [[redirects]]
   from = "/admin/book"
