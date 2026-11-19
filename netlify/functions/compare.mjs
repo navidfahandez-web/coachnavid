@@ -10,6 +10,20 @@ export default async (req) => {
   const url = new URL(req.url);
   const denied = await requireAdmin(req); // the page fetches with the header and plays it from a blob URL
   if (denied) return denied;
+  if (url.pathname.endsWith('/reel')) { // POST starts a reel; GET ?key= → status, &mp4=1 → the video
+    const store = clipStore();
+    if (req.method === 'POST') {
+      const b = await req.json();
+      await fetch(`${url.origin}/api/reel-run`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify(b) });
+      return json({ ok: true, key: `reels/${b.ref}-${b.a?.t}-${b.b?.t}`.replace(/[^\w/-]/g, '_') });
+    }
+    const key = url.searchParams.get('key') ?? '';
+    if (url.searchParams.get('mp4')) {
+      const mp4 = await store.get(`${key}.mp4`, { type: 'arrayBuffer' });
+      return mp4 ? new Response(mp4, { headers: { 'Content-Type': 'video/mp4' } }) : json({ error: 'not ready' }, 404);
+    }
+    return json((await store.get(`${key}.json`, { type: 'json' })) ?? { step: 'starting…' });
+  }
   const ref = (url.searchParams.get('ref') ?? '').replace(/[^\w-]/g, '');
   const t = url.searchParams.get('t') ?? '';
   if (!ref || !t) return json({ error: 'ref and t?' }, 400);
@@ -25,4 +39,4 @@ export default async (req) => {
   return json({ status: 'cutting' }, 202);
 };
 
-export const config = { path: '/api/admin/compare/clip' };
+export const config = { path: ['/api/admin/compare/clip', '/api/admin/compare/reel'] };

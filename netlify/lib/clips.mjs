@@ -256,3 +256,68 @@ export async function cutShot(videoFileId, start, length) {
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+// ---------- Instagram reel: two shots compared, real speed then slow motion with phase captions ----------
+// 1080×1920 (9:16). Shot A on top, shot B below; title on top, captions at the bottom. No sound
+// (music is added in Instagram). Each shot: 5 s at real speed, then the 2 s around contact at 0.25×.
+const W = 1080;
+const CLIP_H = 608; // 16:9 at full width
+const LAYOUT = { titleY: 90, aY: 300, bY: 300 + CLIP_H + 110, capY: 1700 };
+const box = (html, width = 1000, align = 'left') => `<div style="width:${width}px;text-align:${align};font:400 52px/1.08 Anton,sans-serif;color:#fff;letter-spacing:.01em">${html}</div>`;
+const clean2 = (t) => String(t ?? '').replace(/[<>&]/g, '');
+
+export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHNAVID.COM' }, onStep = async () => {}) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'reel-'));
+  const proxy = await driveProxy(videoFileId);
+  try {
+    await onStep('Drawing the captions…');
+    const tag = (txt, bg) => `<span style="display:inline-block;padding:10px 22px 8px;background:${bg};color:#fff;font:400 44px Anton,sans-serif;border-radius:10px">${clean2(txt)}</span>`;
+    const snippets = [
+      box(`<span style="color:#ff5b1f">${clean2(title)}</span>`, 1000, 'center'), // 0 title
+      tag(`A · ${a.label}`, '#ff5b1f'), // 1
+      tag(`B · ${b.label}`, '#0d0d0e'), // 2
+      box('REAL SPEED', 1000, 'center'), // 3
+      ...phases.map((ph, i) => box(`<span style="color:#ff5b1f">${i + 1} · ${clean2(ph.name).toUpperCase()}</span><br><span style="font-size:40px">A: ${clean2(ph.a)}<br>B: ${clean2(ph.b)}</span>`)), // 4…
+      box(`<span style="color:#ff5b1f">COACH NAVID</span> · ${clean2(cta)}`, 1000, 'center'), // last
+    ];
+    const pngs = await renderPngs(snippets, { fontsCss: labelCss() });
+    const files = pngs.map((buf, i) => { const f = path.join(dir, `t${i}.png`); writeFileSync(f, buf); return f; });
+
+    await onStep('Cutting and slowing down the two shots…');
+    const REAL = 5; const SLOW_FROM = 1; const SLOW_LEN = 2; const FACTOR = 4;
+    const total = REAL + SLOW_LEN * FACTOR; // 13 s
+    const shot = (i) => [`[${i}:v]fps=30,scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,setsar=1,split[r${i}][s${i}]`,
+      `[r${i}]trim=0:${REAL},setpts=PTS-STARTPTS[rr${i}]`,
+      `[s${i}]trim=${SLOW_FROM}:${SLOW_FROM + SLOW_LEN},setpts=${FACTOR}*(PTS-STARTPTS)[ss${i}]`,
+      `[rr${i}][ss${i}]concat=n=2:v=1:a=0[c${i}]`];
+    const nPh = phases.length;
+    const slot = (SLOW_LEN * FACTOR) / Math.max(1, nPh);
+    const ov = []; let last = 'bg';
+    const add = (input, x, y, from, to) => { const o = `o${ov.length}`; ov.push(`[${last}][${input}:v]overlay=${x}:${y}${from !== undefined ? `:enable='between(t,${from.toFixed(2)},${to.toFixed(2)})'` : ''}[${o}]`); last = o; };
+    const P = 2; // first png input index (0,1 = the two shots)
+    const graph = [
+      ...shot(0), ...shot(1),
+      `color=c=0x0d0d0e:s=${W}x1920:r=30:d=${total}[base]`,
+      `[base][c0]overlay=0:${LAYOUT.aY}[ba]`, `[ba][c1]overlay=0:${LAYOUT.bY}[bg]`,
+    ];
+    add(P + 0, '(W-w)/2', LAYOUT.titleY);
+    add(P + 1, 30, LAYOUT.aY + 20);
+    add(P + 2, 30, LAYOUT.bY + 20);
+    add(P + 3, '(W-w)/2', LAYOUT.capY, 0, REAL);
+    phases.forEach((_, i) => add(P + 4 + i, 40, 1650, REAL + i * slot, REAL + (i + 1) * slot));
+    add(P + 4 + nPh, '(W-w)/2', 1850);
+    const out = path.join(dir, 'reel.mp4');
+    const sa = toSecondsSafe(a.t); const sb = toSecondsSafe(b.t);
+    await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error',
+      '-seekable', '1', '-ss', Math.max(0, sa - 2).toFixed(2), '-t', String(REAL), '-i', proxy.url,
+      '-seekable', '1', '-ss', Math.max(0, sb - 2).toFixed(2), '-t', String(REAL), '-i', proxy.url,
+      ...files.flatMap((f) => ['-i', f]),
+      '-filter_complex', [...graph, ...ov].join(';'),
+      '-map', `[${last}]`, '-t', String(total), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', '30', '-movflags', '+faststart', '-an', out], 300000);
+    return { mp4: readFileSync(out), seconds: total };
+  } finally {
+    proxy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+const toSecondsSafe = (t) => { const v = toSeconds(t); if (v === null) throw new Error(`Bad time ${t}`); return v; };
