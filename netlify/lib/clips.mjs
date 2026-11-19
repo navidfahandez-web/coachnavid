@@ -474,3 +474,25 @@ export async function packetDump(videoFileId, ss, n, inOpts = []) {
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+// Diagnosis: one frame per minute read straight through (key frames, as the AI's parts are cut),
+// tiled 6×5, plus the time of each frame; and frames by jumping to some times.
+export async function probeSheet(videoFileId, jumps = []) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'sheet-'));
+  const proxy = await driveProxy(videoFileId);
+  try {
+    const sheet = path.join(dir, 'sheet.jpg');
+    const log = await runKeyframes(proxy.url, ['-loglevel', 'info', '-vf', 'fps=1/60:start_time=0,showinfo,scale=320:-2,tile=6x5', '-frames:v', '1', '-q:v', '4', sheet], 11 * 60 * 1000);
+    const shown = [...log.matchAll(/pts_time:\s*([\d.]+)/g)].map((m) => m[1]);
+    const jumpImgs = [];
+    for (const [k, t] of jumps.entries()) {
+      const f = path.join(dir, `j${k}.jpg`);
+      await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-ss', String(t), '-i', proxy.url, '-map', '0:v:0', '-vf', 'scale=320:-2', '-frames:v', '1', '-q:v', '4', f]);
+      jumpImgs.push(readFileSync(f));
+    }
+    return { sheet: existsSync(sheet) ? readFileSync(sheet) : null, shown, jumpImgs };
+  } finally {
+    proxy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}

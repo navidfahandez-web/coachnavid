@@ -3,7 +3,7 @@
 import { getStore } from '@netlify/blobs';
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON } from '../lib/store.mjs';
-import { cutShot, packetDump, probeTimes } from '../lib/clips.mjs';
+import { cutShot, packetDump, probeSheet, probeTimes } from '../lib/clips.mjs';
 import { toSeconds } from '../../shared/report.js';
 
 export const clipStore = () => getStore({ name: 'compare-clips', consistency: 'strong' });
@@ -11,8 +11,20 @@ export const clipKey = (ref, t) => `${ref}/${String(t).replace(/[^\d:.]/g, '')}`
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { ref, t, probe, inOpts, packets } = await req.json();
+  const { ref, t, probe, inOpts, packets, sheet } = await req.json();
   const store = clipStore();
+  if (sheet) { // { ref, sheet: [seconds to jump to] } → one frame per minute read straight + jump frames
+    const key = `probe/${ref}`;
+    try {
+      const r = await readJSON(`reports/by-ref/${ref}`);
+      await store.setJSON(`${key}.json`, { step: 'sheet' });
+      const out = await probeSheet(r.videoFileId, sheet.map(Number).filter(Number.isFinite).slice(0, 8));
+      if (out.sheet) await store.set(`${key}/sheet.jpg`, out.sheet);
+      for (const [k, b] of out.jumpImgs.entries()) await store.set(`${key}/jump${k}.jpg`, b);
+      await store.setJSON(`${key}.json`, { done: true, shown: out.shown, jumps: sheet });
+    } catch (err) { await store.setJSON(`${key}.json`, { error: err.message.slice(0, 400) }); }
+    return new Response('done');
+  }
   if (packets) { // { ref, packets: [{ ss, n }] } → raw packet timestamps
     const key = `probe/${ref}`;
     try {
