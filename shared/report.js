@@ -47,6 +47,8 @@ export const AREAS = [
     { id: 'wanted_lob', en: 'Wanted: lob to take the net', lt: 'Norimas: lobas, kad užimtum tinklą' },
     { id: 'wanted_chiquita', en: 'Wanted: chiquita to take the net', lt: 'Norimas: chiquita, kad užimtum tinklą' },
     { id: 'wanted_approach', en: 'Wanted: moving in after a weak ball', lt: 'Norimas: ėjimas į priekį po silpno kamuolio' },
+    { id: 'transition_area', en: 'Standing in the transition area (on the line) when the previous ball allows it', lt: 'Stovėjimas perėjimo zonoje (ant linijos), kai leidžia ankstesnis kamuolys' },
+    { id: 'transition_shot', en: 'Transition shot: punishing from the transition area', lt: 'Perėjimo smūgis: baudimas iš perėjimo zonos' },
   ] },
   { id: 'position', en: 'Positioning & movement', lt: 'Pozicija ir judėjimas', shots: [
     { id: 'split_step', en: 'Split step', lt: 'Split step' },

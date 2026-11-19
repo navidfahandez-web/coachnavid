@@ -66,6 +66,7 @@ function render() {
       <article class="lg__card" data-id="${esc(c.id)}">
         <div class="lg__meta"><span>${esc(c.kind)}</span><span>${esc(c.area)}${c.shot && c.shot !== 'general' ? ` · ${esc(c.shot)}` : ''}</span>
           <a href="https://www.youtube.com/watch?v=${esc(src)}&t=${toSec(c.time)}s" target="_blank" rel="noopener">▶ ${esc(c.time)}</a></div>
+        ${/no[\s-]*man'?s[\s-]*land|tierra de nadie/i.test(`${c.mistake} ${c.fix} ${c.why}`) ? '<p class="lg__warn">⚠️ Uses “no man’s land” — in your method this is the transition area (OK to stand there when the previous ball allows it). Edit or reject.</p>' : ''}
         ${c.type === 'fitness' ? `<p><b>${esc(c.exercise)}</b> · ${esc(c.where)}${c.equipment ? ` · ${esc(c.equipment)}` : ''}${c.dose ? ` · ${esc(c.dose)}` : ''}</p><p class="note">${esc(c.body_part)}${c.caution ? ` — ⚠️ ${esc(c.caution)}` : ''}</p>`
           : c.mistake ? `<p><b>Mistake:</b> ${esc(c.mistake)}</p>` : ''}
         <label>${c.type === 'fitness' ? 'How to do it (edit into your own words)' : 'Cue (edit into your own words)'}<textarea rows="2" data-fix>${esc(c.fix)}</textarea></label>

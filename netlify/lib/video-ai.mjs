@@ -176,6 +176,7 @@ ${r.kind === 'match' ? '- A 3-week plan: one week per fix, 2-3 sessions each, us
   Timing also has a tactical chapter: CHANGING the timing of contact to hide the shot and be unexpected — if the
   opponent doesn't know when you hit, he can't time his split step. Praise it when the student does it, and suggest it
   when the student is too predictable ("you don't need amazing shots if you are unexpected").
+- Coach Navid's method: there is NO "no man's land" — that zone is the TRANSITION AREA and it is taught at every level. A player may stand on the line in the transition area as long as the ball he played before allows it; being closer puts the opponent under pressure to find space and play a good ball, otherwise the player on the line punishes him with a transition shot. Never write "no man's land" and never advise simply to avoid that zone — judge whether the previous ball allowed the player to be there.
 - Levels in Navid's method: 1 D-, 2 D, 3 D+, 4 C-, 5 C, 6 C+, 7 B-, 8 B, 9 B+, 10 A (amateur → high competition).
   Mention the student's approximate level in confidence_notes (e.g. "looks like a C- / level 4").
 - If the video is not padel, is too short/dark/far away to judge, or you can't tell which player is the student,

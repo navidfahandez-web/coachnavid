@@ -4,7 +4,7 @@
 // Text only (no video), so it is cheap. Started from /api/admin/learn/levels.
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, GOALS } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, NAVID_METHOD } from '../lib/learn.mjs';
 import { ask } from '../lib/video-ai.mjs';
 import { AREAS, LEVELS, SHOTS, levelsText } from '../../shared/report.js';
 
@@ -138,6 +138,7 @@ ${levelsText()}
 
 Below are coaching points (from pro coaching videos) for players at level ${L.n} ${L.label}.
 Write the GOALS of this level: 8-15 concrete skills a player must master to complete level ${L.n} ${L.label} and move up to the next level — measurable where possible ("keeps 8 out of 10 bandejas deep, away from the net"). Cover technique, positioning, tactics/decisions and the physical side. Short, in Navid's words style: direct, simple.
+${NAVID_METHOD}
 
 ${pts.map((c) => `- ${line(c)}`).join('\n')}` }] }],
         generationConfig: {
