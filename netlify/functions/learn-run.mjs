@@ -16,14 +16,14 @@ async function withRetry(fn) {
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { url, title } = await req.json();
+  const { url, title, mode = 'technique' } = await req.json();
   const videoId = youtubeId(url);
   const setSource = (s) => updateJSON(SOURCES, (list) => {
     const i = list.findIndex((x) => x.videoId === videoId);
     if (i < 0) list.push({ videoId, title, ...s }); else list[i] = { ...list[i], ...s };
   }, []);
   try {
-    const { about, items = [], model, video_title: seenTitle } = await learnFromVideo(`https://www.youtube.com/watch?v=${videoId}`, title);
+    const { about, items = [], model, video_title: seenTitle } = await learnFromVideo(`https://www.youtube.com/watch?v=${videoId}`, title, mode);
     const now = Date.now();
     await withRetry(() => updateJSON(CANDIDATES, (list) => {
       list.splice(0, list.length, ...list.filter((c) => c.source !== videoId || c.status !== 'pending')); // a re-run replaces its unreviewed points
@@ -33,7 +33,7 @@ export default async (req) => {
   } catch (err) {
     console.error(`Learn ${videoId} failed: ${err.message}`);
     if (isBillingError(err.message)) { // no credits: back to the front of the queue, retried next hour
-      await updateJSON(QUEUE, (q) => { if (!q.some((x) => x.videoId === videoId)) q.unshift({ videoId, title, channel: '' }); }, []);
+      await updateJSON(QUEUE, (q) => { if (!q.some((x) => x.videoId === videoId)) q.unshift({ videoId, title, channel: '', mode }); }, []);
       await setSource({ status: 'waiting', error: err.message.slice(0, 300), at: new Date().toISOString() });
       return new Response('waiting for credits');
     }

@@ -17,8 +17,9 @@ let data = { sources: [], candidates: [], notes: {}, queued: 0 };
 let tab = 'pending';
 let tech = '';
 const techOf = (c) => (c.shot && c.shot !== 'general' ? c.shot : `area:${c.area}`);
-const techName = (t) => (t.startsWith('area:') ? `${AREAS.find((a) => a.id === t.slice(5))?.en ?? t.slice(5)} — general` : SHOTS.find((x) => x.id === t)?.en ?? t);
-const ORDER = [...SHOTS.map((x) => x.id), ...AREAS.map((a) => `area:${a.id}`)];
+const FIT = { injury_prevention: 'Injury prevention', strength: 'Strength', power: 'Power', speed_agility: 'Speed & agility', endurance: 'Endurance', mobility: 'Mobility', warmup: 'Warm-up', recovery: 'Recovery' };
+const techName = (t) => (t.startsWith('fit:') ? `💪 Fitness — ${FIT[t.slice(4)] ?? t.slice(4)}` : t.startsWith('area:') ? `${AREAS.find((a) => a.id === t.slice(5))?.en ?? t.slice(5)} — general` : SHOTS.find((x) => x.id === t)?.en ?? t);
+const ORDER = [...SHOTS.map((x) => x.id), ...AREAS.map((a) => `area:${a.id}`), ...Object.keys(FIT).map((k) => `fit:${k}`)];
 
 function render() {
   for (const s of ['pending', 'approved', 'rejected']) $(`[data-count="${s}"]`).textContent = data.candidates.filter((c) => c.status === s).length;
@@ -42,8 +43,9 @@ function render() {
       <article class="lg__card" data-id="${esc(c.id)}">
         <div class="lg__meta"><span>${esc(c.kind)}</span><span>${esc(c.area)}${c.shot && c.shot !== 'general' ? ` · ${esc(c.shot)}` : ''}</span>
           <a href="https://www.youtube.com/watch?v=${esc(src)}&t=${toSec(c.time)}s" target="_blank" rel="noopener">▶ ${esc(c.time)}</a></div>
-        ${c.mistake ? `<p><b>Mistake:</b> ${esc(c.mistake)}</p>` : ''}
-        <label>Cue (edit into your own words)<textarea rows="2" data-fix>${esc(c.fix)}</textarea></label>
+        ${c.type === 'fitness' ? `<p><b>${esc(c.exercise)}</b> · ${esc(c.where)}${c.equipment ? ` · ${esc(c.equipment)}` : ''}${c.dose ? ` · ${esc(c.dose)}` : ''}</p><p class="note">${esc(c.body_part)}${c.caution ? ` — ⚠️ ${esc(c.caution)}` : ''}</p>`
+          : c.mistake ? `<p><b>Mistake:</b> ${esc(c.mistake)}</p>` : ''}
+        <label>${c.type === 'fitness' ? 'How to do it (edit into your own words)' : 'Cue (edit into your own words)'}<textarea rows="2" data-fix>${esc(c.fix)}</textarea></label>
         <p class="note">${esc(c.why)}</p>
         <div class="lg__actions">
           ${c.status !== 'approved' ? '<button class="btn btn--lime" type="button" data-set="approved">✓ Approve</button>' : ''}

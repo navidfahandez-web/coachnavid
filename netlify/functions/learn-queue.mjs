@@ -10,7 +10,7 @@ export default async () => {
   // videos that failed only because the Gemini credits ran out go back to the front of the queue
   const stuck = (await readJSON(SOURCES, [])).filter((x) => x.status === 'failed' && isBillingError(x.error));
   if (stuck.length) {
-    await updateJSON(QUEUE, (q) => { const inQ = new Set(q.map((x) => x.videoId)); q.unshift(...stuck.filter((x) => !inQ.has(x.videoId)).map((x) => ({ videoId: x.videoId, title: x.title ?? '', channel: x.channel ?? '' }))); }, []);
+    await updateJSON(QUEUE, (q) => { const inQ = new Set(q.map((x) => x.videoId)); q.unshift(...stuck.filter((x) => !inQ.has(x.videoId)).map((x) => ({ videoId: x.videoId, title: x.title ?? '', channel: x.channel ?? '', mode: x.mode ?? 'technique' }))); }, []);
     await updateJSON(SOURCES, (list) => { for (const x of list) if (x.status === 'failed' && isBillingError(x.error)) x.status = 'waiting'; }, []);
   }
   const sources = await readJSON(SOURCES, []);

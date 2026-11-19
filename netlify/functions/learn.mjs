@@ -45,7 +45,7 @@ export default async (req) => {
   const sources = await readJSON(SOURCES, []);
   const done = new Set(sources.map((s) => s.videoId));
   const videos = (Array.isArray(b.videos) ? b.videos : [])
-    .map((v) => ({ videoId: v?.videoId && /^[\w-]{11}$/.test(v.videoId) ? v.videoId : youtubeId(v?.url), title: String(v?.title ?? '').slice(0, 200), channel: String(v?.channel ?? '').slice(0, 80) }))
+    .map((v) => ({ videoId: v?.videoId && /^[\w-]{11}$/.test(v.videoId) ? v.videoId : youtubeId(v?.url), title: String(v?.title ?? '').slice(0, 200), channel: String(v?.channel ?? '').slice(0, 80), mode: v?.mode === 'fitness' ? 'fitness' : 'technique' }))
     .filter((v) => v.videoId && !done.has(v.videoId));
   if (!videos.length) return json({ ok: true, added: 0, note: 'Nothing new (already watched or no links).' });
   const origin = new URL(req.url).origin;
@@ -56,7 +56,9 @@ export default async (req) => {
   let added = 0;
   await updateJSON(QUEUE, (q) => {
     const inQ = new Set(q.map((x) => x.videoId));
-    for (const v of videos) if (!inQ.has(v.videoId)) { q.push(v); added++; }
+    const fresh = videos.filter((v) => !inQ.has(v.videoId));
+    if (b.first) q.unshift(...fresh); else q.push(...fresh); // first=true: jump the queue
+    added = fresh.length;
   }, []);
   return json({ ok: true, added });
 };
