@@ -53,11 +53,20 @@ export async function embedInfo(id) {
   return { embeddable: true, title: j.title ?? '', author: j.author_name ?? '' };
 }
 
-// Length of a YouTube video (from the public watch page metadata; null if YouTube doesn't say)
+// Length of a YouTube video: from the public watch page metadata, else ask Gemini (a cheap look at
+// 1 frame every 5 s in low resolution). null if neither knows.
 export async function videoSeconds(id) {
-  const html = await fetch(yt(id), { headers: { 'Accept-Language': 'en' } }).then((r) => r.text()).catch(() => '');
-  const n = Number(html.match(/"lengthSeconds":"(\d+)"/)?.[1]);
-  return n > 0 ? n : null;
+  const html = await fetch(yt(id), { headers: { 'Accept-Language': 'en', Cookie: 'CONSENT=YES+1; SOCS=CAI', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' } }).then((r) => r.text()).catch(() => '');
+  const n = Number(html.match(/"lengthSeconds":"(\d+)"/)?.[1] ?? html.match(/itemprop="duration" content="PT(\d+)M(\d+)S"/)?.slice(1).reduce((a, b) => a * 60 + Number(b), 0));
+  if (n > 0) return n;
+  try {
+    const { json } = await ask({
+      contents: [{ role: 'user', parts: [{ fileData: { fileUri: yt(id) }, videoMetadata: { fps: 0.2 } }, { text: 'How long is this video? Answer m:ss.' }] }],
+      generationConfig: { responseMimeType: 'application/json', mediaResolution: 'MEDIA_RESOLUTION_LOW', responseSchema: { type: 'OBJECT', required: ['length'], properties: { length: S('m:ss') } } },
+    }, VERIFY_MODELS, false, 120000);
+    const s = sec(json.length);
+    return s > 0 ? Math.ceil(s) : null;
+  } catch { return null; }
 }
 
 // Gemini sometimes counts from the clip start, sometimes from the video start: accept both
@@ -79,8 +88,9 @@ For each: the time of CONTACT as m:ss.s of the FULL video (between ${fmt(from)} 
     ] }],
     generationConfig: {
       responseMimeType: 'application/json', temperature: 0.1,
-      responseSchema: { type: 'OBJECT', required: ['player_seen', 'shots'], properties: {
+      responseSchema: { type: 'OBJECT', required: ['player_seen', 'has_video', 'shots'], properties: {
         player_seen: { type: 'BOOLEAN', description: `${player} appears in this clip` },
+        has_video: { type: 'BOOLEAN', description: 'false if there is no footage in this time range (the video ended)' },
         shots: { type: 'ARRAY', items: { type: 'OBJECT', required: ['time', 'shot', 'quality', 'view'], properties: {
           time: S('m:ss.s contact time in the full video'),
           shot: { type: 'STRING', enum: SHOTS.map((s) => s.id) },
@@ -90,7 +100,8 @@ For each: the time of CONTACT as m:ss.s of the FULL video (between ${fmt(from)} 
       } },
     },
   }, VERIFY_MODELS, false, 180000);
-  return (json.shots ?? []).map((s) => ({ ...s, t: inClip(sec(s.time), from, to) })).filter((s) => s.t !== null);
+  const shots = (json.shots ?? []).map((s) => ({ ...s, t: inClip(sec(s.time), from, to) })).filter((s) => s.t !== null);
+  return Object.assign(shots, { ended: json.has_video === false });
 }
 
 // VERIFY: one shot on its own 3-second clip at 10 frames/s. Blind on purpose: the AI is NOT told which

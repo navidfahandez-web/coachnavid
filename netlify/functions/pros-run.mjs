@@ -33,8 +33,10 @@ async function indexJob(job, left) {
     await setStatus({ step: `${job.player}: watching “${v.title || job.source}” ${fmt(from)} of ${fmt(dur)}…` });
     const starts = [0, 1, 2].map((k) => from + k * WINDOW).filter((s) => s < dur);
     const parts = await Promise.all(starts.map((s) => findShots(job.source, job.player, s, Math.min(s + WINDOW, dur), v.title)
-      .catch((err) => (err.status === 400 ? [] : Promise.reject(err)))));
-    const shots = parts.flat();
+      .catch((err) => (err.status === 400 ? Object.assign([], { ended: true }) : Promise.reject(err)))));
+    if (!(await readJSON(JOBS, [])).some((x) => sameJob(x, job))) return true; // removed from the list meanwhile: stop
+    const ended = parts.findIndex((x) => x.ended);
+    const shots = (ended >= 0 ? parts.slice(0, ended + 1) : parts).flat(); // nothing after the video's end
     await updateJSON(PROS, (list) => {
       for (const s of shots) {
         if (list.some((c) => c.source === job.source && c.player === job.player && Math.abs(sec(c.time) - s.t) < 1.2)) continue;
@@ -42,7 +44,7 @@ async function indexJob(job, left) {
         found += 1;
       }
     }, [], 12);
-    from = starts.at(-1) + WINDOW;
+    from = ended >= 0 ? dur : starts.at(-1) + WINDOW; // the video ended inside this batch
     Object.assign(job, { next: from, found });
     await saveJob(job);
   }
