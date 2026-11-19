@@ -271,7 +271,8 @@ const clean2 = (t) => String(t ?? '').replace(/[<>&]/g, '');
 async function courtBackground(url, dir, name, t) {
   const f = path.join(dir, `${name}.png`);
   await run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-ss', Math.max(0, t - 40).toFixed(2), '-t', '80', '-i', url,
-    '-vf', `fps=1/3,scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,tmedian=radius=12,select=eq(n\\,12)`, '-frames:v', '1', f], 240000);
+    '-vf', `fps=1/3,scale=${W}:${CLIP_H}:force_original_aspect_ratio=decrease,pad=${W}:${CLIP_H}:(ow-iw)/2:(oh-ih)/2,tmedian=radius=12`, '-update', '1', f], 240000); // keeps the last median frame
+  if (!existsSync(f)) throw new Error('Could not build the empty-court image');
   return f;
 }
 
