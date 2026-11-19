@@ -25,7 +25,8 @@ export default async (req) => {
   try {
     const { about, items = [], goals = [], model, video_title: seenTitle } = await learnFromVideo(`https://www.youtube.com/watch?v=${videoId}`, title, mode);
     const now = Date.now();
-    if (mode === 'pro') { // pro reference shots go to their own library
+    if (mode === 'pro') { // pro reference shots go to their own library (not coaching tips)
+      await withRetry(() => updateJSON(CANDIDATES, (list) => { list.splice(0, list.length, ...list.filter((c) => c.source !== videoId)); }, [], 12));
       await withRetry(() => updateJSON(PROS, (list) => {
         list.splice(0, list.length, ...list.filter((c) => c.source !== videoId));
         items.forEach((it, k) => list.push({ id: `${videoId}-${k}`, source: videoId, sourceTitle: title || seenTitle, ...it }));

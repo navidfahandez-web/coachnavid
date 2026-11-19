@@ -67,7 +67,7 @@ export default async (req) => {
   const done = new Set(sources.map((s) => s.videoId));
   const videos = (Array.isArray(b.videos) ? b.videos : [])
     .map((v) => ({ videoId: v?.videoId && /^[\w-]{11}$/.test(v.videoId) ? v.videoId : youtubeId(v?.url), title: String(v?.title ?? '').slice(0, 200), channel: String(v?.channel ?? '').slice(0, 80), mode: ['fitness', 'pro'].includes(v?.mode) ? v.mode : 'technique' }))
-    .filter((v) => v.videoId && !done.has(v.videoId));
+    .filter((v) => v.videoId && (b.redo || !done.has(v.videoId))); // redo=true: watch again
   if (!videos.length) return json({ ok: true, added: 0, note: 'Nothing new (already watched or no links).' });
   const origin = new URL(req.url).origin;
   if (b.now) {
