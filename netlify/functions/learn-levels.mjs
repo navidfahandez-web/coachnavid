@@ -18,7 +18,10 @@ const line = (c) => (c.type === 'fitness'
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { reshot = false, transitions = false, time = false, fundamentals = false } = await req.json().catch(() => ({}));
+  const { reshot = false, transitions = false, time = false, fundamentals = false, retag = [] } = await req.json().catch(() => ({}));
+  if (Array.isArray(retag) && retag.length) { // clear these tags first so they are done again with the newest rules
+    await updateJSON(CANDIDATES, (list) => { for (const c of list) for (const f of retag) if (['transition', 'time_tag', 'fundamental'].includes(f)) delete c[f]; }, [], 12);
+  }
   const t0 = Date.now();
   const left = () => 13 * 60e3 - (Date.now() - t0);
   const status = (s) => updateJSON(STATUS, (x) => { Object.assign(x, s, { at: new Date().toISOString() }); }, {});
@@ -60,10 +63,11 @@ Answer forced, wanted or none (not about changing zone).` },
 EARN time = gain time for yourself or your partner to defend, get in position or reach the net (high lob, slow ball when far from your position, time to cover).
 REMOVE time = take time away from the opponent so he is not ready for the next shot (fast lob so he can't prepare the smash or a comfortable bandeja, lob down the line because the distance is shorter, moving in and playing closer / earlier).
 Answer earn, remove or none (not about time).` },
-      fundamentals && { field: 'fundamental', values: ['timing', 'contact', 'none'], label: 'timing / contact point', rule: `Coach Navid: two fundamentals matter at every level.
+      fundamentals && { field: 'fundamental', values: ['timing', 'contact', 'deception', 'none'], label: 'timing / contact point / hiding the shot', rule: `Coach Navid: these fundamentals matter at every level.
 TIMING = the right moment: squeezing the fingers slightly at the moment of contact (like a high five that makes a sound), the moment you hit, rhythm with the ball.
 CONTACT = the contact point: where the ball meets the racket (sweet spot, in front of the body, height of contact).
-Answer timing, contact or none (the point is about something else).` },
+DECEPTION = changing the timing of contact to hide the shot and be unexpected (hitting earlier/later, disguise, same preparation for different shots) so the opponent can't time his split step.
+Answer timing, contact, deception or none (the point is about something else).` },
     ].filter(Boolean);
     for (const T of TAGS) {
       let n = 0;
