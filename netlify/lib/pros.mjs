@@ -175,7 +175,10 @@ export const setStatus = ({ log, ...s }) => updateJSON(STATUS, (x) => {
 export const addJobs = (jobs) => updateJSON(JOBS, (q) => {
   for (const j of jobs) {
     const same = q.find((x) => x.type === j.type && x.player === j.player && (x.source ?? null) === (j.source ?? null));
-    if (same) Object.assign(same, j); else q.push(j);
+    if (!same) { q.push(j); continue; }
+    // already listed: keep its progress, move it to the end (so verify/profile run after new videos)
+    q.splice(q.indexOf(same), 1);
+    q.push({ ...same, ...j, refine: Boolean(same.refine || j.refine) });
   }
 }, []);
 
