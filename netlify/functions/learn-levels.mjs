@@ -77,7 +77,8 @@ ${todo.map((c, i) => `${i}. (now: ${c.shot}) ${line(c)}`).join('\n')}` }] }],
         if (left() < 5 * 60e3) { await status({ step: `Merging duplicate tips paused after ${n} (time limit) — it carries on by itself.` }); return carryOn(); }
         const all = await readJSON(CANDIDATES, []);
         const open = all.filter((c) => !c.point && c.status !== 'rejected');
-        if (!open.length) break;
+        // new videos keep adding tips: once nearly caught up, move on (the rest is merged on the next run)
+        if (!open.length || (n > 0 && open.length < 80)) break;
         // 8 techniques at once (each call takes 1-3 min); within a technique, batches go one after another
         const techs = [...new Set(open.map(technique))].filter((t) => (failed.get(t) ?? 0) < 2).slice(0, 8);
         if (!techs.length) throw new Error(`Merging failed twice for ${[...failed.keys()].slice(0, 3).join(', ')} — it tries again on the next run.`);
