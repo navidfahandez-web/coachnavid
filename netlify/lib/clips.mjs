@@ -327,7 +327,6 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
 
     // Step 2: the 9:16 page — title, the two shots, labels and the timed captions.
     await onStep('Putting the reel together…');
-    proxy.close();
     const nPh = phases.length;
     const slot = (SLOW_LEN * FACTOR) / Math.max(1, nPh);
     const ov = []; let last = 'bg';
