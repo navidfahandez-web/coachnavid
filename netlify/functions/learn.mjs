@@ -29,7 +29,7 @@ export default async (req) => {
       if (!c) return;
       c.status = status;
       if (typeof b.fix === 'string' && b.fix.trim()) c.fix = b.fix.trim().slice(0, 300);
-      if (Array.isArray(b.levels)) c.levels = [...new Set(b.levels.map(Number).filter((n) => n >= 1 && n <= 10))].sort((x, y) => x - y);
+      if (Array.isArray(b.levels)) { c.levels = [...new Set(b.levels.map(Number).filter((n) => n >= 1 && n <= 10))].sort((x, y) => x - y); c.levelsByNavid = true; }
       c.reviewedAt = new Date().toISOString();
       found = c;
     }, []);
@@ -54,7 +54,7 @@ export default async (req) => {
       for (const c of list) {
         if (c.point !== found.id) continue;
         if (status) c.status = status;
-        if (found.levels) c.levels = found.levels;
+        if (found.levels) { c.levels = found.levels; c.levelsByNavid = true; }
         c.reviewedAt = found.reviewedAt;
         members.push(c);
       }
@@ -66,7 +66,8 @@ export default async (req) => {
     const shotLevels = await updateJSON(SHOT_LEVELS, (m) => {
       for (const [k, v] of Object.entries(b.levels ?? {})) {
         const from = Math.round(Number(v?.from)); const mastered = Math.round(Number(v?.mastered));
-        if (from >= 1 && from <= 10 && mastered >= from && mastered <= 10) m[String(k).slice(0, 40)] = { from, mastered };
+        if (from >= 1 && from <= 10 && mastered >= from && mastered <= 10) m[String(k).slice(0, 40)] = { from, mastered, ...(v.note ? { note: String(v.note).slice(0, 300) } : {}) };
+        else if (v === null) delete m[k];
       }
       return m;
     }, {});

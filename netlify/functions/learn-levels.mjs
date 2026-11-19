@@ -4,7 +4,7 @@
 // Text only (no video), so it is cheap. Started from /api/admin/learn/levels.
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, GOALS, NAVID_METHOD, POINTS, technique } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, NAVID_METHOD, POINTS, SHOT_LEVELS, technique } from '../lib/learn.mjs';
 import { ask } from '../lib/video-ai.mjs';
 import { AREAS, LEVELS, SHOTS, levelsText } from '../../shared/report.js';
 
@@ -20,9 +20,17 @@ const line = (c) => (c.type === 'fitness'
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { reshot = false, merge = false, transitions = false, time = false, fundamentals = false, retag = [] } = await req.json().catch(() => ({}));
+  const { reshot = false, relevel = false, merge = false, transitions = false, time = false, fundamentals = false, retag = [] } = await req.json().catch(() => ({}));
   if (Array.isArray(retag) && retag.length) { // clear these tags first so they are done again with the newest rules
     await updateJSON(CANDIDATES, (list) => { for (const c of list) for (const f of retag) if (['transition', 'time_tag', 'fundamental'].includes(f)) delete c[f]; }, [], 12);
+  }
+  // Navid's own scale per shot (when it first appears / is mastered) guides every level decision
+  const shotLevels = await readJSON(SHOT_LEVELS, {});
+  const LV = (n) => `${n} ${LEVELS.find((x) => x.n === n)?.label ?? ''}`;
+  const shotRules = Object.entries(shotLevels).map(([id, v]) => `- ${SHOTS.find((x) => x.id === id)?.en ?? id}: first appears at level ${LV(v.from)}, mastered at ${LV(v.mastered)}${v.note ? ` (${v.note})` : ''}`).join('\n');
+  if (relevel) { // Navid changed the scale: sort the AI-levelled tips again and rewrite the unreviewed level goals
+    await updateJSON(CANDIDATES, (list) => { for (const c of list) if (c.type !== 'fitness' && !c.levelsByNavid && c.status === 'pending') delete c.levels; }, [], 12);
+    await updateJSON(GOALS, (list) => { list.splice(0, list.length, ...list.filter((g) => !(g.source === 'derived' && g.status === 'pending'))); }, [], 12);
   }
   const t0 = Date.now();
   const left = () => 13 * 60e3 - (Date.now() - t0);
@@ -170,7 +178,10 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
         contents: [{ role: 'user', parts: [{ text: `Coach Navid's padel levels (amateur → high competition):
 ${levelsText()}
 
-For each numbered padel coaching point below, give every level of the players it is for — the levels where players typically make that mistake or need that tip/exercise. A point usually fits 2-4 consecutive levels; basics fit low levels, advanced shots (víbora, por 3, gancho) fit higher ones.
+${shotRules ? `Coach Navid's own scale for these shots (follow it: basics of a shot go at its first levels, refinements up to the mastered level, never before it appears):
+${shotRules}
+
+` : ''}For each numbered padel coaching point below, give every level of the players it is for — the levels where players typically make that mistake or need that tip/exercise. A point usually fits 2-4 consecutive levels; basics fit low levels, advanced shots (víbora, por 3, gancho) fit higher ones.
 
 ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
         generationConfig: {
@@ -202,7 +213,7 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
         contents: [{ role: 'user', parts: [{ text: `Coach Navid's padel levels:
 ${levelsText()}
 
-Below are coaching points (from pro coaching videos) for players at level ${L.n} ${L.label}.
+${shotRules ? `Coach Navid's scale per shot:\n${shotRules}\n` : ''}Below are coaching points (from pro coaching videos) for players at level ${L.n} ${L.label}.
 Write the GOALS of this level: 8-15 concrete skills a player must master to complete level ${L.n} ${L.label} and move up to the next level — measurable where possible ("keeps 8 out of 10 bandejas deep, away from the net"). Cover technique, positioning, tactics/decisions and the physical side. Short, in Navid's words style: direct, simple.
 ${NAVID_METHOD}
 

@@ -37,7 +37,7 @@ export const AREAS = [
     { id: 'flat_smash', en: 'Flat smash', lt: 'Plokščias smūgis' },
     { id: 'por3', en: 'Kick smash out over the side (por 3)', lt: 'Smash per šoną (por 3)' },
     { id: 'por4', en: 'Smash out over the back (por 4)', lt: 'Smash per galą (por 4)' },
-    { id: 'winner_smash', en: 'Winner smash (put-away)', lt: 'Baigiamasis smash' },
+    { id: 'winner_smash', en: 'Winter smash: fast smash for a fast rebound, not a high one', lt: 'Greitas smash (greitas atšokimas, ne aukštas)' },
   ] },
   // Navid: "padel is about transitions". Forced = the opponent makes us change zone; wanted = we choose to.
   { id: 'transition', en: 'Transitions', lt: 'Perėjimai', shots: [
