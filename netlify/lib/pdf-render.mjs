@@ -39,9 +39,10 @@ export async function renderPngs(snippets, { fontsCss = '' } = {}) {
   });
   try {
     const page = await browser.newPage();
+    await page.setViewport({ width: 1400, height: 2000 }); // wide captions (reels) must not be cut at 800 px
     const out = [];
     for (const html of snippets) {
-      await page.setContent(`<!doctype html><html><head>${fontsCss}<style>html,body{margin:0;background:transparent}</style></head><body><span id="l">${html}</span></body></html>`, { waitUntil: 'load', timeout: 20000 });
+      await page.setContent(`<!doctype html><html><head>${fontsCss}<style>html,body{margin:0;background:transparent}</style></head><body><span id="l" style="display:inline-block">${html}</span></body></html>`, { waitUntil: 'load', timeout: 20000 });
       await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 3000))]));
       out.push(Buffer.from(await (await page.$('#l')).screenshot({ omitBackground: true })));
     }
