@@ -4,11 +4,12 @@
 //   verify { player, refine? }  check unchecked shots (refine: also re-time already-checked ones)
 //   profile { player }          (re)write the technique profile
 //   mark { id, ok }             Navid's own yes/no on a clip (no = hidden everywhere)
+//   trim { source, duration }   set a video's real length and remove moments after its end
 //   block-source { source }     a video that can't be trusted: hide all its clips
 //   run                         restart the job runner
 import { requireAdmin, json } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { PROS, JOBS, STATUS, VIDEOS, PLAYERS, profileKey, playerByName, youtubeId, embedInfo, addJobs, kick } from '../lib/pros.mjs';
+import { PROS, JOBS, STATUS, VIDEOS, PLAYERS, profileKey, playerByName, youtubeId, embedInfo, addJobs, kick, sec } from '../lib/pros.mjs';
 
 export default async (req) => {
   const denied = await requireAdmin(req);
@@ -41,6 +42,12 @@ export default async (req) => {
   if (body.action === 'profile' && player) { await addJobs([{ type: 'profile', player }]); await kick(origin); return json({ ok: true }); }
   if (body.action === 'run') { await kick(origin); return json({ ok: true }); }
   if (body.action === 'clear-jobs') { await updateJSON(JOBS, (q) => { q.length = 0; }, []); await updateJSON(STATUS, (x) => { x.runner = null; x.step = null; x.error = null; }, {}); return json({ ok: true }); }
+  if (body.action === 'trim' && body.source && Number(body.duration) > 0) { // real length known: drop moments past the end
+    const source = String(body.source), dur = Number(body.duration);
+    await updateJSON(VIDEOS, (all) => { all[source] = { ...all[source], duration: dur }; }, {});
+    const n = await updateJSON(PROS, (list) => { const before = list.length; for (let i = list.length - 1; i >= 0; i--) if (list[i].source === source && sec(list[i].time) > dur) list.splice(i, 1); return before - list.length; }, []);
+    return json({ ok: true, removed: n });
+  }
   if (body.action === 'block-source' && body.source) { // a video whose shots can't be trusted: hide all its clips
     const source = String(body.source);
     await updateJSON(VIDEOS, (all) => { all[source] = { ...all[source], blocked: true }; }, {});
