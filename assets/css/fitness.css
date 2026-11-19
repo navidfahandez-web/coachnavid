@@ -1,0 +1,82 @@
+/* Padel fitness program: admin page (fitness.html) and student page (fitness-plan.html) */
+.fx-kicker { margin: 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.fx-h1 { margin: 4px 0 6px; font-size: clamp(30px, 5vw, 48px); letter-spacing: -.02em; }
+.fx .adm-box + .adm-box { margin-top: 18px; }
+.fx h2 { margin: 0 0 4px; font-size: 24px; }
+.fx-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; align-items: center; }
+.fx-stats > div { display: flex; flex-direction: column; gap: 2px; }
+.fx-stats b { font-size: 26px; }
+.fx-stats span, .fx-stats small { font-size: 13px; color: var(--muted); }
+.fx-merge { gap: 6px !important; }
+.fx-err, .fx-bad { color: var(--danger); }
+.fx-run { color: var(--accent-glow); font-weight: 600; }
+.fx-tabs, .fx-bands, .fx-weeks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.fx-tabs button, .fx-bands button, .fx-weeks button {
+  font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-soft);
+  background: transparent; color: var(--ink); cursor: pointer;
+}
+.fx-bands button small { color: var(--muted); font-size: 12px; }
+.fx-tabs .is-on, .fx-bands .is-on, .fx-weeks .is-on { border-color: var(--accent); background: rgba(255, 91, 31, .14); }
+.fx-make { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }
+.fx-make textarea, .fx-filters input, .fx-filters select, .fx-editf input, .fx-editf textarea, .fx-pick select, .fx-pick input, .fx-dose {
+  font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line-soft); border-radius: 8px; padding: 7px 9px;
+}
+.fx-make textarea { flex: 1 1 100%; resize: vertical; }
+.fx-make small { color: var(--muted); }
+.fx-planhead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+.fx-planhead small { color: var(--muted); }
+.fx-badge { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-soft); }
+.fx-badge.approved { color: #7ee08a; border-color: #7ee08a; }
+.fx-badge.draft { color: var(--accent-glow); border-color: var(--accent-glow); }
+.fx-overview { line-height: 1.55; margin: 10px 0; }
+.fx-warn { padding: 8px 12px; border-left: 3px solid var(--accent); background: rgba(255, 91, 31, .08); border-radius: 0 8px 8px 0; margin: 8px 0; }
+.fx-wfocus { margin: 10px 0 0; font-weight: 600; }
+.fx-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 12px; }
+.fx-day { border: 1.5px solid var(--line-soft); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--surface); min-width: 0; }
+.fx-day h3 { margin: 0 0 4px; font-size: 18px; }
+.fx-day h3 small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+.fx-day h4 { margin: 12px 0 2px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-glow); }
+.fx-day h4 small { text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 400; }
+.fx-list, .fx-lib, .fx-links { list-style: none; margin: 0; padding: 0; }
+.fx-list li, .fx-lib li { padding: 8px 0; border-top: 1px solid var(--line-soft); }
+.fx-lib { margin-top: 10px; }
+.fx-list li.st-rejected b, .fx-list li.is-gone { text-decoration: line-through; opacity: .6; }
+.fx-list li.st-pending, .fx-lib li.st-pending { border-left: 3px solid var(--accent-glow); padding-left: 8px; }
+.fx-ex small { display: block; color: var(--ink-2); font-size: 13px; margin-top: 2px; }
+.fx-goal { font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line-soft); color: var(--muted); white-space: nowrap; }
+.fx-said { font-size: 12px; font-weight: 700; color: var(--accent); }
+.fx-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.fx-st { font-size: 12px; color: var(--muted); }
+.fx-play, .fx-ok, .fx-x {
+  font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 999px; cursor: pointer; background: transparent;
+}
+.fx-play { border: 1px solid var(--accent); color: var(--accent); }
+.fx-ok { border: 1px solid #7ee08a; color: #7ee08a; }
+.fx-x { border: 1px solid var(--line-soft); color: var(--ink-2); }
+.fx-add { margin-top: 6px; }
+.fx-dose { width: 150px; padding: 3px 8px; font-size: 13px; }
+.fx-dose.is-saved { border-color: #7ee08a; }
+.fx-link { font: inherit; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+.fx-video { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; margin-top: 8px; }
+.fx-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+.fx-actions small { color: var(--muted); }
+.fx-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.fx-filters input[type="search"] { flex: 1 1 200px; }
+.fx-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.fx-pick select { max-width: 100%; }
+.fx-editf { display: grid; gap: 8px; margin-top: 8px; }
+.fx-editf label { display: grid; gap: 3px; font-size: 13px; color: var(--muted); }
+.fx-lv { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+.fx-lv label { display: inline-flex; gap: 4px; align-items: center; color: var(--ink); }
+.fx-links li { padding: 8px 0; border-top: 1px solid var(--line-soft); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.fx-links a { color: var(--accent); }
+
+/* Student page */
+.fxs { max-width: 860px; }
+.fxs-safety { padding: 10px 14px; border-left: 3px solid var(--accent); background: rgba(255, 91, 31, .08); border-radius: 0 8px 8px 0; margin: 12px 0; line-height: 1.5; }
+.fxs-ex { display: flex; flex-direction: column; gap: 2px; }
+.fxs-ex .fx-row { margin-top: 4px; }
+@media (max-width: 560px) {
+  .fx-days { grid-template-columns: 1fr; }
+  .fx-dose { width: 120px; }
+}

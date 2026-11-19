@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Fitness program · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+  <link rel="stylesheet" href="/assets/css/fitness.css" />
+  <script type="module" src="/assets/js/fitness.js"></script>
+</head>
+<body class="admin">
+  <header class="nav">
+    <a class="lockup" href="/admin">
+      <span class="lockup__pb"><img src="/assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Fitness program</b><small>Coach Navid · gym, home &amp; court · private</small></span>
+    </a>
+    <nav class="nav__links"><a class="pill" href="/admin/learn">Coaching guide</a> <a class="pill" href="/admin">← Admin</a></nav>
+  </header>
+
+  <main class="wrap admin__main fx">
+    <section class="adm-box">
+      <p class="fx-kicker">Padel Beast · Coach Navid Fahandezh</p>
+      <h1 class="fx-h1">Padel fitness program</h1>
+      <p class="note">3 × 45 minutes a week — one gym day, one home day (band + light dumbbells), one court day. Every session: 10 min warm-up &amp; mobility, 30 min main block, 5 min injury-prevention finisher. Students only see plans and exercises you approved.</p>
+      <div class="fx-stats" data-stats>Loading…</div>
+      <p class="fx-err" data-error hidden></p>
+      <nav class="fx-tabs" data-tabs>
+        <button type="button" data-tab="plans" class="is-on">📅 Plans by level</button>
+        <button type="button" data-tab="library">💪 Exercises</button>
+        <button type="button" data-tab="links">🔗 Student links</button>
+      </nav>
+    </section>
+
+    <section class="adm-box" data-view="plans"></section>
+    <section class="adm-box" data-view="library" hidden></section>
+    <section class="adm-box" data-view="links" hidden></section>
+  </main>
+</body>
+</html>

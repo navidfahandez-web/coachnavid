@@ -92,6 +92,23 @@
   to = "/learn.html"
   status = 200
 
+# Padel fitness program (admin)
+[[redirects]]
+  from = "/admin/fitness"
+  to = "/fitness.html"
+  status = 200
+
+# Student's fitness plan (private link)
+[[redirects]]
+  from = "/fitness/*"
+  to = "/fitness-plan.html"
+  status = 200
+
+[[headers]]
+  for = "/fitness*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
 # Report builder (admin)
 [[redirects]]
   from = "/admin/report"
