@@ -1,10 +1,10 @@
-// Slowly through the queue, as Navid asked: one coaching video per hour, 20 hours a day
-// (20 videos per day), so the Gemini bill stays small and steady.
+// Full speed (Navid, 2026-11-19: "as many videos as you can now without stopping"): every 5 minutes,
+// up to 8 videos being watched at once. If Gemini says no credits / rate limit, videos wait and retry.
 import { readJSON, updateJSON } from '../lib/store.mjs';
 import { QUEUE, SOURCES, isBillingError, startVideo } from '../lib/learn.mjs';
 import { SITE_URL } from '../lib/google.mjs';
 
-const AT_ONCE = 1;
+const AT_ONCE = 8;
 
 export default async () => {
   // videos that failed only because the Gemini credits ran out go back to the front of the queue
@@ -24,10 +24,12 @@ export default async () => {
   // finish any unfinished sorting (levels, transition / time / timing tags) left by a paused job
   const tips = (await readJSON('learn/candidates', [])).filter((c) => c.type !== 'fitness');
   const missing = { transitions: tips.some((c) => !c.transition), time: tips.some((c) => !c.time_tag), fundamentals: tips.some((c) => !c.fundamental), levels: tips.some((c) => !(c.levels ?? []).length) };
-  if (Object.values(missing).some(Boolean)) {
+  const ls = await readJSON('learn/levels-status', {});
+  const busy = ls.step && Date.now() - Date.parse(ls.at) < 4 * 60e3; // a sorting job is still working
+  if (Object.values(missing).some(Boolean) && !busy) {
     await fetch(`${process.env.URL || SITE_URL}/api/learn-levels`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify(missing) });
   }
   return new Response(`started ${next.length}`);
 };
 
-export const config = { schedule: '0 3-22 * * *' }; // on the hour, 03:00–22:00 UTC = 20 runs a day
+export const config = { schedule: '*/5 * * * *' };
