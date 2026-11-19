@@ -305,7 +305,7 @@ function followCrop(boxes) {
   const AR = 16 / 9; // club cameras film 16:9
   const maxH = Math.max(...ok.map((b) => (b[2] - b[0]) / 1000));
   const maxW = Math.max(...ok.map((b) => (b[3] - b[1]) / 1000));
-  const ch = Math.min(1, Math.max(0.14, maxH * 1.9, maxW * 1.5 * AR * PH / PW)); // crop height as a share of the frame height
+  const ch = Math.min(1, Math.max(0.14, maxH * 1.35, maxW * 0.75 * AR * PH / PW)); // crop height as a share of the frame height (an outstretched racket may touch the edge)
   const pts = (boxes ?? []).map((b, i) => (ok.includes(b) ? { t: REEL.BOX_AT[i], x: (b[1] + b[3]) / 2000, y: (b[0] + b[2]) / 2000 - 0.03 * (b[2] - b[0]) / 1000 } : null)).filter(Boolean);
   const lerp = (k) => { // piecewise straight lines between the boxed moments, flat before/after
     if (pts.length === 1) return pts[0][k].toFixed(4);
@@ -355,13 +355,15 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     for (const [k, [t, m]] of [[sa0, a], [sb0, b]].entries()) {
       const CROP = followCrop(m.boxes);
       const pre = anon === 'silhouette' ? [
-        `[0:v]fps=30,setpts=PTS-STARTPTS,scale=1920:-2,format=yuv420p,gblur=sigma=1.2[f]`,
-        `[1:v]loop=loop=-1:size=1,fps=30,trim=0:${REAL},setpts=PTS-STARTPTS,scale=1920:-2,format=yuv420p,split[b0][e0]`,
+        // difference in colour (R+G+B), not only brightness, so dark clothes on a dark wall still count;
+        // then remove thin lines/noise (open) and fill holes in the body (close)
+        `[0:v]fps=30,setpts=PTS-STARTPTS,scale=1920:-2,format=gbrp,gblur=sigma=1.2[f]`,
+        `[1:v]loop=loop=-1:size=1,fps=30,trim=0:${REAL},setpts=PTS-STARTPTS,scale=1920:-2,format=gbrp,split[b0][e0]`,
         `[b0]gblur=sigma=1.2[b]`,
-        `[f][b]blend=all_mode=difference,format=gray,lut=y='if(gt(val,34),255,0)',erosion,dilation,dilation,dilation,erosion,${CROP},gblur=sigma=2.5,lut=y='if(gt(val,120),255,0)',gblur=sigma=1[m]`,
+        `[f][b]blend=all_mode=difference,colorchannelmixer=rr=0.6:rg=0.6:rb=0.6:gr=0.6:gg=0.6:gb=0.6:br=0.6:bg=0.6:bb=0.6,format=gray,lut=y='if(gt(val,36),255,0)',erosion,erosion,dilation,dilation,dilation,dilation,dilation,erosion,erosion,erosion,${CROP},gblur=sigma=3,lut=y='if(gt(val,110),255,0)',gblur=sigma=1[m]`,
         `color=c=${color}:s=${PW}x${PH}:r=30:d=${REAL}[o]`,
         `[o][m]alphamerge[sil]`,
-        `[e0]${CROP},edgedetect=low=0.1:high=0.3:mode=wires,lutrgb=r=val*0.3:g=val*0.3:b=val*0.34,vignette=PI/4[court]`,
+        `[e0]format=yuv420p,${CROP},edgedetect=low=0.1:high=0.3:mode=wires,lutrgb=r=val*0.3:g=val*0.3:b=val*0.34,vignette=PI/4[court]`,
         `[court][sil]overlay=0:0:shortest=1,format=yuv420p,setsar=1,split[r][s]`,
       ] : [`[0:v]fps=30,setpts=PTS-STARTPTS,${CROP},setsar=1,format=yuv420p,split[r][s]`];
       const f = path.join(dir, `shot${k}.mp4`);
@@ -377,7 +379,7 @@ export async function makeReel(videoFileId, { a, b, title, phases, cta = 'COACHN
     const nPh = phases.length;
     const slot = (SLOW_LEN * FACTOR) / Math.max(1, nPh);
     const ov = []; let last = 'bg';
-    const add = (input, x, y, from, to) => { const o = `o${ov.length}`; ov.push(`[${last}][${input}:v]overlay=${x}:${y}${from !== undefined ? `:enable='between(t,${from.toFixed(2)},${to.toFixed(2)})'` : ''}[${o}]`); last = o; };
+    const add = (input, x, y, from, to) => { const o = `o${ov.length}`; ov.push(`[${last}][${input}:v]overlay=${x}:${y}${from !== undefined ? `:enable='gte(t,${from.toFixed(2)})*lt(t,${to.toFixed(2)})'` : ''}[${o}]`); last = o; };
     const P = 2; // inputs 0,1 = the two shots, then the caption images
     const graph = [
       `color=c=0x0d0d0e:s=${W}x1920:r=30:d=${total}[base]`,

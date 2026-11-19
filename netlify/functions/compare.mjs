@@ -14,6 +14,9 @@ export default async (req) => {
     const store = clipStore();
     if (req.method === 'POST') {
       const b = await req.json();
+      const key = `reels/${b.ref}-${b.a?.t}-${b.b?.t}`.replace(/[^\w/-]/g, '_');
+      const old = (await store.get(`${key}.json`, { type: 'json' })) ?? {};
+      await store.setJSON(`${key}.json`, { ...old, step: 'Starting…', done: false, error: null, ...(b.step === 'render' ? {} : { draft: null }) }); // so the page never sees the last run's result
       await fetch(`${url.origin}/api/reel-run`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: JSON.stringify(b) });
       return json({ ok: true, key: `reels/${b.ref}-${b.a?.t}-${b.b?.t}`.replace(/[^\w/-]/g, '_') });
     }
