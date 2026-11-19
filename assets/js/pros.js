@@ -110,7 +110,7 @@ function renderPlayer(p) {
   const todo = list.filter((c) => c.verified === undefined).length;
   const dropped = list.filter((c) => c.verified === false).length;
   const clipCard = (c, best) => `<div class="pl-clip${best ? ' is-best' : ''}${c.navid === 'ok' ? ' is-ok' : ''}" data-clip="${esc(c.id)}">
-      <button type="button" class="pl-clip__play" data-play="${esc(c.id)}">▶ ${esc(c.time)}${best ? ' · best' : ''}${c.navid === 'ok' ? ' · ✓ Navid' : ''}</button>
+      <button type="button" class="pl-clip__play" data-play="${esc(c.id)}">▶ ${esc(c.time)}${best ? ' · best' : ''}${c.navid === 'ok' ? ' · ✓ Navid' : ''}${c.recheck === 'unsure' && c.navid !== 'ok' ? ' · ?' : ''}</button>
       <span class="pl-clip__meta">${'★'.repeat(c.quality ?? 0)} ${esc(c.view ?? '')} · ${esc((c.sourceTitle || data.videos?.[c.source]?.title || c.source).slice(0, 48))}</span>
       ${c.details?.length ? `<span class="pl-clip__det">${esc(c.details[0])}</span>` : ''}
       <span class="pl-clip__mark"><button type="button" data-mark="${esc(c.id)}" data-ok="1" title="Good clip">✓</button><button type="button" data-mark="${esc(c.id)}" data-ok="0" title="Wrong — hide it">✗</button></span>
@@ -118,7 +118,7 @@ function renderPlayer(p) {
   const shotBlock = (s) => {
     const ps = profShot[s];
     const best = new Set(ps?.best ?? []);
-    const clips = byShot[s].slice().sort((a, b) => best.has(b.id) - best.has(a.id) || (b.navid === 'ok') - (a.navid === 'ok') || (b.quality ?? 0) - (a.quality ?? 0));
+    const clips = byShot[s].slice().sort((a, b) => best.has(b.id) - best.has(a.id) || (b.navid === 'ok') - (a.navid === 'ok') || (a.recheck === 'unsure') - (b.recheck === 'unsure') || (b.quality ?? 0) - (a.quality ?? 0));
     return `<section class="adm-box pl-shot" id="shot-${esc(s)}">
       <h3>${esc(shotName(s))} <small>${byShot[s].length} clip${byShot[s].length > 1 ? 's' : ''}${ps ? ` · ${esc(ps.confidence)} confidence` : ''}</small></h3>
       ${ps ? `<p>${esc(ps.summary)}</p>

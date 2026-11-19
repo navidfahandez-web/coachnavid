@@ -5,7 +5,7 @@ import { isAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
 import {
   JOBS, PROS, STATUS, VIDEOS, profileKey, playerByName, embedInfo, videoSeconds, findShots,
-  verifyShot, applyVerify, buildProfile, setStatus, kick, fmt, sec,
+  verifyShot, applyVerify, buildProfile, setStatus, kick, fmt, sec, addJobs,
 } from '../lib/pros.mjs';
 
 const BUDGET = 12 * 60e3;
@@ -48,6 +48,7 @@ async function indexJob(job, left) {
   if (from < dur) return false;
   await updateJSON(VIDEOS, (all) => { const x = (all[job.source] ??= {}); x.players = [...new Set([...(x.players ?? []), job.player])]; x.indexed = new Date().toISOString(); }, {});
   await setStatus({ log: `${job.player}: “${v.title || job.source}” → ${found} moments found` });
+  await addJobs([{ type: 'verify', player: job.player }, { type: 'profile', player: job.player }]); // check them next
   return true;
 }
 
@@ -65,7 +66,7 @@ async function verifyJob(job, left) {
         const c = list.find((x) => x.id === r.id);
         if (!c) continue;
         if (r.error) c.verifyTries = (c.verifyTries ?? 0) + 1;
-        if (job.refine && c.verified === true && !r.error && !r.ok) { c.timed = true; continue; } // keep the earlier yes; just don't retry
+        if (job.refine && c.verified === true && !r.error && !r.ok) { c.timed = true; c.recheck = 'unsure'; continue; } // 2nd look disagreed: keep it, ranked lower
         applyVerify(c, r);
       }
     }, [], 12);

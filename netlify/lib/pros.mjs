@@ -140,7 +140,7 @@ export async function buildProfile(p) {
   if (!clips.length) return null;
   const byShot = {};
   for (const c of clips) (byShot[c.shot] ??= []).push(c);
-  const input = Object.entries(byShot).map(([shot, list]) => `## ${shot} — ${shotName(shot)} (${list.length} clips)\n${list.map((c) => `- id ${c.id} · quality ${c.quality ?? '?'} · view ${c.view ?? '?'}\n  ${Object.entries(c.phases ?? {}).map(([k, v]) => `${k}: ${v}`).join(' | ')}\n  details: ${(c.details ?? []).join('; ')}`).join('\n')}`).join('\n\n');
+  const input = Object.entries(byShot).map(([shot, list]) => `## ${shot} — ${shotName(shot)} (${list.length} clips)\n${list.map((c) => `- id ${c.id} · quality ${c.quality ?? '?'} · view ${c.view ?? '?'}${c.navid === 'ok' ? ' · approved by coach' : c.recheck === 'unsure' ? ' · second check unsure (weigh less)' : ''}\n  ${Object.entries(c.phases ?? {}).map(([k, v]) => `${k}: ${v}`).join(' | ')}\n  details: ${(c.details ?? []).join('; ')}`).join('\n')}`).join('\n\n');
   const { json, model } = await ask({
     contents: [{ role: 'user', parts: [{ text: `You are helping padel coach Navid build a pro reference library for his students. Below are checked clips of ${p.full} (each one swing, described phase by phase by a video AI).
 Write ${p.full}'s technique profile per shot: what is TYPICAL in each of the 5 phases (what repeats across his clips) and what is SPECIAL about him compared with most players, his signature details, and what an amateur student can copy. Base everything on these clips only; where clips disagree, go with the majority; if a shot has only 1-2 clips say so in "confidence". Pick the best 1-3 clip ids per shot to show students (clear, typical, high quality). Simple English, short sentences.
