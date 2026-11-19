@@ -56,8 +56,15 @@ export default async (req) => {
   let added = 0;
   await updateJSON(QUEUE, (q) => {
     const inQ = new Set(q.map((x) => x.videoId));
+    if (b.first) { // first=true: these jump to the front (also when they were already waiting)
+      const ids = new Set(videos.map((v) => v.videoId));
+      const rest = q.filter((x) => !ids.has(x.videoId));
+      q.splice(0, q.length, ...videos, ...rest);
+      added = videos.length;
+      return;
+    }
     const fresh = videos.filter((v) => !inQ.has(v.videoId));
-    if (b.first) q.unshift(...fresh); else q.push(...fresh); // first=true: jump the queue
+    q.push(...fresh);
     added = fresh.length;
   }, []);
   return json({ ok: true, added });
