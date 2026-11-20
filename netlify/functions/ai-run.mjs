@@ -34,7 +34,14 @@ export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
   const { ref, checkOnly } = await req.json();
   const key = `reports/by-ref/${ref}`;
-  const setAi = (ai) => updateJSON(key, (x) => { x.ai = { ...(x.ai ?? {}), ...ai }; }, {});
+  let lastStep = 'starting';
+  const setAi = (ai) => { if (ai.step) lastStep = ai.step; return updateJSON(key, (x) => { x.ai = { ...(x.ai ?? {}), ...ai }; }, {}); };
+  // Netlify stops a background function after 15 min without a word, which left the builder saying
+  // "running" for ever: save a clear message just before that.
+  const watchdog = setTimeout(() => {
+    console.error(`AI draft for ${ref}: out of time (${lastStep})`);
+    setAi({ status: 'failed', error: `The AI took too long (stopped while: ${lastStep}). ${lastStep.startsWith('Double') ? 'The new draft is in, but its moments weren’t all double-checked' : 'Your report wasn’t changed'} — try again later; if it happens again, tell Claude.` }).catch(() => {});
+  }, 14 * 60e3);
   try {
     if (checkOnly) { // Navid changed times: only re-check the moments
       await checkMoments(key, setAi);
@@ -90,6 +97,8 @@ export default async (req) => {
   } catch (err) {
     console.error(`AI draft for ${ref} failed: ${err.message}`);
     await setAi({ status: 'failed', error: err.message });
+  } finally {
+    clearTimeout(watchdog);
   }
   return new Response('done');
 };
