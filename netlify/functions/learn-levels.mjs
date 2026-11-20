@@ -4,7 +4,7 @@
 // Text only (no video), so it is cheap. Started from /api/admin/learn/levels.
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, GOALS, NAVID_METHOD, POINTS, SHOT_LEVELS, isBillingError as isBilling, technique } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, NAVID_METHOD, POINTS, SETTINGS, SHOT_LEVELS, isBillingError as isBilling, technique } from '../lib/learn.mjs';
 import { ask } from '../lib/video-ai.mjs';
 import { AREAS, LEVELS, SHOTS, levelsText } from '../../shared/report.js';
 
@@ -28,10 +28,12 @@ export default async (req) => {
   const shotLevels = await readJSON(SHOT_LEVELS, {});
   const LV = (n) => `${n} ${LEVELS.find((x) => x.n === n)?.label ?? ''}`;
   const shotRules = Object.entries(shotLevels).map(([id, v]) => `- ${SHOTS.find((x) => x.id === id)?.en ?? id}: first appears at level ${LV(v.from)}, mastered at ${LV(v.mastered)}${v.note ? ` (${v.note})` : ''}`).join('\n');
-  if (relevel) { // Navid changed the scale: sort the AI-levelled tips again and rewrite the unreviewed level goals
-    await updateJSON(CANDIDATES, (list) => { for (const c of list) if (c.type !== 'fitness' && !c.levelsByNavid && c.status === 'pending') delete c.levels; }, [], 12);
-    await updateJSON(GOALS, (list) => { list.splice(0, list.length, ...list.filter((g) => !(g.source === 'derived' && g.status === 'pending'))); }, [], 12);
-  }
+  // relevel: Navid changed his scale. Nothing is cleared up front (credits may be empty): each AI-levelled,
+  // unreviewed tip is sorted again when its turn comes, then the unreviewed level goals are rewritten once.
+  if (relevel) await updateJSON(SETTINGS, (x) => { x.relevelAt = new Date().toISOString(); }, {}, 12);
+  const { relevelAt = '', goalsAt = '', goalsClearedFor = '' } = await readJSON(SETTINGS, {});
+  const needsLevel = (c) => !Array.isArray(c.levels) || !c.levels.length
+    || (relevelAt && c.type !== 'fitness' && !c.levelsByNavid && c.status === 'pending' && (c.levelledAt ?? '') < relevelAt);
   const t0 = Date.now();
   // out of time (a background run stops at 15 min): start the next run right away with the same work
   // (not the one-off clearing of relevel / retag), so nothing waits for the 5-minute queue
@@ -246,7 +248,7 @@ ${ps.map((p) => `${p.id}: ${p.fix} [${size.get(p.id)} tips]`).join('\n')}` }] }]
     let tagged = 0;
     for (;;) {
       if (left() < 60e3) { await status({ step: `Paused after ${tagged} points (time limit) — run again to continue.` }); return carryOn(); }
-      const todo = (await readJSON(CANDIDATES, [])).filter((c) => !Array.isArray(c.levels) || !c.levels.length).slice(0, BATCH);
+      const todo = (await readJSON(CANDIDATES, [])).filter(needsLevel).slice(0, BATCH);
       if (!todo.length) break;
       await status({ step: `Sorting tips by level… ${tagged} done` });
       const { json } = await ask({
@@ -271,11 +273,16 @@ ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
         if (c && lv.length) byId.set(c.id, lv);
       }
       for (const c of todo) if (!byId.has(c.id)) byId.set(c.id, [0]); // 0 = couldn't tell; don't loop on it forever
-      await updateJSON(CANDIDATES, (list) => { for (const c of list) if (byId.has(c.id)) c.levels = byId.get(c.id); }, [], 12);
+      const at = new Date().toISOString();
+      await updateJSON(CANDIDATES, (list) => { for (const c of list) if (byId.has(c.id)) { c.levels = byId.get(c.id); c.levelledAt = at; } }, [], 12);
       tagged += todo.length;
     }
 
     // 2) goals per level, from the tips of that level (only if none were derived yet)
+    if (relevelAt && goalsClearedFor !== relevelAt) { // after a relevel: the unreviewed AI goals are written again, once
+      await updateJSON(GOALS, (list) => { list.splice(0, list.length, ...list.filter((g) => !(g.source === 'derived' && g.status === 'pending'))); }, [], 12);
+      await updateJSON(SETTINGS, (x) => { x.goalsClearedFor = relevelAt; }, {}, 12);
+    }
     const goals = await readJSON(GOALS, []);
     const all = await readJSON(CANDIDATES, []);
     for (const L of LEVELS) {
@@ -301,6 +308,7 @@ ${pts.map((c) => `- ${line(c)}`).join('\n')}` }] }],
       const now = Date.now();
       await updateJSON(GOALS, (list) => { (json ?? []).forEach((g, k) => list.push({ id: `L${L.n}-${now}-${k}`, source: 'derived', level: L.n, area: g.area, goal: g.goal, status: 'pending' })); }, [], 12);
     }
+    if (relevelAt && goalsAt < relevelAt) await updateJSON(SETTINGS, (x) => { x.goalsAt = new Date().toISOString(); }, {}, 12);
     await status({ step: null, done: true, tagged });
   } catch (err) {
     console.error(`learn-levels failed: ${err.message}`);

@@ -25,6 +25,8 @@ export default async () => {
   for (const p of pts) if (p.status === 'pending' && used.has(p.id)) perTech.set(p.tech, (perTech.get(p.tech) ?? 0) + 1);
   const crowded = [...perTech].some(([t, k]) => k > 25 && k > (cons[t] ?? 0) * 1.15);
   const missing = { merge: crowded || all.some((c) => !c.point && c.status !== 'rejected'), transitions: tips.some((c) => !c.transition), time: tips.some((c) => !c.time_tag), fundamentals: tips.some((c) => !c.fundamental), levels: tips.some((c) => !(c.levels ?? []).length) };
+  const set = await readJSON(SETTINGS, {});
+  if (set.relevelAt && (set.goalsAt ?? '') < set.relevelAt) missing.levels = true; // a re-sort by Navid's scale is not finished
   const ls = await readJSON('learn/levels-status', {});
   const busy = ls.step && Date.now() - Date.parse(ls.at) < 4 * 60e3; // a sorting job is still working
   if (Object.values(missing).some(Boolean) && !busy) {
