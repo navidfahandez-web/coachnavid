@@ -3,7 +3,7 @@
 import { getStore } from '@netlify/blobs';
 import { isAdmin } from '../lib/auth.mjs';
 import { readJSON } from '../lib/store.mjs';
-import { cutShot, packetDump, probeSheet, probeTimes } from '../lib/clips.mjs';
+import { cutParts, cutShot, packetDump, probeSheet, probeTimes } from '../lib/clips.mjs';
 import { toSeconds } from '../../shared/report.js';
 
 export const clipStore = () => getStore({ name: 'compare-clips', consistency: 'strong' });
@@ -11,8 +11,22 @@ export const clipKey = (ref, t) => `${ref}/${String(t).replace(/[^\d:.]/g, '')}`
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { ref, t, probe, inOpts, packets, sheet } = await req.json();
+  const { ref, t, probe, inOpts, packets, sheet, parts } = await req.json();
   const store = clipStore();
+  if (parts) { // { ref, parts: seconds per part } → only cut the analyser's parts (no AI) and log when each arrives
+    const key = `probe/${ref}`;
+    const t0 = Date.now();
+    const log = [];
+    const save = (x) => store.setJSON(`${key}.json`, { step: 'parts', log, ...x, sec: Math.round((Date.now() - t0) / 1000), mem: Math.round(process.memoryUsage().rss / 1e6) });
+    const beat = setInterval(() => { save({}).catch(() => {}); }, 15000);
+    try {
+      const r = await readJSON(`reports/by-ref/${ref}`);
+      await save({});
+      await cutParts(r.videoFileId, Number(parts) || 300, async (k, buf) => { log.push({ k, sec: Math.round((Date.now() - t0) / 1000), kb: Math.round(buf.length / 1024) }); await save({}); });
+      await save({ done: true });
+    } catch (err) { await save({ error: err.message.slice(0, 400) }); } finally { clearInterval(beat); }
+    return new Response('done');
+  }
   if (sheet) { // { ref, sheet: [seconds to jump to] } → one frame per minute read straight + jump frames
     const key = `probe/${ref}`;
     try {
