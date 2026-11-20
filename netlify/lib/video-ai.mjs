@@ -17,10 +17,14 @@ export const canAnalyze = () => Boolean(key());
 const MODELS = ['gemini-3.1-pro-preview', 'gemini-3.8-flash', 'gemini-3.5-flash'];
 const CHUNK = 32 * 1024 * 1024; // multiple of 256 KB, as Google requires
 
+// 402 = Google wants payment: the Gemini account is out of prepaid credit or its billing has a problem
+const PAY = 'Google’s AI (Gemini) asks for payment: its account is out of credit or billing has a problem. Top it up in Google AI Studio → Billing, then try again. Your report wasn’t changed.';
+const upErr = (what, status) => new Error(status === 402 ? PAY : `${what} (${status})`);
+
 async function gemini(path, init = {}) {
   const res = await fetch(`${API}${path}`, { ...init, headers: { 'x-goog-api-key': key(), ...init.headers } });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw Object.assign(new Error(`Gemini: ${body.error?.message || res.status}`), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(res.status === 402 ? PAY : `Gemini: ${body.error?.message || res.status}`), { status: res.status });
   return body;
 }
 
@@ -38,7 +42,7 @@ export async function uploadFromDrive(fileId, onProgress = () => {}) {
     body: JSON.stringify({ file: { display_name: meta.name } }),
   });
   const url = start.headers.get('x-goog-upload-url');
-  if (!url) throw new Error(`Gemini upload didn't start (${start.status})`);
+  if (!url) throw upErr('Gemini upload didn’t start', start.status);
   let file = null;
   for (let offset = 0; offset < size; offset += CHUNK) {
     const end = Math.min(offset + CHUNK, size) - 1;
@@ -75,10 +79,10 @@ export async function uploadBuffer(buf, name, mimeType = 'video/mp4', log = () =
     body: JSON.stringify({ file: { display_name: name } }),
   });
   const url = start.headers.get('x-goog-upload-url');
-  if (!url) throw new Error(`Gemini upload didn't start (${start.status})`);
+  if (!url) throw upErr('Gemini upload didn’t start', start.status);
   log(`upload started ${at()}`);
   const res = await fetch(url, { method: 'POST', headers: { 'X-Goog-Upload-Offset': '0', 'X-Goog-Upload-Command': 'upload, finalize' }, body: buf, signal: AbortSignal.timeout(120000) });
-  if (!res.ok) throw new Error(`Gemini upload failed (${res.status})`);
+  if (!res.ok) throw upErr('Gemini upload failed', res.status);
   let file = (await res.json()).file;
   log(`sent ${at()}, ${file.state}`);
   for (let i = 0; i < 60 && file.state === 'PROCESSING'; i++) {
