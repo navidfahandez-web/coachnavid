@@ -2,6 +2,7 @@
 // type 'fitness') into one library, and let the AI propose 4-week plans per level band.
 // Navid approves every exercise and every plan; students only ever see approved ones.
 import { randomBytes } from 'node:crypto';
+import { getStore } from '@netlify/blobs';
 import { DAYS, INJURY_AREAS, PADEL_MOVES, PARTS, bandOf } from '../../shared/fitness.js';
 import { LEVELS } from '../../shared/report.js';
 import { CANDIDATES } from './learn.mjs'; // read the coaching guide's exercises (session 2 owns that file)
@@ -12,6 +13,29 @@ export const LIBRARY = 'fitness/library'; // [{ id, name, goal, where[], equipme
 export const PLANS = 'fitness/plans'; // { [bandId]: { band, status, overview, weeks:[{ week, focus, sessions:[{ day, focus, parts:[{ part, minutes, items:[{ ex, dose, cue }] }] }] }], at, model, note } }
 export const LINKS = 'fitness/links'; // { [token]: { name, band, at } } private student links
 export const STATUS = 'fitness/status'; // { merge: { state, at, error, stats }, plans: { [bandId]: { state, at, error } } }
+
+// Mannequin demo videos (made with Higgsfield, one per exercise), stored on our site
+export const media = () => getStore({ name: 'fitness-media', consistency: 'strong' });
+const VIDEO_HOSTS = ['d8j0ntlcm91z4.cloudfront.net'];
+export async function saveVideo(id, url, job = '') {
+  const u = new URL(url);
+  if (u.protocol !== 'https:' || !VIDEO_HOSTS.includes(u.hostname)) throw new Error('Only Higgsfield video links.');
+  const res = await fetch(u, { signal: AbortSignal.timeout(60000) });
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const buf = await res.arrayBuffer();
+  if (buf.byteLength > 30 * 1024 * 1024) throw new Error('Video too big');
+  await media().set(`video/${id}`, buf, { metadata: { type: res.headers.get('content-type') || 'video/mp4' } });
+  let entry = null;
+  await updateJSON(LIBRARY, (list) => {
+    const e = list.find((x) => x.id === id);
+    if (!e) return;
+    e.video = { status: 'pending', at: new Date().toISOString(), v: Date.now(), size: buf.byteLength, job: String(job).slice(0, 60) };
+    entry = e;
+  }, []);
+  if (!entry) { await media().delete(`video/${id}`); throw new Error('Exercise not found'); }
+  return entry;
+}
+export const videoUrl = (e) => (e?.video ? `/api/fitness/video/${encodeURIComponent(e.id)}?v=${e.video.v}` : null);
 
 const FAST = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.1-pro-preview'];
 const BEST = ['gemini-3.1-pro-preview', 'gemini-3.8-flash', 'gemini-3.5-flash'];
@@ -98,6 +122,7 @@ export async function mergeLibrary() {
       if (prev.status !== 'pending') entry.status = prev.status;
       if (prev.edited) for (const f of ['name', 'how', 'dose', 'levels', 'caution']) if (prev.edited.includes(f)) entry[f] = prev[f];
       if (prev.edited) entry.edited = prev.edited;
+      if (prev.video) entry.video = prev.video; // the mannequin video stays with the exercise
     }
     return entry;
   });
@@ -236,7 +261,7 @@ export function studentPlan(plan, lib) {
       parts: s.parts.map((p) => ({ ...p, items: p.items.filter((it) => byId.get(it.ex)?.status === 'approved').map((it) => { used.set(it.ex, byId.get(it.ex)); return it; }) })),
     })),
   }));
-  const exercises = Object.fromEntries([...used].map(([id, e]) => [id, { name: e.name, goal: e.goal, how: e.how, caution: e.caution, equipment: e.equipment, padel_links: e.padel_links, moment: e.moments[0] ?? null }]));
+  const exercises = Object.fromEntries([...used].map(([id, e]) => [id, { name: e.name, goal: e.goal, how: e.how, caution: e.caution, equipment: e.equipment, padel_links: e.padel_links, moment: e.moments[0] ?? null, video: e.video?.status === 'approved' ? videoUrl(e) : null, body_part: e.body_part }]));
   return { band: plan.band, overview: plan.overview, weeks, exercises };
 }
 

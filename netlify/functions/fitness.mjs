@@ -9,7 +9,7 @@
 // Student (public, private link):
 //   GET  /api/fitness/:token                   the approved plan, approved exercises only
 import { json, requireAdmin } from '../lib/auth.mjs';
-import { LIBRARY, LINKS, PLANS, STATUS, newToken, setStatus, studentPlan, syncMembers } from '../lib/fitness.mjs';
+import { LIBRARY, LINKS, PLANS, STATUS, media, newToken, saveVideo, setStatus, studentPlan, syncMembers } from '../lib/fitness.mjs';
 import { CANDIDATES } from '../lib/learn.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
 import { canAnalyze } from '../lib/video-ai.mjs';
@@ -22,6 +22,23 @@ const STALE = 15 * 60 * 1000; // a background job can't run longer than this
 
 export default async (req) => {
   const { pathname } = new URL(req.url);
+
+  if (pathname.startsWith('/api/fitness/video/')) { // mannequin video (supports Range, needed by iPhones)
+    const id = decodeURIComponent(pathname.split('/').pop());
+    const got = await media().getWithMetadata(`video/${id}`, { type: 'arrayBuffer' });
+    if (!got?.data) return new Response('Not found', { status: 404 });
+    const buf = new Uint8Array(got.data);
+    const type = got.metadata?.type || 'video/mp4';
+    const base = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=31536000, immutable' };
+    const m = /bytes=(\d*)-(\d*)/.exec(req.headers.get('range') ?? '');
+    if (m) {
+      const start = m[1] ? Number(m[1]) : Math.max(0, buf.length - Number(m[2]));
+      const end = m[1] && m[2] ? Math.min(Number(m[2]), buf.length - 1) : buf.length - 1;
+      if (start >= buf.length || start > end) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${buf.length}` } });
+      return new Response(buf.slice(start, end + 1), { status: 206, headers: { ...base, 'Content-Range': `bytes ${start}-${end}/${buf.length}`, 'Content-Length': String(end - start + 1) } });
+    }
+    return new Response(buf, { headers: { ...base, 'Content-Length': String(buf.length) } });
+  }
 
   if (pathname.startsWith('/api/fitness/')) { // student page
     const token = pathname.split('/').pop();
@@ -113,6 +130,22 @@ export default async (req) => {
     return json({ ok: true, exercise: found });
   }
 
+  if (pathname.endsWith('/video')) { // store a mannequin video for an exercise (Navid approves it after)
+    try { return json({ ok: true, exercise: await saveVideo(String(b.id ?? ''), String(b.url ?? ''), b.job) }); } catch (err) { return json({ error: err.message }, 400); }
+  }
+
+  if (pathname.endsWith('/video-review')) {
+    let found = null;
+    await updateJSON(LIBRARY, (list) => {
+      const e = list.find((x) => x.id === b.id);
+      if (!e?.video || !['approved', 'rejected', 'pending'].includes(b.status)) return;
+      e.video.status = b.status;
+      e.video.reviewedAt = new Date().toISOString();
+      found = e;
+    }, []);
+    return found ? json({ ok: true, exercise: found }) : json({ error: 'Not found' }, 404);
+  }
+
   if (pathname.endsWith('/link')) {
     if (b.remove) {
       await updateJSON(LINKS, (m) => { delete m[b.token]; }, {});
@@ -128,4 +161,4 @@ export default async (req) => {
   return json({ error: 'Not found' }, 404);
 };
 
-export const config = { path: ['/api/admin/fitness', '/api/admin/fitness/merge', '/api/admin/fitness/plan', '/api/admin/fitness/plan-edit', '/api/admin/fitness/review', '/api/admin/fitness/link', '/api/admin/fitness/for', '/api/fitness/:token'] };
+export const config = { path: ['/api/admin/fitness', '/api/admin/fitness/merge', '/api/admin/fitness/plan', '/api/admin/fitness/plan-edit', '/api/admin/fitness/review', '/api/admin/fitness/link', '/api/admin/fitness/for', '/api/admin/fitness/video', '/api/admin/fitness/video-review', '/api/fitness/video/:id', '/api/fitness/:token'] };

@@ -1,6 +1,6 @@
 // Fitness program (admin): merge the exercises the coaching guide collected, review them,
 // let the AI draft a 4-week plan per level band, fix and approve it, and make private student links.
-import { BANDS, DAYS, GOALS, PARTS, goalLabel, toSec } from '../../shared/fitness.js';
+import { BANDS, DAYS, GOALS, PARTS, goalLabel, muscleMap, musclesOf, toSec } from '../../shared/fitness.js';
 import { LEVELS } from '../../shared/report.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -61,16 +61,21 @@ function render() {
 }
 
 // ---------- Plans ----------
+const VSTATUS = { approved: '🎬 video approved', rejected: '🎬 video rejected', pending: '🎬 video waiting for you' };
+const mannequin = (e) => (e.video ? `<button class="fx-play fx-mq" type="button" data-mq="${esc(e.id)}">🎬 Mannequin</button><span class="fx-st">${VSTATUS[e.video.status]}</span>
+  ${e.video.status !== 'approved' ? `<button class="fx-ok" type="button" data-vreview="${esc(e.id)}" data-st="approved">✓ Video OK</button>` : ''}
+  ${e.video.status !== 'rejected' ? `<button class="fx-x" type="button" data-vreview="${esc(e.id)}" data-st="rejected">✕ Redo video</button>` : ''}` : '');
+const vidSrc = (e) => `/api/fitness/video/${encodeURIComponent(e.id)}?v=${e.video.v}`;
 const play = (mo) => (mo ? `<button class="fx-play" type="button" data-play="${esc(mo.source)}" data-t="${toSec(mo.time)}" title="${esc(mo.title)}">▶ ${esc(mo.time)}</button>` : '');
 function exRow(it, i, ctx) {
   const e = byId.get(it.ex);
   if (!e) return `<li class="is-gone"><span>Exercise no longer in the library</span><button class="fx-x" type="button" data-remove="${i}" ${ctx}>Remove</button></li>`;
-  return `<li class="st-${e.status}">
+  return `<li class="st-${e.status} fx-withmap">${muscleMap(musclesOf(e), 54)}
     <div class="fx-ex">
       <b>${esc(e.name)}</b> <span class="fx-goal">${esc(goalLabel(e.goal))}</span>
       <small>${esc(e.how)}${e.caution ? ` · ⚠ ${esc(e.caution)}` : ''}</small>
       <small>${equip(e)}helps: ${esc(helps(e))}${e.videos > 1 ? ` · <i>in ${e.videos} videos</i>` : ''}</small>
-      <div class="fx-row">${play(e.moments[0])}
+      <div class="fx-row">${mannequin(e)}${play(e.moments[0])}
         <input class="fx-dose" value="${esc(it.dose)}" data-dose="${i}" ${ctx} aria-label="Dose" />
         <span class="fx-st">${STATUS_TXT[e.status]}</span>
         ${e.status !== 'approved' ? `<button class="fx-ok" type="button" data-review="${esc(e.id)}" data-st="approved">✓ OK</button>` : ''}
@@ -149,12 +154,12 @@ function renderLibrary() {
       <input data-f="q" type="search" placeholder="Search: shoulder, split step, band…" value="${esc(ui.q)}" />
       <span class="note">${list.length} shown</span>
     </div>
-    <ul class="fx-lib">${list.slice(0, ui.limit).map((e) => `<li class="st-${e.status}" data-id="${esc(e.id)}">
+    <ul class="fx-lib">${list.slice(0, ui.limit).map((e) => `<li class="st-${e.status} fx-withmap" data-id="${esc(e.id)}">${muscleMap(musclesOf(e), 54)}
       <div class="fx-ex">
         <b>${esc(e.name)}</b> <span class="fx-goal">${esc(goalLabel(e.goal))}</span> <span class="fx-goal">${esc(e.where.join(' / '))}</span>${lvLabel(e.levels) ? ` <span class="fx-goal">${esc(lvLabel(e.levels))}</span>` : ''}
         <small>${esc(e.how)}</small>
         <small>${e.dose ? `${esc(e.dose)} · ` : ''}${equip(e)}helps: ${esc(helps(e))}${e.caution ? ` · ⚠ ${esc(e.caution)}` : ''}</small>
-        <div class="fx-row">${e.moments.map(play).join('')}${e.videos > 1 ? `<span class="fx-said">in ${e.videos} videos</span>` : ''}
+        <div class="fx-row">${mannequin(e)}${e.moments.map(play).join('')}${e.videos > 1 ? `<span class="fx-said">in ${e.videos} videos</span>` : ''}
           <span class="fx-st">${STATUS_TXT[e.status]}</span>
           ${e.status !== 'approved' ? `<button class="fx-ok" type="button" data-review="${esc(e.id)}" data-st="approved">✓ OK</button>` : ''}
           ${e.status !== 'rejected' ? `<button class="fx-x" type="button" data-review="${esc(e.id)}" data-st="rejected">✕ Not good</button>` : ''}
@@ -219,6 +224,21 @@ document.addEventListener('click', (e) => act(async () => {
     box.dataset.key = key;
     box.innerHTML = `<iframe class="fx-video" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(t.dataset.play)}?start=${Number(t.dataset.t) || 0}&autoplay=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
     return;
+  }
+  if (t.dataset.mq) {
+    const e = byId.get(t.dataset.mq);
+    const box = t.closest('.fx-ex').querySelector('[data-video]');
+    if (box.dataset.key === 'mq') { box.innerHTML = ''; box.dataset.key = ''; return; }
+    box.dataset.key = 'mq';
+    box.innerHTML = `<video class="fx-mqvideo" src="${vidSrc(e)}" autoplay loop muted playsinline controls></video>`;
+    return;
+  }
+  if (t.dataset.vreview) {
+    t.disabled = true;
+    const out = await api('/api/admin/fitness/video-review', { id: t.dataset.vreview, status: t.dataset.st });
+    const i = data.library.findIndex((x) => x.id === out.exercise.id);
+    data.library[i] = out.exercise; byId.set(out.exercise.id, out.exercise);
+    render(); return;
   }
   if (t.hasAttribute('data-merge')) {
     if (data.library.length && !confirm('Merge again? Your approvals and edits are kept.')) return;

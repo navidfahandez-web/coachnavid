@@ -1,6 +1,6 @@
 // Student's padel fitness plan (private link /fitness/<token>): Navid's approved 4-week plan for
 // their level, 3 × 45 min a week, with the video moment for every exercise. Remembers ticked sessions.
-import { BANDS, DAYS, PARTS, goalLabel, toSec } from '../../shared/fitness.js';
+import { BANDS, DAYS, PARTS, goalLabel, muscleMap, musclesOf, toSec } from '../../shared/fitness.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -36,10 +36,11 @@ function render() {
     const P = PARTS.find((x) => x.id === p.part);
     return `<h4>${esc(P.label)} <small>${P.minutes} min</small></h4><ol class="fx-list">${p.items.map((it) => {
       const e = plan.exercises[it.ex];
-      return `<li><div class="fx-ex fxs-ex"><b>${esc(e.name)}</b> <small><b>${esc(it.dose)}</b> · ${esc(goalLabel(e.goal))}${e.equipment && e.equipment !== 'none' ? ` · ${esc(e.equipment)}` : ''}</small>
+      return `<li class="fx-withmap">${muscleMap(musclesOf(e), 54)}<div class="fx-ex fxs-ex"><b>${esc(e.name)}</b> <small><b>${esc(it.dose)}</b> · ${esc(goalLabel(e.goal))}${e.equipment && e.equipment !== 'none' ? ` · ${esc(e.equipment)}` : ''}</small>
         <small>${esc(it.cue || e.how)}</small>${e.caution ? `<small>⚠ ${esc(e.caution)}</small>` : ''}
         ${e.padel_links?.length ? `<small>Helps your padel: ${esc(e.padel_links.slice(0, 2).join(', '))}</small>` : ''}
-        ${e.moment ? `<div class="fx-row"><button class="fx-play" type="button" data-play="${esc(e.moment.source)}" data-t="${toSec(e.moment.time)}">▶ Watch how</button></div>` : ''}
+        ${e.video ? `<div class="fx-row"><button class="fx-play" type="button" data-mq="${esc(e.video)}">▶ Watch how</button></div>`
+    : e.moment ? `<div class="fx-row"><button class="fx-play" type="button" data-play="${esc(e.moment.source)}" data-t="${toSec(e.moment.time)}">▶ Watch how</button></div>` : ''}
         <div data-video></div></div></li>`;
     }).join('')}</ol>`;
   }).join('')}
@@ -52,6 +53,11 @@ main.addEventListener('click', (e) => {
   const t = e.target.closest('button');
   if (!t) return;
   if (t.dataset.week) { week = Number(t.dataset.week); render(); return; }
+  if (t.dataset.mq) {
+    const box = t.closest('.fx-ex').querySelector('[data-video]');
+    box.innerHTML = box.innerHTML ? '' : `<video class="fx-mqvideo" src="${esc(t.dataset.mq)}" autoplay loop muted playsinline></video>`;
+    return;
+  }
   if (t.dataset.play) {
     const box = t.closest('.fx-ex').querySelector('[data-video]');
     if (box.innerHTML) { box.innerHTML = ''; return; }

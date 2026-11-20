@@ -68,3 +68,40 @@ export const SAFETY_NOTE = 'Train without pain. If something hurts (more than no
 
 // m:ss → seconds, for YouTube embeds
 export const toSec = (t) => String(t ?? '').split(':').map(Number).reduce((a, b) => a * 60 + b, 0) || 0;
+
+// ---------- Muscle map: which body regions an exercise works (from its body part + name) ----------
+const REGION_WORDS = {
+  shoulders: ['shoulder', 'deltoid', 'rotator', 'overhead'],
+  chest: ['chest', 'pec', 'push-up', 'push up', 'bench press'],
+  arms: ['arm', 'bicep', 'tricep'],
+  forearms: ['forearm', 'wrist', 'grip', 'elbow'],
+  core: ['core', ' abs', 'abdominal', 'oblique', 'trunk', 'plank', 'dead bug', 'rotation', 'breathing'],
+  upperback: ['upper back', 'thoracic', 'lat', 'scapula', 'rhomboid', 'posture', 'pull-apart', 'pull apart', 'row'],
+  lowerback: ['lower back', 'lumbar'],
+  glutes: ['glute', 'hip', 'squat', 'lunge', 'bridge'],
+  quads: ['quad', 'leg', 'thigh', 'knee', 'squat', 'lunge', 'jump', 'skipping', 'sprint', 'shuffle', 'step', 'run', 'agility', 'cone', 'reaction'],
+  hamstrings: ['hamstring', 'posterior', 'deadlift', 'bridge', 'leg swing'],
+  calves: ['calf', 'calves', 'ankle', 'achilles', 'foot', 'feet', 'jump', 'skipping', 'pogo', 'sprint', 'shuffle', 'step', 'run', 'cone', 'reaction'],
+};
+export function musclesOf(e) {
+  const t = ` ${String(e?.body_part ?? '')} ${String(e?.name ?? '')} `.toLowerCase();
+  return Object.keys(REGION_WORDS).filter((r) => REGION_WORDS[r].some((w) => t.includes(w)));
+}
+// Small front + back body map (SVG) with the worked regions in orange
+export function muscleMap(regions, size = 96) {
+  const on = new Set(regions);
+  const f = (r) => (on.has(r) ? '#ff5b1f' : '#3b3b3e');
+  const el = (r, cx, cy, rx, ry) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${f(r)}"/>`;
+  const fig = (x, back) => `
+    <circle cx="${x}" cy="9" r="6" fill="#55555a"/><rect x="${x - 2}" y="14" width="4" height="4" fill="#55555a"/>
+    ${el('shoulders', x - 11, 22, 5, 4)}${el('shoulders', x + 11, 22, 5, 4)}
+    ${back ? el('upperback', x, 30, 9, 9) : `${el('chest', x - 5, 27, 5, 4.5)}${el('chest', x + 5, 27, 5, 4.5)}`}
+    ${back ? `<rect x="${x - 6}" y="40" width="12" height="11" rx="3" fill="${f('lowerback')}"/>` : `<rect x="${x - 6}" y="33" width="12" height="20" rx="3" fill="${f('core')}"/>`}
+    ${el('arms', x - 15, 33, 3.5, 8)}${el('arms', x + 15, 33, 3.5, 8)}
+    ${el('forearms', x - 17, 49, 3, 7.5)}${el('forearms', x + 17, 49, 3, 7.5)}
+    ${back ? `${el('glutes', x - 5, 59, 5.5, 5.5)}${el('glutes', x + 5, 59, 5.5, 5.5)}` : `<rect x="${x - 9}" y="54" width="18" height="8" rx="3" fill="${f('glutes')}" opacity=".55"/>`}
+    ${back ? `${el('hamstrings', x - 5, 76, 4.2, 11)}${el('hamstrings', x + 5, 76, 4.2, 11)}` : `${el('quads', x - 5, 74, 4.5, 11.5)}${el('quads', x + 5, 74, 4.5, 11.5)}`}
+    ${el('calves', x - 5, 99, 3.5, 9)}${el('calves', x + 5, 99, 3.5, 9)}
+    <ellipse cx="${x - 5}" cy="113" rx="3" ry="2" fill="#55555a"/><ellipse cx="${x + 5}" cy="113" rx="3" ry="2" fill="#55555a"/>`;
+  return `<svg class="fx-map" viewBox="0 0 110 120" width="${size}" height="${Math.round(size * 120 / 110)}" role="img" aria-label="Muscles worked">${fig(28, false)}${fig(82, true)}</svg>`;
+}
