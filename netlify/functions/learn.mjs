@@ -6,7 +6,7 @@
 // POST /api/admin/learn/note   { technique, text } → Navid's own notes on top of a technique
 import { json, requireAdmin } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { CANDIDATES, GOALS, NOTES, POINTS, PROS, QUEUE, SHOT_LEVELS, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
+import { CANDIDATES, GOALS, NOTES, POINTS, PROS, QUEUE, SETTINGS, SHOT_LEVELS, SOURCES, startVideo, youtubeId } from '../lib/learn.mjs';
 import { canAnalyze } from '../lib/video-ai.mjs';
 
 export default async (req) => {
@@ -16,7 +16,8 @@ export default async (req) => {
   if (req.method === 'GET' && pathname.endsWith('/pros')) return json({ pros: await readJSON(PROS, []) });
   if (req.method === 'GET') {
     const [sources, candidates, notes, queue, goals, levelsStatus, points, shotLevels] = await Promise.all([readJSON(SOURCES, []), readJSON(CANDIDATES, []), readJSON(NOTES, {}), readJSON(QUEUE, []), readJSON(GOALS, []), readJSON('learn/levels-status', {}), readJSON(POINTS, []), readJSON(SHOT_LEVELS, {})]);
-    return json({ sources, candidates, notes, queued: queue.length, goals, levelsStatus, points, shotLevels });
+    const settings = await readJSON(SETTINGS, {});
+    return json({ sources, candidates, notes, queued: queue.length, goals, levelsStatus, points, shotLevels, settings });
   }
   const b = await req.json().catch(() => ({}));
 
@@ -60,6 +61,11 @@ export default async (req) => {
       }
     }, [], 12);
     return json({ ok: true, point: found, members });
+  }
+
+  if (pathname.endsWith('/settings')) { // { videosPaused: true|false }
+    const settings = await updateJSON(SETTINGS, (x) => { if (typeof b.videosPaused === 'boolean') x.videosPaused = b.videosPaused; return x; }, {});
+    return json({ ok: true, settings });
   }
 
   if (pathname.endsWith('/shot-levels')) { // Navid: when each shot first appears / is mastered (1-10)
@@ -129,4 +135,4 @@ export default async (req) => {
   return json({ ok: true, added });
 };
 
-export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note', '/api/admin/learn/goal', '/api/admin/learn/levels', '/api/admin/learn/pros', '/api/admin/learn/point', '/api/admin/learn/shot-levels'] };
+export const config = { path: ['/api/admin/learn', '/api/admin/learn/review', '/api/admin/learn/note', '/api/admin/learn/goal', '/api/admin/learn/levels', '/api/admin/learn/pros', '/api/admin/learn/point', '/api/admin/learn/shot-levels', '/api/admin/learn/settings'] };

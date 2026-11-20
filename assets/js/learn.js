@@ -128,6 +128,7 @@ function render() {
   const running = data.sources.filter((s) => s.status === 'running').length;
   const watched = data.sources.filter((s) => s.status === 'ready').length;
   $('[data-status]').textContent += ` · ${watched} videos watched${running ? `, ${running} being watched now` : ''}${data.queued ? `, ${data.queued} in the queue` : ''}`;
+  $('[data-paused]').checked = Boolean(data.settings?.videosPaused);
   $('[data-sources]').innerHTML = data.sources.map((s) => `<li>${esc(s.title || s.videoId)} — ${s.status === 'ready' ? `${s.found} points` : esc(s.status)}${s.error ? ` (${esc(s.error)})` : ''}</li>`).join('');
 }
 
@@ -218,6 +219,10 @@ $('[data-list]').addEventListener('click', async (e) => {
     }
     render();
   } catch (err) { card.classList.remove('is-done'); alert(err.message); }
+});
+
+$('[data-paused]').addEventListener('change', async (e) => {
+  try { data.settings = (await api('/api/admin/learn/settings', { videosPaused: e.target.checked })).settings; render(); } catch (err) { alert(err.message); }
 });
 
 $('[data-learn]').addEventListener('click', async () => {

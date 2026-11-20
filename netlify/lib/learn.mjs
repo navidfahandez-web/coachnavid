@@ -14,6 +14,7 @@ export const NOTES = 'learn/notes'; // { [technique]: Navid's own notes for that
 // Merged points: near-identical tips from different videos become ONE point ("said in N videos").
 // The original tips stay in CANDIDATES with c.point = the point id (members); approving a point approves its members.
 export const POINTS = 'learn/points'; // [{ id, tech, fix, mistake, why, status, at }]
+export const SETTINGS = 'learn/settings'; // { videosPaused } — Navid 2026-11-20: enough videos, build the method (queue kept, not watched)
 export const SHOT_LEVELS = 'learn/shot-levels'; // { [shot]: { from, mastered } } — Navid's scale: when a shot first appears / is mastered
 
 // Gemini said the account has no money left (prepaid credits / billing / quota): not the video's fault
