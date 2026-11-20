@@ -62,9 +62,11 @@ export async function uploadFromDrive(fileId, onProgress = () => {}) {
 }
 
 // A small file (Buffer) → Gemini Files API, ready to use
-export async function uploadBuffer(buf, name, mimeType = 'video/mp4') {
+export async function uploadBuffer(buf, name, mimeType = 'video/mp4', log = () => {}) {
+  const t0 = Date.now();
+  const at = () => `${Math.round((Date.now() - t0) / 1000)} s`;
   const start = await fetch(`${API}/upload/v1beta/files`, {
-    method: 'POST',
+    method: 'POST', signal: AbortSignal.timeout(60000),
     headers: {
       'x-goog-api-key': key(), 'Content-Type': 'application/json',
       'X-Goog-Upload-Protocol': 'resumable', 'X-Goog-Upload-Command': 'start',
@@ -74,13 +76,16 @@ export async function uploadBuffer(buf, name, mimeType = 'video/mp4') {
   });
   const url = start.headers.get('x-goog-upload-url');
   if (!url) throw new Error(`Gemini upload didn't start (${start.status})`);
-  const res = await fetch(url, { method: 'POST', headers: { 'X-Goog-Upload-Offset': '0', 'X-Goog-Upload-Command': 'upload, finalize' }, body: buf });
+  log(`upload started ${at()}`);
+  const res = await fetch(url, { method: 'POST', headers: { 'X-Goog-Upload-Offset': '0', 'X-Goog-Upload-Command': 'upload, finalize' }, body: buf, signal: AbortSignal.timeout(120000) });
   if (!res.ok) throw new Error(`Gemini upload failed (${res.status})`);
   let file = (await res.json()).file;
+  log(`sent ${at()}, ${file.state}`);
   for (let i = 0; i < 60 && file.state === 'PROCESSING'; i++) {
     await new Promise((r) => setTimeout(r, 3000));
-    file = await gemini(`/v1beta/${file.name}`);
+    file = await gemini(`/v1beta/${file.name}`, { signal: AbortSignal.timeout(30000) });
   }
+  log(`ready ${at()}, ${file.state}`);
   if (file.state !== 'ACTIVE') throw new Error(`Gemini couldn't process a part of the video (${file.state})`);
   return file;
 }
@@ -257,7 +262,8 @@ async function findMoments(cut, r, onProgress, guide = [], guideNotes = {}) {
     if (k > 0) await firstDone; // the other parts need part 1's description of the student
     const t0 = Date.now();
     const took = () => `${Math.round((Date.now() - t0) / 1000)} s`;
-    const file = await uploadBuffer(buf, `part ${k + 1}`);
+    console.log(`part ${k + 1}: cut, sending to the AI`);
+    const file = await uploadBuffer(buf, `part ${k + 1}`, 'video/mp4', (x) => console.log(`part ${k + 1}: ${x}`));
     console.log(`part ${k + 1}: uploaded ${Math.round(buf.length / 1e5) / 10} MB in ${took()}`);
     try {
       const { json, model } = await ask({

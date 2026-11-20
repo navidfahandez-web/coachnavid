@@ -22,7 +22,17 @@ export default async (req) => {
     try {
       const r = await readJSON(`reports/by-ref/${ref}`);
       await save({});
-      await cutParts(r.videoFileId, Number(parts) || 300, async (k, buf) => { log.push({ k, sec: Math.round((Date.now() - t0) / 1000), kb: Math.round(buf.length / 1024) }); await save({}); });
+      await cutParts(r.videoFileId, Number(parts) || 300, async (k, buf) => {
+        log.push({ k, sec: Math.round((Date.now() - t0) / 1000), kb: Math.round(buf.length / 1024) });
+        await save({});
+        if (k === 0) { // also send part 1 to Gemini (upload only, no AI question) and time it
+          try {
+            const f = await uploadBuffer(buf, 'probe part 1', 'video/mp4', (x) => { log.push({ gemini: x }); save({}).catch(() => {}); });
+            deleteUpload(f.name);
+          } catch (err) { log.push({ gemini: `failed: ${err.message.slice(0, 200)}` }); }
+          await save({});
+        }
+      });
       await save({ done: true });
     } catch (err) { await save({ error: err.message.slice(0, 400) }); } finally { clearInterval(beat); }
     return new Response('done');
