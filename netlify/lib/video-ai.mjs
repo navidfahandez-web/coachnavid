@@ -259,13 +259,18 @@ async function findMoments(cut, r, onProgress, guide = [], guideNotes = {}) {
   let done = 0;
   const one = async (k, buf) => {
     const a = k * PART;
-    if (k > 0) await firstDone; // the other parts need part 1's description of the student
+    if (k > 0 && !(await firstDone)) throw new Error('part 1 failed'); // the other parts need part 1's description of the student (no AI spent if it failed)
     const t0 = Date.now();
     const took = () => `${Math.round((Date.now() - t0) / 1000)} s`;
     console.log(`part ${k + 1}: cut, sending to the AI`);
-    const file = await uploadBuffer(buf, `part ${k + 1}`, 'video/mp4', (x) => console.log(`part ${k + 1}: ${x}`));
-    console.log(`part ${k + 1}: uploaded ${Math.round(buf.length / 1e5) / 10} MB in ${took()}`);
+    let file;
+    let ok = false;
     try {
+      // inside the try: if part 1 fails, the finally still lets the other parts go on (they wait
+      // for part 1) — otherwise they waited for ever and the whole run hung until Netlify killed it
+      file = await uploadBuffer(buf, `part ${k + 1}`, 'video/mp4', (x) => console.log(`part ${k + 1}: ${x}`))
+        .catch((err) => { console.log(`part ${k + 1}: upload failed after ${took()}: ${err.message}`); throw err; });
+      console.log(`part ${k + 1}: uploaded ${Math.round(buf.length / 1e5) / 10} MB in ${took()}`);
       const { json, model } = await ask({
         contents: [{ role: 'user', parts: [
           { fileData: { mimeType: 'video/mp4', fileUri: file.uri } },
@@ -291,14 +296,15 @@ Only the student, not the partner or opponents (except to explain what happened)
       if (k === 0 && json.usable === false) throw new Error(`The AI couldn’t analyse this video: ${json.student_description || 'not padel or the student can’t be found'}. Your report wasn’t changed.`);
       if (k === 0 && json.student_description) who = json.student_description;
       partLog[k] = { from: fmt(a), found: (json.moments ?? []).length, model, mb: Math.round(buf.length / 1e5) / 10, usable: json.usable, seen: String(json.part_summary ?? '').slice(0, 300) };
+      ok = true;
       onProgress?.(++done);
       return (json.moments ?? []).map((m) => {
         const rel = toSec(m.time);
         return rel === null ? null : { ...m, t: a + Math.min(PART, rel), time: fmt(a + Math.min(PART, rel)) };
       }).filter(Boolean);
     } finally {
-      if (k === 0) whoReady();
-      deleteUpload(file.name);
+      if (k === 0) whoReady(ok);
+      if (file) deleteUpload(file.name);
     }
   };
   const out = (await cut(one)).flat().sort((x, y) => x.t - y.t);
