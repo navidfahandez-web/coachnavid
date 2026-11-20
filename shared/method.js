@@ -22,6 +22,10 @@ export const PRINCIPLES = [
     text: 'The right moment to squeeze the fingers slightly at contact makes your life easier — the real-life exercise is the high five: a high five with sound has timing. Timing also has a second chapter: change the timing of contact, not only to change direction but to hide the shot and be unexpected. If the opponent doesn’t know when you hit, he doesn’t know when to split step — the more unexpected you are, the less you need amazing shots to be effective.',
   },
   {
+    id: 'growth', title: 'Every shot grows at every level', icon: '📈',
+    text: 'No shot is mastered in the early levels. Each shot is introduced at its level and then improves with every level you go up: what each level adds is more quality, more spin or more speed, and more accuracy. The gancho is the simplified version of the rulo — also the one to use when there is little time to play the shot.',
+  },
+  {
     id: 'contact', title: 'Contact point: the sweet spot', icon: '⚪', tag: ['fundamental', ['contact']],
     text: 'Contacting the ball with the sweet spot is mandatory at every level.',
   },

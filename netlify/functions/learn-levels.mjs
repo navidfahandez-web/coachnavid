@@ -253,7 +253,7 @@ ${ps.map((p) => `${p.id}: ${p.fix} [${size.get(p.id)} tips]`).join('\n')}` }] }]
         contents: [{ role: 'user', parts: [{ text: `Coach Navid's padel levels (amateur → high competition):
 ${levelsText()}
 
-${shotRules ? `Coach Navid's own scale for these shots (follow it: basics of a shot go at its first levels, refinements up to the mastered level, never before it appears):
+${shotRules ? `Coach Navid's own scale for these shots (follow it — it wins over the level descriptions: never put a point before its shot appears; the basics go at the first levels, and since every shot keeps improving at every level — more quality, spin or speed, and accuracy — refinements go at the higher levels):
 ${shotRules}
 
 ` : ''}For each numbered padel coaching point below, give every level of the players it is for — the levels where players typically make that mistake or need that tip/exercise. A point usually fits 2-4 consecutive levels; basics fit low levels, advanced shots (víbora, por 3, gancho) fit higher ones.
