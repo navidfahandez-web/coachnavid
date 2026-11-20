@@ -109,7 +109,7 @@ function renderPlans() {
         <span class="fx-badge ${plan.status}">${plan.status === 'approved' ? '✓ Approved — students see it' : 'Draft — students don’t see it yet'}</span>
         <small>${used.length} different exercises · made ${new Date(plan.at).toLocaleDateString()}${plan.note ? ` · your note: “${esc(plan.note)}”` : ''}</small>
       </div>
-      <p class="fx-overview">${esc(plan.overview)}</p>
+      <details class="fx-about"><summary>About this plan (what the student reads)</summary><p class="fx-overview">${esc(plan.overview)}</p></details>
       ${waiting.length ? `<p class="fx-warn">${waiting.length} exercise${waiting.length > 1 ? 's' : ''} in this plan still need your OK (students only see approved ones). Check them below, or <button class="fx-link" type="button" data-approve-all>approve all ${waiting.length} at once</button>.</p>` : ''}
       ${rejected.length ? `<p class="fx-warn">${rejected.length} exercise${rejected.length > 1 ? 's' : ''} you rejected ${rejected.length > 1 ? 'are' : 'is'} still in the plan — swap or remove ${rejected.length > 1 ? 'them' : 'it'}.</p>` : ''}
       <nav class="fx-weeks">${plan.weeks.map((w) => `<button type="button" data-week="${w.week}" class="${w.week === week.week ? 'is-on' : ''}">Week ${w.week}</button>`).join('')}</nav>
@@ -130,7 +130,7 @@ function renderPlans() {
       </div>
       ${maker(true)}`;
   }
-  box.innerHTML = `<h2>4-week plan by level</h2><p class="note">Most of your students are D+ to C+. Pick a level band:</p><nav class="fx-bands">${chips}</nav>${body}`;
+  box.innerHTML = `<h2>4-week plan by level</h2><nav class="fx-bands">${chips}</nav>${body}`;
 }
 
 // ---------- Library ----------

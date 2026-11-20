@@ -1,11 +1,11 @@
 /* Padel fitness program: admin page (fitness.html) and student page (fitness-plan.html) */
 .fx-kicker { margin: 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
-.fx-h1 { margin: 4px 0 6px; font-size: clamp(30px, 5vw, 48px); letter-spacing: -.02em; }
+.fx-h1 { margin: 0 0 4px; font-size: clamp(24px, 4vw, 32px); letter-spacing: -.02em; }
 .fx .adm-box + .adm-box { margin-top: 18px; }
 .fx h2 { margin: 0 0 4px; font-size: 24px; }
-.fx-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; align-items: center; }
+.fx-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; align-items: center; }
 .fx-stats > div { display: flex; flex-direction: column; gap: 2px; }
-.fx-stats b { font-size: 26px; }
+.fx-stats b { font-size: 20px; }
 .fx-stats span, .fx-stats small { font-size: 13px; color: var(--muted); }
 .fx-merge { gap: 6px !important; }
 .fx-err, .fx-bad { color: var(--danger); }
@@ -80,3 +80,7 @@
   .fx-days { grid-template-columns: 1fr; }
   .fx-dose { width: 120px; }
 }
+.fx-about { margin: 8px 0; }
+.fx-about summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+.fx .adm-box { padding: 12px 16px; }
+.fx-tabs { margin-top: 10px; }
