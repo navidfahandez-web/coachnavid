@@ -6,7 +6,6 @@
 //             contact time, the 5 phases of THIS swing and 1-3 signature details
 //   profile — write the player's technique per shot from his verified clips (text only, cheap)
 // Clips live in pros/clips (shared with the compare page — only ever ADD fields there).
-import { getStore } from '@netlify/blobs';
 import { readJSON, updateJSON } from './store.mjs';
 import { ask } from './video-ai.mjs';
 import { SHOTS } from '../../shared/report.js';
@@ -207,22 +206,3 @@ export const addJobs = (jobs, front = false) => updateJSON(JOBS, (q) => {
 export const kick = (origin = process.env.URL || SITE_URL) => fetch(`${origin}/api/pros-run`, {
   method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': (process.env.ADMIN_PASSWORD ?? '').trim() }, body: '{}',
 }).catch(() => {});
-
-// Mannequin demos: a faceless white mannequin (Higgsfield, made from our own written description of the
-// player's technique, never traced from pro footage). Stored on our site; Navid approves each one.
-export const MQ = 'pros/mannequins'; // { [playerId]: { [shot]: { status, at, v, size, job, prompt, reviewedAt? } } }
-export const mqMedia = () => getStore({ name: 'pros-media', consistency: 'strong' });
-const MQ_HOSTS = ['d8j0ntlcm91z4.cloudfront.net'];
-export async function saveMannequin(playerId, shot, url, job = '', prompt = '') {
-  if (!PLAYERS.some((p) => p.id === playerId) || !/^[a-z0-9_]{2,30}$/.test(shot)) throw new Error('Unknown player or shot.');
-  const u = new URL(url);
-  if (u.protocol !== 'https:' || !MQ_HOSTS.includes(u.hostname)) throw new Error('Only Higgsfield video links.');
-  const res = await fetch(u, { signal: AbortSignal.timeout(60000) });
-  if (!res.ok) throw new Error(`Download failed (${res.status})`);
-  const buf = await res.arrayBuffer();
-  if (buf.byteLength > 30 * 1024 * 1024) throw new Error('Video too big');
-  await mqMedia().set(`mq/${playerId}/${shot}`, buf, { metadata: { type: res.headers.get('content-type') || 'video/mp4' } });
-  const entry = { status: 'pending', at: new Date().toISOString(), v: Date.now(), size: buf.byteLength, job: String(job).slice(0, 60), prompt: String(prompt).slice(0, 1500) };
-  await updateJSON(MQ, (all) => { (all[playerId] ??= {})[shot] = entry; }, {});
-  return entry;
-}

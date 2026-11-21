@@ -7,11 +7,9 @@
 //   trim { source, duration }   set a video's real length and remove moments after its end
 //   block-source { source }     a video that can't be trusted: hide all its clips
 //   run                         restart the job runner
-//   mannequin { player, shot, url, job?, prompt? }  store a Higgsfield mannequin demo (made from our own description)
-//   mannequin-review { player, shot, status }       Navid approves / rejects it
 import { requireAdmin, json } from '../lib/auth.mjs';
 import { readJSON, updateJSON } from '../lib/store.mjs';
-import { PROS, JOBS, STATUS, VIDEOS, MQ, saveMannequin, PLAYERS, profileKey, playerByName, youtubeId, embedInfo, addJobs, kick, sec } from '../lib/pros.mjs';
+import { PROS, JOBS, STATUS, VIDEOS, PLAYERS, profileKey, playerByName, youtubeId, embedInfo, addJobs, kick, sec } from '../lib/pros.mjs';
 
 export default async (req) => {
   const denied = await requireAdmin(req);
@@ -19,11 +17,11 @@ export default async (req) => {
   const origin = new URL(req.url).origin;
 
   if (req.method === 'GET') {
-    const [clips, jobs, status, videos, mannequins, ...profiles] = await Promise.all([
-      readJSON(PROS, []), readJSON(JOBS, []), readJSON(STATUS, {}), readJSON(VIDEOS, {}), readJSON(MQ, {}),
+    const [clips, jobs, status, videos, ...profiles] = await Promise.all([
+      readJSON(PROS, []), readJSON(JOBS, []), readJSON(STATUS, {}), readJSON(VIDEOS, {}),
       ...PLAYERS.map((p) => readJSON(profileKey(p.id), null)),
     ]);
-    return json({ players: PLAYERS, clips, jobs, status, videos, mannequins, profiles: Object.fromEntries(PLAYERS.map((p, i) => [p.id, profiles[i]])) });
+    return json({ players: PLAYERS, clips, jobs, status, videos, profiles: Object.fromEntries(PLAYERS.map((p, i) => [p.id, profiles[i]])) });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -55,14 +53,6 @@ export default async (req) => {
     await updateJSON(VIDEOS, (all) => { all[source] = { ...all[source], blocked: true }; }, {});
     const n = await updateJSON(PROS, (list) => { let k = 0; for (const c of list) if (c.source === source && c.navid !== 'ok') { c.verified = false; c.blocked = true; k += 1; } return k; }, []);
     return json({ ok: true, hidden: n });
-  }
-  const pid = playerByName(body.player)?.id;
-  if (body.action === 'mannequin' && pid) {
-    try { return json({ ok: true, mannequin: await saveMannequin(pid, String(body.shot ?? ''), String(body.url ?? ''), body.job, body.prompt) }); } catch (err) { return json({ error: err.message }, 400); }
-  }
-  if (body.action === 'mannequin-review' && pid && ['approved', 'rejected', 'pending'].includes(body.status)) {
-    const ok = await updateJSON(MQ, (all) => { const m = all[pid]?.[body.shot]; if (!m) return false; m.status = body.status; m.reviewedAt = new Date().toISOString(); return true; }, {});
-    return ok ? json({ ok: true }) : json({ error: 'Not found' }, 404);
   }
   if (body.action === 'mark' && body.id) {
     const ok = Boolean(body.ok);
