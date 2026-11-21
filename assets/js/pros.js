@@ -119,8 +119,16 @@ function renderPlayer(p) {
     const ps = profShot[s];
     const best = new Set(ps?.best ?? []);
     const clips = byShot[s].slice().sort((a, b) => best.has(b.id) - best.has(a.id) || (b.navid === 'ok') - (a.navid === 'ok') || (a.recheck === 'unsure') - (b.recheck === 'unsure') || (b.quality ?? 0) - (a.quality ?? 0));
+    const mq = data.mannequins?.[p.id]?.[s];
+    const MQS = { pending: 'waiting for your OK', approved: '✓ approved', rejected: '✗ rejected — hidden from students' };
     return `<section class="adm-box pl-shot" id="shot-${esc(s)}">
       <h3>${esc(shotName(s))} <small>${byShot[s].length} clip${byShot[s].length > 1 ? 's' : ''}${ps ? ` · ${esc(ps.confidence)} confidence` : ''}</small></h3>
+      ${mq ? `<div class="pl-mq${mq.status === 'rejected' ? ' is-rejected' : ''}">
+        <video src="/api/pros/mq/${esc(p.id)}/${esc(s)}?v=${mq.v}" muted loop playsinline controls preload="metadata"></video>
+        <div><p><b>🎬 ${esc(p.name)}-style ${esc(shotName(s).toLowerCase())}: mannequin</b><br><span class="note">Our own animation made from the technique below, not him and not from his footage. ${MQS[mq.status] ?? ''}</span></p>
+        <p><button type="button" class="btn btn--ghost" data-mq="${esc(s)}" data-mq-status="approved">✓ Good</button> <button type="button" class="btn btn--ghost" data-mq="${esc(s)}" data-mq-status="rejected">✗ Not right</button>
+        <button type="button" class="btn btn--ghost" data-mq-slow>0.5×</button></p></div>
+      </div>` : ''}
       ${ps ? `<p>${esc(ps.summary)}</p>
         <table class="pl-phases"><thead><tr><th></th><th>Typical</th><th>Special about ${esc(p.name)}</th></tr></thead><tbody>
         ${PHASES.map(([k, l]) => `<tr><th>${l}</th><td>${esc(ps.phases?.[k]?.typical)}</td><td>${esc(ps.phases?.[k]?.special)}</td></tr>`).join('')}</tbody></table>
@@ -182,6 +190,11 @@ document.addEventListener('click', async (e) => {
     try { await api('POST', { action: 'block-source', source: t.dataset.block }); await load(); } catch (err) { alert(err.message); }
     return;
   }
+  if (t.dataset.mq) {
+    try { await api('POST', { action: 'mannequin-review', player: player.id, shot: t.dataset.mq, status: t.dataset.mqStatus }); data.mannequins[player.id][t.dataset.mq].status = t.dataset.mqStatus; route(); } catch (err) { alert(err.message); }
+    return;
+  }
+  if (t.dataset.mqSlow !== undefined) { const v = t.closest('.pl-mq')?.querySelector('video'); if (v) { v.playbackRate = v.playbackRate === 0.5 ? 1 : 0.5; t.textContent = v.playbackRate === 0.5 ? '1×' : '0.5×'; v.play(); } return; }
   if (t.dataset.mark) {
     const ok = t.dataset.ok === '1';
     if (!ok && !confirm('Hide this clip everywhere (library and compare page)?')) return;
@@ -211,6 +224,6 @@ async function load() {
 load();
 setInterval(async () => { // refresh the status while the AI works
   if (!data || !(data.status?.step || data.jobs?.length)) return;
-  try { const d = await api(); const sig = (x) => `${x.clips.length}|${x.clips.filter((c) => c.verified !== undefined).length}|${Object.values(x.profiles ?? {}).map((p) => p?.at).join()}`;
+  try { const d = await api(); const sig = (x) => `${x.clips.length}|${x.clips.filter((c) => c.verified !== undefined).length}|${Object.values(x.profiles ?? {}).map((p) => p?.at).join()}|${JSON.stringify(x.mannequins ?? {}).length}`;
     const changed = sig(d) !== sig(data); data = d; if (changed && !cur) route(); else renderStatus(); } catch { /* next time */ }
 }, 20000);

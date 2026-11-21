@@ -46,3 +46,9 @@
 .pl-sources ul { margin: 6px 0; padding-left: 18px; font-size: 14px; }
 .pl-sources li { margin: 4px 0; }
 .pl-mini { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-soft); background: transparent; color: inherit; cursor: pointer; }
+
+/* mannequin demo (our own animation, not pro footage) */
+.pl-mq { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin: 6px 0 12px; }
+.pl-mq video { width: 180px; max-width: 45vw; aspect-ratio: 9 / 16; background: #111; border-radius: 10px; }
+.pl-mq > div { flex: 1 1 220px; }
+.pl-mq.is-rejected video { opacity: .4; }
