@@ -123,7 +123,7 @@ function renderPlayer(p) {
     const MQS = { pending: 'waiting for your OK', approved: '✓ approved', rejected: '✗ rejected — hidden from students' };
     return `<section class="adm-box pl-shot" id="shot-${esc(s)}">
       <h3>${esc(shotName(s))} <small>${byShot[s].length} clip${byShot[s].length > 1 ? 's' : ''}${ps ? ` · ${esc(ps.confidence)} confidence` : ''}</small></h3>
-      ${mq ? `<div class="pl-mq${mq.status === 'rejected' ? ' is-rejected' : ''}">
+      ${mq && mq.status !== 'rejected' ? `<div class="pl-mq">
         <video src="/api/pros/mq/${esc(p.id)}/${esc(s)}?v=${mq.v}" muted loop playsinline controls preload="metadata"></video>
         <div><p><b>🎬 ${esc(p.name)}-style ${esc(shotName(s).toLowerCase())}: mannequin</b><br><span class="note">Our own animation made from the technique below, not him and not from his footage. ${MQS[mq.status] ?? ''}</span></p>
         <p><button type="button" class="btn btn--ghost" data-mq="${esc(s)}" data-mq-status="approved">✓ Good</button> <button type="button" class="btn btn--ghost" data-mq="${esc(s)}" data-mq-status="rejected">✗ Not right</button>
