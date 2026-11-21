@@ -248,11 +248,14 @@ ${ps.map((p) => `${p.id}: ${p.fix} [${size.get(p.id)} tips]`).join('\n')}` }] }]
     let tagged = 0;
     for (;;) {
       if (left() < 60e3) { await status({ step: `Paused after ${tagged} points (time limit) — run again to continue.` }); return carryOn(); }
-      const todo = (await readJSON(CANDIDATES, [])).filter(needsLevel).slice(0, BATCH);
-      if (!todo.length) break;
+      const pool = (await readJSON(CANDIDATES, [])).filter(needsLevel).slice(0, BATCH * 4);
+      if (!pool.length) break;
       await status({ step: `Sorting tips by level… ${tagged} done` });
-      const { json } = await ask({
-        contents: [{ role: 'user', parts: [{ text: `Coach Navid's padel levels (amateur → high competition):
+      const chunks = [0, 1, 2, 3].map((k) => pool.slice(k * BATCH, (k + 1) * BATCH)).filter((x) => x.length); // 4 calls at once
+      const byId = new Map();
+      const res = await Promise.allSettled(chunks.map(async (todo) => {
+          const { json } = await ask({
+            contents: [{ role: 'user', parts: [{ text: `Coach Navid's padel levels (amateur → high competition):
 ${levelsText()}
 
 ${shotRules ? `Coach Navid's own scale for these shots (follow it — it wins over the level descriptions: never put a point before its shot appears; the basics go at the first levels, and since every shot keeps improving at every level — more quality, spin or speed, and accuracy — refinements go at the higher levels):
@@ -261,21 +264,23 @@ ${shotRules}
 ` : ''}For each numbered padel coaching point below, give every level of the players it is for — the levels where players typically make that mistake or need that tip/exercise. A point usually fits 2-4 consecutive levels; basics fit low levels, advanced shots (víbora, por 3, gancho) fit higher ones.
 
 ${todo.map((c, i) => `${i}. ${line(c)}`).join('\n')}` }] }],
-        generationConfig: {
-          responseMimeType: 'application/json', temperature: 0.1,
-          responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 'levels'], properties: { i: { type: 'INTEGER' }, levels: { type: 'ARRAY', items: { type: 'INTEGER' } } } } },
-        },
-      }, FAST, false, 90000); // a slow reply must not freeze the job
-      const byId = new Map();
-      for (const r of json ?? []) {
-        const c = todo[r.i];
-        const lv = [...new Set((r.levels ?? []).map(Math.round).filter((n) => n >= 1 && n <= 10))].sort((a, b) => a - b);
-        if (c && lv.length) byId.set(c.id, lv);
-      }
-      for (const c of todo) if (!byId.has(c.id)) byId.set(c.id, [0]); // 0 = couldn't tell; don't loop on it forever
+            generationConfig: {
+              responseMimeType: 'application/json', temperature: 0.1,
+              responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', required: ['i', 'levels'], properties: { i: { type: 'INTEGER' }, levels: { type: 'ARRAY', items: { type: 'INTEGER' } } } } },
+            },
+          }, FAST, false, 90000); // a slow reply must not freeze the job
+          for (const r of json ?? []) {
+            const c = todo[r.i];
+            const lv = [...new Set((r.levels ?? []).map(Math.round).filter((n) => n >= 1 && n <= 10))].sort((a, b) => a - b);
+            if (c && lv.length) byId.set(c.id, lv);
+          }
+          for (const c of todo) if (!byId.has(c.id)) byId.set(c.id, c.levels?.length ? c.levels : [0]); // keep the old levels; 0 = couldn't tell
+          return todo.length;
+        }));
+      if (res.every((r) => r.status === 'rejected')) throw res[0].reason;
       const at = new Date().toISOString();
       await updateJSON(CANDIDATES, (list) => { for (const c of list) if (byId.has(c.id)) { c.levels = byId.get(c.id); c.levelledAt = at; } }, [], 12);
-      tagged += todo.length;
+      tagged += byId.size;
     }
 
     // 2) goals per level, from the tips of that level (only if none were derived yet)
