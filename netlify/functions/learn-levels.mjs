@@ -42,7 +42,7 @@ export default async (req) => {
     return new Response('partial');
   };
   const left = () => 13 * 60e3 - (Date.now() - t0);
-  const status = (s) => updateJSON(STATUS, (x) => { Object.assign(x, s, { at: new Date().toISOString() }); }, {});
+  const status = (s) => updateJSON(STATUS, (x) => { Object.assign(x, { error: null }, s, { at: new Date().toISOString() }); }, {}); // a new step clears an old error
   try {
     // 0) new shots were added to the framework: move tips of related shots to the right one
     if (reshot) {
