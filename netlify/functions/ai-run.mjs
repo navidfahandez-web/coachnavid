@@ -32,7 +32,7 @@ const digits = (p) => String(p ?? '').replace(/\D/g, '');
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { ref, checkOnly } = await req.json();
+  const { ref, checkOnly, watch } = await req.json();
   const key = `reports/by-ref/${ref}`;
   let lastStep = 'starting';
   const setAi = (ai) => { if (ai.step) lastStep = ai.step; return updateJSON(key, (x) => { x.ai = { ...(x.ai ?? {}), ...ai }; }, {}); };
@@ -80,13 +80,13 @@ export default async (req) => {
     });
     const guide = (await readJSON('learn/candidates', [])).filter((c) => c.status === 'approved');
     const guideNotes = await readJSON('learn/notes', {});
-    const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide, guideNotes },
+    const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide, guideNotes, watch },
       (done) => setAi({ step: done === total ? 'Writing the draft from the moments…' : `Watched part ${done} of ${total}…` }));
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);
       Object.assign(x, filled, {
         videoFileId: x.videoFileId || videoId,
-        ai: { status: 'ready', at: new Date().toISOString(), model, player: draft.player_identified, notes: draft.confidence_notes, moments, parts, duration, checked: false },
+        ai: { status: 'ready', at: new Date().toISOString(), model, watchedBy: watch === 'pro' ? 'pro' : 'flash', player: draft.player_identified, notes: draft.confidence_notes, moments, parts, duration, checked: false },
         updatedAt: new Date().toISOString(),
       });
     }, {});
