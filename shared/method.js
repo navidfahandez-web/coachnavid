@@ -10,6 +10,10 @@ export const PRINCIPLES = [
     text: 'Forced transitions: the opponent makes us change zone — we are at the net, he plays a lob and we answer with a bandeja, or we let it pass and play after the glass. Wanted transitions: we choose to change zone — we play the lob or the chiquita to take the net.',
   },
   {
+    id: 'net_earned', title: 'The net is earned, not mandatory', icon: '🥅',
+    text: 'After the first test of the player’s skill and understanding, the coach checks whether the player is ready to go to the net and be efficient there — more points won than lost at the net. In level 1 the player is often not ready yet: he stays behind the line and, after a good shot, moves up a little towards the baseline in case the opponent plays a short ball. Going to the net is not mandatory at this level, not even after the serve — at level 1 the serve is played like a normal forehand.',
+  },
+  {
     id: 'transition_area', title: 'There is no “no man’s land” — it is the transition area', icon: '📍',
     text: 'The transition area is taught at every level. A player can stand on the line as long as the ball he played before allows it. From there he is closer to the opponent and puts him under pressure to find more space and play a good ball — otherwise the player on the line punishes him with a transition shot.',
   },
