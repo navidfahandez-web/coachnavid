@@ -57,7 +57,7 @@ const filtered = () => {
 const warn = (r) => {
   const t = `${r.mistake} ${r.fix} ${r.why}`;
   const out = [];
-  if (/neutral stance|closed stance|square stance|step(s|ping)? (in|across|forward) (with|into)/i.test(r.fix) || /open stance/i.test(r.mistake)) out.push('Against your stance rule: open or semi-open from the start, closed only off the glass or short balls.');
+  if (r.status === 'pending' && (/neutral stance|closed stance|square stance/i.test(r.fix) && !/glass|short ball/i.test(r.fix) || /open stance/i.test(r.mistake) && !/glass/i.test(r.mistake))) out.push('Against your stance rule: open or semi-open from the start, closed only off the glass or short balls.');
   if (/no[\s-]*man'?s[\s-]*land|tierra de nadie/i.test(t)) out.push('Says “no man’s land”: in your method it is the transition area.');
   return out.map((w) => `<p class="ws__warn">⚠️ ${esc(w)}</p>`).join('');
 };

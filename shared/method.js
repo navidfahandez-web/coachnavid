@@ -31,7 +31,7 @@ export const PRINCIPLES = [
   },
   {
     id: 'stance', title: 'Open or semi-open stance from the beginning', icon: '🦶',
-    text: 'From the first lesson we teach the open or semi-open stance. We avoid teaching the closed stance, except for a ball that comes off the glass or a short ball.',
+    text: 'From the first lesson we teach the open or semi-open stance. We avoid teaching the closed stance, except for a ball that comes off the glass or a short ball. The player can wait in an open stance as long as he does not want to step into the shot to move forward: the open stance gives more stability and makes the shot unreadable for the opponent, while a closed stance shows where the ball is going and makes the lob much harder. Off the glass, beginners and amateurs turn sideways (closed); at advanced levels the player can sometimes open the stance off the glass to hide the shot. The stance also depends on the player’s dominant eye — check it in the first lessons.',
   },
   {
     id: 'contact', title: 'Contact point: the sweet spot', icon: '⚪', tag: ['fundamental', ['contact']],
