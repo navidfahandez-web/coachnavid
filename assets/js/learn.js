@@ -34,6 +34,11 @@ const units = () => { // points (with their tips) + tips not merged yet
 const share = (u, f) => (u.isPoint ? u.members.filter(f).length >= u.members.length / 2 : f(u));
 let level = '';
 const inLevel = (c) => !level || (c.levels ?? []).includes(Number(level));
+// "said in 2+ videos only": the points several coaches agree on come first (remembered on this device)
+let multiOnly = true;
+try { multiOnly = localStorage.getItem('learn-multi-only') !== '0'; } catch { /* blocked */ }
+const vidsOf = (c) => (c.isPoint ? new Set(c.members.map((m) => m.source)).size : 1);
+const inVids = (c) => !multiOnly || vidsOf(c) >= 2;
 $('[data-level]').innerHTML += LEVELS.map((l) => `<option value="${l.n}">${l.n} · ${l.label}</option>`).join('');
 let tab = 'pending';
 let tech = '';
@@ -45,8 +50,11 @@ const techName = (t) => (TR[t] ? TR[t] : t.startsWith('fit:') ? `💪 Fitness �
 const ORDER = ['tr:forced', 'tr:wanted', 'tm:earn', 'tm:remove', 'fu:timing', 'fu:contact', 'fu:deception', ...SHOTS.map((x) => x.id), ...AREAS.map((a) => `area:${a.id}`), ...Object.keys(FIT).map((k) => `fit:${k}`)];
 
 function render() {
-  const all = units();
+  const everything = units();
+  const all = everything.filter(inVids);
   for (const s of ['pending', 'approved', 'rejected']) $(`[data-count="${s}"]`).textContent = all.filter((c) => c.status === s).length;
+  const hidden = everything.filter((c) => !inVids(c) && c.status === tab).length;
+  $('[data-multi-note]').textContent = multiOnly && hidden ? `${hidden} said in only one video are hidden` : '';
   // technique picker: every technique with points, "(n to review)"
   const pool = all.filter(inLevel);
   const techs = [...Object.keys(TR).filter((t) => pool.some((c) => inTech(c, t))), ...new Set(pool.map(techOf))].sort((a, b) => (ORDER.indexOf(a) + 999 * (ORDER.indexOf(a) < 0)) - (ORDER.indexOf(b) + 999 * (ORDER.indexOf(b) < 0)));
@@ -145,6 +153,12 @@ $('[data-tabs]').addEventListener('click', (e) => {
 });
 
 $('[data-level]').addEventListener('change', (e) => { level = e.target.value; render(); });
+$('[data-multi]').checked = multiOnly;
+$('[data-multi]').addEventListener('change', (e) => {
+  multiOnly = e.target.checked;
+  try { localStorage.setItem('learn-multi-only', multiOnly ? '1' : '0'); } catch { /* blocked */ }
+  render();
+});
 
 $('[data-goals]').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-goal-set]');
