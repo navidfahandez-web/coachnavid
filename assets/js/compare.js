@@ -50,6 +50,7 @@ function loadPro() {
   $('[data-phase-pro]').textContent = proClip.player;
   $('[data-phases]').innerHTML = PHASES.map(([k, label]) => `<tr><th>${label}</th><td>${esc(proClip.phases?.[k])}</td></tr>`).join('')
     + (proClip.details?.length ? `<tr><th>Details</th><td><ul>${proClip.details.map((d) => `<li>${esc(d)}</li>`).join('')}</ul></td></tr>` : '');
+  renderPhases();
   const opts = { videoId: proClip.source, startSeconds: proStart(), endSeconds: proEnd() };
   if (yt) yt.cueVideoById(opts);
   else {
@@ -72,6 +73,67 @@ function loadPro() {
 setInterval(() => { // loop the pro clip on its swing
   if (yt?.getCurrentTime && proClip && yt.getPlayerState?.() === 1 && yt.getCurrentTime() > proEnd()) yt.seekTo(proStart(), true);
 }, 120);
+
+// ---------- phase by phase: the student's marked breakdown pictures next to the pro paused at the same phase ----------
+// The pro's phase instants are around his contact time (pro clips have the contact second, not the phases):
+const PRO_AT = { preparation: -0.5, execution: 0, ending: 0.5 };
+const PRO_TEXT = { preparation: ['preparation', 'load'], execution: ['contact'], ending: ['finish'] };
+let breakdown = null;
+const ppPlayers = [];
+async function loadBreakdown() {
+  breakdown = null;
+  const ref = $('[data-ref]').value.trim();
+  const t = $('[data-t]').value.trim();
+  try {
+    const res = await fetch(`/api/admin/reports/${encodeURIComponent(ref)}`, { headers: H });
+    const shots = res.ok ? ((await res.json()).report?.ai?.breakdown ?? []) : [];
+    breakdown = shots.find((s) => s.time === t) ?? shots.find((s) => Math.abs(sec(s.time) - sec(t)) <= 1) ?? null;
+  } catch { /* no breakdown */ }
+  renderPhases();
+}
+function renderPhases() {
+  const box = $('[data-pp-box]');
+  box.hidden = !breakdown || !proClip;
+  ppPlayers.splice(0).forEach((p) => p.destroy?.());
+  if (box.hidden) return;
+  $('[data-pp-pro]').textContent = proClip.player;
+  $('[data-pp]').innerHTML = breakdown.phases.map((p, i) => `<div class="cp-pp">
+      <figure><figcaption><b>${esc(p.name)}</b> · student ${esc(p.time)}</figcaption><img data-pp-img="${esc(p.img)}" alt="${esc(p.name)}" />
+        <p class="note">${esc(p.caption)}</p></figure>
+      <figure><figcaption><b>${esc(p.name)}</b> · ${esc(proClip.player)}</figcaption><div class="cp-pp-yt"><div id="pp-${i}"></div></div>
+        <p class="cp-pp-nudge"><button type="button" class="pill" data-nudge="${i}" data-by="-0.1">◀ 0.1 s</button> <span data-pp-t="${i}"></span> <button type="button" class="pill" data-nudge="${i}" data-by="0.1">0.1 s ▶</button></p>
+        <p class="note">${esc((PRO_TEXT[p.id] ?? []).map((k) => proClip.phases?.[k]).filter(Boolean).join(' '))}</p></figure>
+    </div>`).join('');
+  for (const img of document.querySelectorAll('[data-pp-img]')) {
+    fetch(`/api/admin/compare/frame?key=${encodeURIComponent(img.dataset.ppImg)}`, { headers: H }).then((r) => (r.ok ? r.blob() : null)).then((b) => { if (b) img.src = URL.createObjectURL(b); });
+  }
+  breakdown.phases.forEach((p, i) => {
+    const at = Math.max(0, sec(proClip.time) + (PRO_AT[p.id] ?? 0));
+    let first = true;
+    const player = new window.YT.Player(`pp-${i}`, {
+      videoId: proClip.source,
+      playerVars: { start: Math.floor(at), rel: 0, modestbranding: 1, playsinline: 1, mute: 1, controls: 1 },
+      events: {
+        onReady: () => { player.mute(); player.playVideo(); },
+        // YouTube shows a frame only once it has played: play, then jump to the instant and pause
+        onStateChange: (e) => { if (first && e.data === window.YT.PlayerState.PLAYING) { first = false; player.seekTo(at, true); player.pauseVideo(); } },
+      },
+    });
+    player.at = at;
+    ppPlayers[i] = player;
+    $(`[data-pp-t="${i}"]`).textContent = mmss(at);
+  });
+}
+const mmss = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-nudge]');
+  if (!b) return;
+  const p = ppPlayers[Number(b.dataset.nudge)];
+  if (!p?.seekTo) return;
+  p.at = Math.max(0, p.at + Number(b.dataset.by));
+  p.seekTo(p.at, true); p.pauseVideo();
+  $(`[data-pp-t="${b.dataset.nudge}"]`).textContent = mmss(p.at);
+});
 
 function fillPros() {
   const shot = $('[data-shot]').value;
@@ -98,8 +160,8 @@ $('[data-both]').addEventListener('click', () => {
 $('[data-pause]').addEventListener('click', () => { student.pause(); yt?.pauseVideo?.(); });
 $('[data-shot]').addEventListener('change', fillPros);
 $('[data-pro]').addEventListener('change', loadPro);
-$('[data-t]').addEventListener('change', loadStudent);
-$('[data-ref]').addEventListener('change', loadStudent);
+$('[data-t]').addEventListener('change', () => { loadStudent(); loadBreakdown(); });
+$('[data-ref]').addEventListener('change', () => { loadStudent(); loadBreakdown(); });
 
 (async () => {
   try {
@@ -114,6 +176,7 @@ $('[data-ref]').addEventListener('change', loadStudent);
     ready();
   } catch (err) { $('[data-status]').textContent = err.message; }
   loadStudent();
+  loadBreakdown();
 })();
 
 // ---------- Instagram reel: AI drafts the captions, Navid edits them, then the video is made ----------
