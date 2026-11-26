@@ -235,3 +235,12 @@ a.rp__time:hover { background: var(--accent); color: #fff; }
 .rb__mb { display: flex; gap: 4px; }
 .rb__mb .pill { padding: 3px 9px; font-size: 12px; margin: 0 !important; }
 @media (max-width: 640px) { .rb__moment { grid-template-columns: 50px 1fr; } .rb__mb { grid-column: 1 / -1; } }
+
+/* Shot breakdown (report builder) */
+.rb__bd { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.12); }
+.rb__bd-shot { margin: 10px 0 16px; }
+.rb__bd-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rb__bd-row figure { margin: 0; }
+.rb__bd-row img { width: 100%; min-height: 120px; border-radius: 10px; background: #1a1a1a; display: block; cursor: zoom-in; }
+.rb__bd-row figcaption { font-size: 13px; margin-top: 4px; opacity: .85; }
+@media (max-width: 640px) { .rb__bd-row { grid-template-columns: 1fr; } }

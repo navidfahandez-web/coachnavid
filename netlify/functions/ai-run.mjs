@@ -1,11 +1,13 @@
 // Background (up to 15 min): AI first draft of a report from the student's video — { ref }.
 // Started from the report builder; progress is kept in report.ai so the builder can show it.
+import { getStore } from '@netlify/blobs';
 import { isAdmin } from '../lib/auth.mjs';
 import { logActivity, readJSON, updateJSON } from '../lib/store.mjs';
 import { listFolder } from '../lib/google.mjs';
 import { externalKey } from '../lib/players.mjs';
-import { analyzeVideo, draftToReport, PART, verifyMoment } from '../lib/video-ai.mjs';
-import { cutMoments, cutParts } from '../lib/clips.mjs';
+import { analyzeVideo, draftToReport, markFrames, PART, shotPhases, verifyMoment } from '../lib/video-ai.mjs';
+import { cutMoments, cutParts, cutShot, grabFrames } from '../lib/clips.mjs';
+import { markedFrameHtml, renderJpegs } from '../lib/pdf-render.mjs';
 import { drive } from '../lib/google.mjs';
 import { AREAS, toSeconds } from '../../shared/report.js';
 
@@ -28,11 +30,44 @@ async function checkMoments(key, setAi) {
   await setAi({ checks, checkedAt: new Date().toISOString() });
 }
 
+// Shot breakdown: for each fix, the 3 phases of that shot (preparation → contact → ending) as frames
+// with the important body parts marked. Pictures in Blobs (compare-clips store), served by
+// /api/admin/compare/frame; the list in report.ai.breakdown.
+const mmss = (sec) => `${Math.floor(sec / 60)}:${(sec % 60).toFixed(1).padStart(4, '0')}`;
+async function breakdown(key, setAi) {
+  const r = await readJSON(key);
+  const items = (r.items ?? []).map((it, k) => ({ it, k, t: toSeconds(it.time) })).filter((x) => x.it.title && x.t !== null).slice(0, 3);
+  if (!items.length || !r.videoFileId) throw new Error('No fixes with a time yet.');
+  const store = getStore({ name: 'compare-clips', consistency: 'strong' });
+  const shots = [];
+  const cards = [];
+  for (const [n, x] of items.entries()) {
+    await setAi({ breakdownStep: `Shot ${n + 1} of ${items.length}: finding preparation, contact and ending…` });
+    const before = Math.min(2.5, x.t);
+    const start = x.t - before;
+    const clip = await cutShot(r.videoFileId, start, 4.5);
+    const phases = await shotPhases(clip, x.it, r.ai?.player, before);
+    let prev = -1;
+    for (const p of phases) { if (!Number.isFinite(p.t) || p.t <= prev) p.t = Math.min(4.4, prev + 0.4); p.t = Math.max(0, Math.min(4.4, p.t)); prev = p.t; }
+    const at = phases.map((p) => start + p.t);
+    await setAi({ breakdownStep: `Shot ${n + 1} of ${items.length}: marking the body on each frame…` });
+    const frames = await grabFrames(r.videoFileId, at);
+    const marked = await markFrames(frames, x.it, phases, r.ai?.player);
+    const shot = { index: x.k, time: x.it.time, title: x.it.title, phases: phases.map((p, i) => ({ id: p.id, name: p.name, time: mmss(at[i]), what: p.what, ...marked[i], img: `breakdown/${r.ref}/${x.k}-${p.id}` })) };
+    shots.push(shot);
+    shot.phases.forEach((ph, i) => cards.push({ ph, html: markedFrameHtml(frames[i], { phase: `${x.k + 1} · ${ph.name}`, time: ph.time, caption: ph.caption, marks: ph.marks }) }));
+  }
+  await setAi({ breakdownStep: 'Drawing the marks…' });
+  const jpgs = await renderJpegs(cards.map((c) => c.html));
+  for (const [i, c] of cards.entries()) await store.set(`${c.ph.img}.jpg`, jpgs[i]);
+  await setAi({ breakdown: shots, breakdownAt: new Date().toISOString() });
+}
+
 const digits = (p) => String(p ?? '').replace(/\D/g, '');
 
 export default async (req) => {
   if (!isAdmin(req)) return new Response('Forbidden', { status: 403 });
-  const { ref, checkOnly, watch } = await req.json();
+  const { ref, checkOnly, watch, breakdownOnly } = await req.json();
   const key = `reports/by-ref/${ref}`;
   let lastStep = 'starting';
   const setAi = (ai) => { if (ai.step) lastStep = ai.step; return updateJSON(key, (x) => { x.ai = { ...(x.ai ?? {}), ...ai }; }, {}); };
@@ -43,6 +78,14 @@ export default async (req) => {
     setAi({ status: 'failed', error: `The AI took too long (stopped while: ${lastStep}). ${lastStep.startsWith('Double') ? 'The new draft is in, but its moments weren’t all double-checked' : 'Your report wasn’t changed'} — try again later; if it happens again, tell Claude.` }).catch(() => {});
   }, 14 * 60e3);
   try {
+    if (breakdownOnly) { // Navid asked for the shot breakdown of the current fixes
+      await setAi({ breakdownStatus: 'running', breakdownStep: 'Starting…', breakdownError: null });
+      try { await breakdown(key, setAi); await setAi({ breakdownStatus: 'ready', breakdownStep: null }); } catch (err) {
+        console.error(`breakdown ${ref}: ${err.message}`);
+        await setAi({ breakdownStatus: 'failed', breakdownStep: null, breakdownError: err.message.slice(0, 300) });
+      }
+      return new Response('done');
+    }
     if (checkOnly) { // Navid changed times: only re-check the moments
       await checkMoments(key, setAi);
       await setAi({ status: 'ready', step: null });
@@ -93,6 +136,10 @@ export default async (req) => {
     }, {});
     await setAi({ status: 'running', step: 'Double-checking each moment…' });
     try { await checkMoments(key, setAi); } catch (err) { await setAi({ checks: [{ ok: null, seen: `Moments not checked: ${err.message}` }] }); }
+    if (setting === 'training') { // technique clips: break each fix's shot down into its phases
+      await setAi({ status: 'running', step: 'Breaking down each shot (preparation → contact → ending)…', breakdownStatus: 'running' });
+      try { await breakdown(key, setAi); await setAi({ breakdownStatus: 'ready', breakdownStep: null }); } catch (err) { await setAi({ breakdownStatus: 'failed', breakdownStep: null, breakdownError: err.message.slice(0, 300) }); }
+    }
     await setAi({ status: 'ready', step: null });
     await logActivity({ kind: 'sent', text: `AI draft ready for ${ref} (${model}) — check it in the report builder.` });
   } catch (err) {

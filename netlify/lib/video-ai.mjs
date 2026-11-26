@@ -432,3 +432,55 @@ In what_happens, describe in one sentence what actually happens in the clip (who
   }
   throw lastErr;
 }
+
+// ---------- Shot breakdown: preparation → execution (contact) → ending, each a frame with marks ----------
+export const PHASES = [
+  { id: 'preparation', name: 'Preparation', find: 'the END of the preparation: fully loaded just before the racket starts forward — racket back, body turned, free arm up, legs bent', check: 'body turned side-on or not, free arm (tracking the ball), racket position and height, legs/knees loaded, feet placement, distance and position behind the ball, eyes on the ball' },
+  { id: 'execution', name: 'Execution', find: 'the exact CONTACT with the ball', check: 'contact point (in front of the body or not, height, sweet spot), hitting arm extension, wrist, racket face, head/eyes on the contact, body balance and lean, hips/shoulders rotation, feet (on the ground or in the air)' },
+  { id: 'ending', name: 'Ending', find: 'the END of the follow-through and the first recovery step (or the landing after a jump)', check: 'where the racket finishes (direction of the swing), balance on landing, weight going forward or back, racket up and ready, first step of the recovery (towards the net or the right place), facing the play' },
+];
+
+// Times of the 3 phases in a short clip (seconds from the clip's start). clip = MP4 Buffer.
+export async function shotPhases(clip, item, player, before) {
+  const T = { type: 'OBJECT', required: ['t', 'what'], properties: { t: { type: 'NUMBER', description: 'seconds from the start of THIS clip, one decimal (e.g. 2.4)' }, what: S('What the student is doing at that instant') } };
+  const { json } = await ask({
+    contents: [{ role: 'user', parts: [
+      { inlineData: { mimeType: 'video/mp4', data: clip.toString('base64') }, videoMetadata: { fps: 10 } },
+      { text: `This short clip is cut from a padel video; the student's shot "${item.title}" is hit about ${before} seconds into it.
+The student is: ${player || 'the player hitting that shot'}.
+Watch it frame by frame (10 frames per second) and give, for THIS ONE shot, the instant of:
+${PHASES.map((p) => `- ${p.id}: ${p.find}`).join('\n')}
+Times in seconds from the start of this clip, with one decimal. They must be in order (preparation < execution < ending).` },
+    ] }],
+    generationConfig: { responseMimeType: 'application/json', temperature: 0.1, responseSchema: { type: 'OBJECT', required: PHASES.map((p) => p.id), properties: Object.fromEntries(PHASES.map((p) => [p.id, T])) } },
+  }, ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], false, 120000);
+  return PHASES.map((p) => ({ id: p.id, name: p.name, t: Number(json[p.id]?.t), what: String(json[p.id]?.what ?? '') }));
+}
+
+// Marks for each phase frame: points (and optional lines) on the body, judged with Navid's method.
+// frames = JPEG Buffers in PHASES order. Coordinates [y, x] normalised 0–1000.
+export async function markFrames(frames, item, phases, player) {
+  const P = { type: 'ARRAY', items: { type: 'INTEGER' }, description: '[y, x], 0–1000 (0,0 = top left of the image)' };
+  const mark = { type: 'OBJECT', required: ['label', 'kind', 'p', 'note'], properties: {
+    label: S('2–5 words, e.g. "Free arm up", "Contact behind the head"'),
+    kind: { type: 'STRING', enum: ['good', 'fix'] },
+    p: P, q: { ...P, description: 'Optional second point for a LINE (e.g. shoulder → racket, the lean of the body, the direction of the swing). Leave empty for a single point.' },
+    note: S('One short sentence: what you see and why it matters'),
+  } };
+  const { json } = await ask({
+    contents: [{ role: 'user', parts: [
+      ...frames.map((f) => ({ inlineData: { mimeType: 'image/jpeg', data: f.toString('base64') } })),
+      { text: `${frames.length} frames of ONE padel shot by the student ("${item.title}" — ${item.detail ?? ''}). The student: ${player || 'the player hitting the shot'}.
+${phases.map((p, i) => `Frame ${i + 1} = ${p.name.toUpperCase()} (${p.what}). Check: ${PHASES[i].check}.`).join('\n')}
+For each frame, mark the 2–4 most important things on the student's body or racket, as Coach Navid would when teaching this shot: what is good (kind "good") and what to fix (kind "fix").
+Each mark is a point exactly on that body part / racket / ball (p = [y, x] in 0–1000 of THAT image); add q to draw a line when a direction or an angle is the point.
+Be precise: the point must sit on the part you name. Mark only what you can really see. Then one caption per frame (max 20 words) in Navid's terms: decision before technique, timing, contact point (in front, sweet spot), earning or removing time, recovery to the right place.` },
+    ] }],
+    generationConfig: { responseMimeType: 'application/json', temperature: 0.2, responseSchema: { type: 'OBJECT', required: ['frames'], properties: { frames: { type: 'ARRAY', items: { type: 'OBJECT', required: ['caption', 'marks'], properties: { caption: S(), marks: { type: 'ARRAY', items: mark } } } } } } },
+  }, ['gemini-3.1-pro-preview', 'gemini-3.8-flash'], false, 120000);
+  const ok = (v) => Array.isArray(v) && v.length === 2 && v.every((n) => Number.isFinite(n) && n >= 0 && n <= 1000);
+  return frames.map((_, i) => {
+    const f = json.frames?.[i] ?? {};
+    return { caption: String(f.caption ?? ''), marks: (f.marks ?? []).filter((m) => ok(m.p)).slice(0, 4).map((m) => ({ label: String(m.label ?? '').slice(0, 40), kind: m.kind === 'fix' ? 'fix' : 'good', p: m.p, ...(ok(m.q) ? { q: m.q } : {}), note: String(m.note ?? '').slice(0, 160) })) };
+  });
+}

@@ -207,7 +207,7 @@ function renderAi() {
   const notes = $('[data-ai-notes]');
   const checks = ai.checks ?? [];
   const missed = (ai.parts ?? []).filter((p) => p.failed);
-  notes.hidden = ai.status !== 'ready' || !(ai.player || ai.notes || checks.length || missed.length);
+  notes.hidden = ai.status !== 'ready' || !(ai.player || ai.notes || checks.length || missed.length || ai.breakdown || report.items?.some((i) => i.time));
   notes.innerHTML = `${ai.setting === 'training' ? '<p><b>Training video:</b> no points were played, so the AI judged each repetition on technique.</p>' : ''}${missed.length ? `<p class="rb__bad"><b>Not watched:</b> the AI couldn’t watch ${missed.map((p) => `the 5 minutes from ${esc(p.from)}`).join(', ')}, so nothing there is in this draft — check those minutes yourself.</p>` : ''}${ai.player ? `<p><b>Who it analysed:</b> ${esc(ai.player)}</p>` : ''}${ai.notes ? `<p><b>Not sure about:</b> ${esc(ai.notes)}</p>` : ''}
     ${checks.length ? `<p><b>Moment check</b> (the AI re-watched the seconds around each time):</p>${checks.map((c) => `<p class="${c.ok === false ? 'rb__bad' : ''}">${c.ok === true ? '✅' : c.ok === false ? '⚠️' : '•'} ${c.index !== undefined ? `Fix ${c.index + 1} at ${esc(c.time)} — ` : ''}${c.ok === false ? '<b>doesn’t match.</b> It shows: ' : ''}${esc(c.seen)}</p>`).join('')}
       <button class="pill" type="button" data-recheck>Re-check moments after changing times</button>` : ''}
@@ -215,14 +215,55 @@ function renderAi() {
       ${ai.moments.map((m) => `<div class="rb__moment">
         <span class="rb__mt">${esc(m.time)}</span><span>${m.kind === 'error' ? '⚠️' : '👍'} ${esc(m.what_happens)}${m.tip ? ` <i>Tip: ${esc(m.tip)}</i>` : ''}</span>
         <span class="rb__mb">${(report.items ?? []).map((_, k) => `<button type="button" class="pill" data-use-moment="${m.id}" data-fix="${k}">Fix ${k + 1}</button>`).join('')}</span>
-      </div>`).join('')}</details>` : ''}`;
+      </div>`).join('')}</details>` : ''}
+    ${breakdownHtml(ai)}`;
+  loadFrames();
   clearTimeout(aiTimer);
-  if (ai.status === 'running') aiTimer = setTimeout(pollAi, 5000);
+  if (ai.status === 'running' || ai.breakdownStatus === 'running') aiTimer = setTimeout(pollAi, 5000);
 }
+
+// Shot breakdown: each fix's shot in 3 frames (preparation → contact → ending) with the body marked
+function breakdownHtml(ai) {
+  const running = ai.breakdownStatus === 'running';
+  return `<div class="rb__bd">
+    <p><b>Shot breakdown</b> — each fix’s shot in 3 pictures (preparation → contact → ending), with the important parts marked: green = good, orange = to fix.</p>
+    ${running ? `<p>⏳ ${esc(ai.breakdownStep ?? 'Working…')} (about a minute per shot)</p>` : ''}
+    ${ai.breakdownStatus === 'failed' ? `<p class="rb__bad">⚠️ ${esc(ai.breakdownError)}</p>` : ''}
+    ${(ai.breakdown ?? []).map((s) => `<div class="rb__bd-shot"><p><b>Fix ${s.index + 1} at ${esc(s.time)} — ${esc(s.title)}</b></p>
+      <div class="rb__bd-row">${s.phases.map((p) => `<figure><img data-frame="${esc(p.img)}" alt="${esc(p.name)} at ${esc(p.time)}"><figcaption><b>${esc(p.name)}</b> · ${esc(p.time)}</figcaption></figure>`).join('')}</div></div>`).join('')}
+    <button class="pill" type="button" data-breakdown ${running ? 'disabled' : ''}>${ai.breakdown?.length ? 'Make the breakdown again (after changing fix times)' : 'Make the shot breakdown'}</button>
+  </div>`;
+}
+const frameUrls = new Map();
+async function loadFrames() {
+  for (const img of document.querySelectorAll('img[data-frame]')) {
+    const k = img.dataset.frame;
+    try {
+      if (!frameUrls.has(k)) {
+        const res = await fetch(`/api/admin/compare/frame?key=${encodeURIComponent(k)}&v=${encodeURIComponent(report.ai?.breakdownAt ?? '')}`, { headers: { 'x-admin-key': password } });
+        if (!res.ok) continue;
+        frameUrls.set(k, URL.createObjectURL(await res.blob()));
+      }
+      img.src = frameUrls.get(k);
+      img.onclick = () => window.open(img.src, '_blank');
+    } catch { /* leave it empty */ }
+  }
+}
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('[data-breakdown]')) return;
+  try {
+    if (dirty) await save(); // use the fix times on screen
+    frameUrls.clear();
+    const res = await fetch('/api/ai-run', { method: 'POST', headers: { 'x-admin-key': password, 'Content-Type': 'application/json' }, body: JSON.stringify({ ref, breakdownOnly: true }) });
+    if (!res.ok && res.status !== 202) throw new Error(`Couldn’t start (${res.status})`);
+    report.ai = { ...(report.ai ?? {}), breakdownStatus: 'running', breakdownStep: 'Starting…', breakdownError: null };
+    renderAi();
+  } catch (err) { toast(esc(err.message)); }
+});
 async function pollAi() {
   try {
     const data = await api('GET');
-    if (data.report.ai?.status === 'ready') {
+    if (data.report.ai?.status === 'ready' && report.ai?.status === 'running') {
       dirty = false;
       render(data);
       toast('AI draft ready ✅ — check it before publishing.', 10000);

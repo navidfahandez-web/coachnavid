@@ -29,6 +29,12 @@ export default async (req) => {
     }
     return json((await store.get(`${key}.json`, { type: 'json' })) ?? { step: 'starting…' });
   }
+  if (url.pathname.endsWith('/frame')) { // a shot-breakdown picture: ?key=breakdown/VA0003/0-execution
+    const k = (url.searchParams.get('key') ?? '').replace(/[^\w/-]/g, '');
+    if (!k.startsWith('breakdown/')) return json({ error: 'bad key' }, 400);
+    const b = await clipStore().get(`${k}.jpg`, { type: 'arrayBuffer' });
+    return b ? new Response(b, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=600' } }) : json({ error: 'none' }, 404);
+  }
   if (url.pathname.endsWith('/probe')) { // timestamp diagnosis: POST { ref, probe: ['0:27', …] }; GET ?ref= → status, &img=seek0 → frame
     const store = clipStore();
     if (req.method === 'POST') {
@@ -56,4 +62,4 @@ export default async (req) => {
   return json({ status: 'cutting' }, 202);
 };
 
-export const config = { path: ['/api/admin/compare/clip', '/api/admin/compare/reel', '/api/admin/compare/probe'] };
+export const config = { path: ['/api/admin/compare/clip', '/api/admin/compare/reel', '/api/admin/compare/probe', '/api/admin/compare/frame'] };
