@@ -46,6 +46,11 @@ export default async (req) => {
       if (status) p.status = status;
       if (typeof b.fix === 'string' && b.fix.trim()) p.fix = b.fix.trim().slice(0, 300);
       if (Array.isArray(b.levels)) p.levels = [...new Set(b.levels.map(Number).filter((n) => n >= 1 && n <= 10))].sort((x, y) => x - y);
+      if (Number(b.start) >= 1 && Number(b.start) <= 10) { // Navid's start level: the point is for that level and the next ones (every shot grows)
+        p.start = Number(b.start);
+        p.levels = [p.start, p.start + 1, p.start + 2, p.start + 3].filter((n) => n <= 10);
+      }
+      if (typeof b.mistake === 'string') p.mistake = b.mistake.trim().slice(0, 300);
       p.reviewedAt = new Date().toISOString();
       found = p;
     }, []);

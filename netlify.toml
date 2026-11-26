@@ -86,6 +86,12 @@
   to = "/book.html"
   status = 200
 
+# Worksheet: every coaching point in one table, Navid edits wording + start level (admin)
+[[redirects]]
+  from = "/admin/worksheet"
+  to = "/worksheet.html"
+  status = 200
+
 # Coaching guide: approve what the AI learned from coaching videos (admin)
 [[redirects]]
   from = "/admin/learn"

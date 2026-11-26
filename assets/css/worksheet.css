@@ -1,0 +1,30 @@
+.ws { max-width: 1400px; margin: 0 auto; padding: 0 16px 60px; box-sizing: border-box; }
+.ws__filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; margin-top: 12px; }
+.ws__filters label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.ws__filters select, .ws__filters input[type="search"] { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; min-width: 220px; }
+.ws__filters .ws__check { flex-direction: row; align-items: center; cursor: pointer; font-size: 14px; }
+.ws__count { margin: 12px 0 0; font-weight: 600; }
+.ws__head, .ws__row { display: grid; grid-template-columns: 200px 1fr 1.3fr 120px 96px; gap: 12px; align-items: start; }
+.ws__head { position: sticky; top: 0; z-index: 2; padding: 10px 12px; margin-top: 16px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; background: var(--bg, #121212); border-bottom: 2px solid #ff5b1f; }
+.ws__row { padding: 12px; border-bottom: 1px solid var(--line-soft); }
+.ws__row.is-approved { background: rgba(47, 191, 113, .08); }
+.ws__row.is-rejected { opacity: .5; }
+.ws__topic b { display: block; font-size: 14px; }
+.ws__topic small { display: block; opacity: .7; margin: 2px 0 4px; }
+.ws__topic a { font-size: 13px; color: #ff5b1f; }
+.ws__cell span { display: none; font-size: 12px; opacity: .7; }
+.ws__cell textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; resize: vertical; }
+.ws__cell textarea:focus { border-color: #ff5b1f; outline: none; }
+.ws__cell small { display: block; margin-top: 4px; font-size: 12px; opacity: .65; }
+.ws__start select { width: 100%; font: inherit; font-size: 14px; padding: 6px; border-radius: 8px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; }
+.ws__keep { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ws__keep button { font: inherit; font-size: 18px; width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--line-soft); background: transparent; color: inherit; cursor: pointer; }
+.ws__yes.is-on { background: #2fbf71; border-color: #2fbf71; color: #fff; }
+.ws__no.is-on { background: #e5484d; border-color: #e5484d; color: #fff; }
+.ws__saved { width: 100%; font-size: 12px; opacity: .75; }
+.ws__more { display: block; margin: 20px auto; }
+@media (max-width: 900px) {
+  .ws__head { display: none; }
+  .ws__row { grid-template-columns: 1fr; gap: 8px; }
+  .ws__cell span { display: block; }
+}

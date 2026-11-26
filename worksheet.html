@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Worksheet · Coach Navid</title>
+  <meta name="theme-color" content="#121212" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+  <link rel="stylesheet" href="/assets/css/worksheet.css" />
+  <script type="module" src="/assets/js/worksheet.js"></script>
+</head>
+<body class="admin">
+  <header class="nav">
+    <a class="lockup" href="/admin">
+      <span class="lockup__pb"><img src="/assets/img/padel-beast-logo-sm.png" alt="Padel Beast" width="151" height="200" /></span>
+      <span class="lockup__rule" aria-hidden="true"></span>
+      <span class="lockup__text"><b>Worksheet</b><small>Coach Navid · every point · private</small></span>
+    </a>
+    <nav class="nav__links"><a class="pill" href="/admin/learn">Coaching guide</a> <a class="pill" href="/admin/book">📖 The Method</a></nav>
+  </header>
+
+  <main class="ws">
+    <section class="adm-box ws__top">
+      <h3>Every coaching point, in one table</h3>
+      <p class="note">Write the cue in your words, pick the level where it <b>starts</b>, then ✓ keep or ✕ reject. Everything saves by itself as you go. A kept point goes into The Method; its start level puts it in that level and the 3 above it.</p>
+      <div class="ws__filters">
+        <label>Topic <select data-topic><option value="">All topics</option></select></label>
+        <label>Search <input type="search" data-search placeholder="word in the mistake or cue…" /></label>
+        <label class="ws__check"><input type="checkbox" data-multi checked /> Only said in 2+ videos</label>
+        <label class="ws__check"><input type="checkbox" data-hide-done /> Hide the ones I've done</label>
+      </div>
+      <p class="ws__count" data-count>Loading…</p>
+    </section>
+    <div class="ws__head" aria-hidden="true"><span>Topic</span><span>Mistake (how it looks)</span><span>Cue — your words</span><span>Starts at</span><span>Keep?</span></div>
+    <div data-rows></div>
+    <button class="btn btn--ghost ws__more" type="button" data-more hidden>Show more</button>
+  </main>
+</body>
+</html>
