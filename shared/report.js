@@ -85,7 +85,7 @@ export const AREAS = [
 // Navid's methodology levels (amateur → high competition; professionals are out of scope)
 // desc = DRAFT descriptions for the AI to sort tips by level — Navid to correct them.
 export const LEVELS = [
-  { n: 1, label: 'D-', desc: 'First months: learning grips, basic forehand/backhand and serve; short rallies; avoids the walls.' },
+  { n: 1, label: 'D-', desc: 'First months (Navid): stays behind the line, the net is not mandatory and the serve is played like a normal forehand. To move up: plays normal rallies, comfortable with balls before the glass; consistent sweet-spot contact (technique not good yet; a longer preparation is fine if the timing is good); first volleys from the back of the court, to avoid the glass when using it is still too hard.' },
   { n: 2, label: 'D', desc: 'Keeps short rallies; lets easy balls come off the back wall; volleys are mostly blocks; positions by instinct.' },
   { n: 3, label: 'D+', desc: 'Plays regular matches; basic back-wall exits; starts to lob; knows net vs back position; overheads mostly flat and hit hard.' },
   { n: 4, label: 'C-', desc: 'Consistent rallies; learning the bandeja; returns with lobs; follows the lob to the net; side wall still difficult.' },
