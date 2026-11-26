@@ -347,7 +347,8 @@ Only the student, not the partner or opponents (except to explain what happened)
 export async function analyzeVideo(cut, r, ctx, onProgress) {
   const { moments, who, setting, duration, partLog } = await findMoments(cut, r, onProgress, ctx.guide ?? [], ctx.guideNotes ?? {}, ctx.watch, ctx.fps);
   const errors = moments.filter((m) => m.kind === 'error');
-  if (!errors.length) throw new Error('The AI didn’t find clear errors by the student in this video. Your report wasn’t changed.');
+  // keep what it saw, so Navid can judge (the moment list shows in the builder)
+  if (!errors.length) throw Object.assign(new Error(`The AI didn’t find clear errors by the student in this video (${moments.length} good moments). Your report wasn’t changed. What it saw: ${partLog.map((p) => p.seen).filter(Boolean).join(' ').slice(0, 300)}`), { moments, partLog, setting });
   const sch = schema(r.kind);
   const item = sch.properties.items.items;
   item.properties = { moment: { type: 'INTEGER', description: 'id of the error moment from the list that this fix is about (its clearest example)' }, ...item.properties };

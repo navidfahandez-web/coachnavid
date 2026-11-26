@@ -97,7 +97,7 @@ export default async (req) => {
     await logActivity({ kind: 'sent', text: `AI draft ready for ${ref} (${model}) — check it in the report builder.` });
   } catch (err) {
     console.error(`AI draft for ${ref} failed: ${err.message}`);
-    await setAi({ status: 'failed', error: err.message });
+    await setAi({ status: 'failed', error: err.message, ...(err.moments ? { moments: err.moments, parts: err.partLog, setting: err.setting } : {}) });
   } finally {
     clearTimeout(watchdog);
   }
