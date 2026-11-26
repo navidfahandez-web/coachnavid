@@ -27,7 +27,7 @@ const ptLevels = (p) => { // Navid's levels, else the levels at least a third of
 const units = () => { // points (with their tips) + tips not merged yet
   members = new Map();
   for (const c of data.candidates) if (c.point) { if (!members.has(c.point)) members.set(c.point, []); members.get(c.point).push(c); }
-  const pts = data.points.filter((p) => members.has(p.id)).map((p) => ({ ...p, isPoint: true, members: members.get(p.id), levels: ptLevels(p), shot: p.tech, type: members.get(p.id)[0].type }));
+  const pts = data.points.filter((p) => members.has(p.id)).map((p) => ({ ...p, isPoint: true, members: members.get(p.id), levels: ptLevels(p), shot: p.tech, type: members.get(p.id)[0].type, area: members.get(p.id)[0].area }));
   const known = new Set(data.points.map((p) => p.id));
   return [...pts, ...data.candidates.filter((c) => !c.point || !known.has(c.point))];
 };
@@ -42,12 +42,12 @@ const inVids = (c) => !multiOnly || vidsOf(c) >= 2;
 $('[data-level]').innerHTML += LEVELS.map((l) => `<option value="${l.n}">${l.n} · ${l.label}</option>`).join('');
 let tab = 'pending';
 let tech = '';
-const TR = { 'tr:forced': '🔄 Forced transitions (all shots)', 'tr:wanted': '🔄 Wanted transitions (all shots)', 'tm:earn': '⏱ Earning time (all shots)', 'tm:remove': '⏱ Removing time (all shots)', 'fu:timing': '🎯 Timing (all shots)', 'fu:contact': '🎯 Contact point / sweet spot (all shots)', 'fu:deception': '🎭 Changing timing to hide the shot (all shots)' };
-const inTech = (c, t) => (t.startsWith('tr:') ? share(c, (m) => m.transition === t.slice(3)) : t.startsWith('tm:') ? share(c, (m) => m.time_tag === t.slice(3)) : t.startsWith('fu:') ? share(c, (m) => m.fundamental === t.slice(3)) : techOf(c) === t);
+const TR = { 'all:tactics': '🧠 All tactics — by level', 'all:position': '📍 All positioning — by level', 'all:partner': '🤝 All partner play — by level', 'tr:forced': '🔄 Forced transitions (all shots)', 'tr:wanted': '🔄 Wanted transitions (all shots)', 'tm:earn': '⏱ Earning time (all shots)', 'tm:remove': '⏱ Removing time (all shots)', 'fu:timing': '🎯 Timing (all shots)', 'fu:contact': '🎯 Contact point / sweet spot (all shots)', 'fu:deception': '🎭 Changing timing to hide the shot (all shots)' };
+const inTech = (c, t) => (t.startsWith('all:') ? c.type !== 'fitness' && c.area === t.slice(4) : t.startsWith('tr:') ? share(c, (m) => m.transition === t.slice(3)) : t.startsWith('tm:') ? share(c, (m) => m.time_tag === t.slice(3)) : t.startsWith('fu:') ? share(c, (m) => m.fundamental === t.slice(3)) : techOf(c) === t);
 const techOf = (c) => (c.isPoint ? c.tech : c.shot && c.shot !== 'general' ? c.shot : `area:${c.area}`);
 const FIT = { injury_prevention: 'Injury prevention', strength: 'Strength', power: 'Power', speed_agility: 'Speed & agility', endurance: 'Endurance', mobility: 'Mobility', warmup: 'Warm-up', recovery: 'Recovery' };
 const techName = (t) => (TR[t] ? TR[t] : t.startsWith('fit:') ? `💪 Fitness — ${FIT[t.slice(4)] ?? t.slice(4)}` : t.startsWith('area:') ? `${AREAS.find((a) => a.id === t.slice(5))?.en ?? t.slice(5)} — general` : SHOTS.find((x) => x.id === t)?.en ?? t);
-const ORDER = ['tr:forced', 'tr:wanted', 'tm:earn', 'tm:remove', 'fu:timing', 'fu:contact', 'fu:deception', ...SHOTS.map((x) => x.id), ...AREAS.map((a) => `area:${a.id}`), ...Object.keys(FIT).map((k) => `fit:${k}`)];
+const ORDER = ['all:tactics', 'all:position', 'all:partner', 'tr:forced', 'tr:wanted', 'tm:earn', 'tm:remove', 'fu:timing', 'fu:contact', 'fu:deception', ...SHOTS.map((x) => x.id), ...AREAS.map((a) => `area:${a.id}`), ...Object.keys(FIT).map((k) => `fit:${k}`)];
 
 function render() {
   const everything = units();
@@ -100,7 +100,7 @@ function render() {
     const vids = new Set(p.members.map((m) => m.source)).size;
     return `
       <article class="lg__card lg__point" data-point="${esc(p.id)}">
-        <div class="lg__meta"><span class="lg__said">said in ${vids} video${vids === 1 ? '' : 's'}</span>${p.members.length > vids ? `<span>${p.members.length} tips</span>` : ''}</div>
+        <div class="lg__meta"><span class="lg__said">said in ${vids} video${vids === 1 ? '' : 's'}</span>${tech.startsWith('all:') ? `<span>${esc(techName(p.tech))}</span>` : ''}${p.members.length > vids ? `<span>${p.members.length} tips</span>` : ''}</div>
         ${nmlWarn(`${p.mistake} ${p.fix} ${p.why}`)}
         ${p.mistake ? `<p><b>Mistake:</b> ${esc(p.mistake)}</p>` : ''}
         <label>${p.type === 'fitness' ? 'Exercise (edit into your own words)' : 'Cue (edit into your own words)'}<textarea rows="2" data-fix>${esc(p.fix)}</textarea></label>
@@ -114,7 +114,10 @@ function render() {
   };
   const bySource = new Map();
   for (const c of singles) { if (!bySource.has(c.source)) bySource.set(c.source, []); bySource.get(c.source).push(c); }
-  $('[data-list]').innerHTML = (pts.length ? `<h4 class="lg__src">Merged points<small>Near-identical tips from different videos, merged into one. Approving a point approves every tip in it.</small></h4>${pts.map(pointCard).join('')}` : '')
+  const start = (u) => (u.levels ?? []).find((l) => l >= 1) ?? 99; // the level where the point starts
+  const byLevel = (list) => LEVELS.map((L) => [L, list.filter((u) => start(u) === L.n)]).concat([[{ n: 99, label: '?' }, list.filter((u) => start(u) === 99)]]).filter(([, xs]) => xs.length)
+    .map(([L, xs]) => `<h4 class="lg__src lg__lvhead">${L.n === 99 ? 'Level not sorted yet' : `Level ${L.n} · ${L.label}`}<small>${esc(L.desc ?? '')} — ${xs.length} point${xs.length === 1 ? '' : 's'}</small></h4>${xs.map(pointCard).join('')}`).join('');
+  $('[data-list]').innerHTML = tech.startsWith('all:') ? (pts.length ? byLevel(pts) : '') + (singles.length ? `<h4 class="lg__src">Not merged yet</h4>${singles.length} tips — they appear here once merged.` : '') : (pts.length ? `<h4 class="lg__src">Merged points<small>Near-identical tips from different videos, merged into one. Approving a point approves every tip in it.</small></h4>${pts.map(pointCard).join('')}` : '')
     + (singles.length && pts.length ? '<h4 class="lg__src">Not merged yet<small>The merging job is still working on these.</small></h4>' : '')
     + [...bySource].map(([src, items]) => {
     const s = data.sources.find((x) => x.videoId === src) ?? {};
