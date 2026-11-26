@@ -30,6 +30,10 @@ export const PRINCIPLES = [
     text: 'No shot is mastered in the early levels. Each shot is introduced at its level and then improves with every level you go up: what each level adds is more quality, more spin or more speed, and more accuracy. The gancho is the simplified version of the rulo — also the one to use when there is little time to play the shot.',
   },
   {
+    id: 'stance', title: 'Open or semi-open stance from the beginning', icon: '🦶',
+    text: 'From the first lesson we teach the open or semi-open stance. We avoid teaching the closed stance, except for a ball that comes off the glass or a short ball.',
+  },
+  {
     id: 'contact', title: 'Contact point: the sweet spot', icon: '⚪', tag: ['fundamental', ['contact']],
     text: 'Contacting the ball with the sweet spot is mandatory at every level.',
   },
