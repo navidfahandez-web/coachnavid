@@ -80,13 +80,13 @@ export default async (req) => {
     });
     const guide = (await readJSON('learn/candidates', [])).filter((c) => c.status === 'approved');
     const guideNotes = await readJSON('learn/notes', {});
-    const { draft, model, moments, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide, guideNotes, watch },
+    const { draft, model, moments, setting, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide, guideNotes, watch },
       (done) => setAi({ step: done === total ? 'Writing the draft from the moments…' : `Watched part ${done} of ${total}…` }));
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);
       Object.assign(x, filled, {
         videoFileId: x.videoFileId || videoId,
-        ai: { status: 'ready', at: new Date().toISOString(), model, watchedBy: watch === 'pro' ? 'pro' : 'flash', player: draft.player_identified, notes: draft.confidence_notes, moments, parts, duration, checked: false },
+        ai: { status: 'ready', at: new Date().toISOString(), model, watchedBy: watch === 'pro' ? 'pro' : 'flash', setting, player: draft.player_identified, notes: draft.confidence_notes, moments, parts, duration, checked: false },
         updatedAt: new Date().toISOString(),
       });
     }, {});

@@ -208,7 +208,7 @@ function renderAi() {
   const checks = ai.checks ?? [];
   const missed = (ai.parts ?? []).filter((p) => p.failed);
   notes.hidden = ai.status !== 'ready' || !(ai.player || ai.notes || checks.length || missed.length);
-  notes.innerHTML = `${missed.length ? `<p class="rb__bad"><b>Not watched:</b> the AI couldn’t watch ${missed.map((p) => `the 5 minutes from ${esc(p.from)}`).join(', ')}, so nothing there is in this draft — check those minutes yourself.</p>` : ''}${ai.player ? `<p><b>Who it analysed:</b> ${esc(ai.player)}</p>` : ''}${ai.notes ? `<p><b>Not sure about:</b> ${esc(ai.notes)}</p>` : ''}
+  notes.innerHTML = `${ai.setting === 'training' ? '<p><b>Training video:</b> no points were played, so the AI judged each repetition on technique.</p>' : ''}${missed.length ? `<p class="rb__bad"><b>Not watched:</b> the AI couldn’t watch ${missed.map((p) => `the 5 minutes from ${esc(p.from)}`).join(', ')}, so nothing there is in this draft — check those minutes yourself.</p>` : ''}${ai.player ? `<p><b>Who it analysed:</b> ${esc(ai.player)}</p>` : ''}${ai.notes ? `<p><b>Not sure about:</b> ${esc(ai.notes)}</p>` : ''}
     ${checks.length ? `<p><b>Moment check</b> (the AI re-watched the seconds around each time):</p>${checks.map((c) => `<p class="${c.ok === false ? 'rb__bad' : ''}">${c.ok === true ? '✅' : c.ok === false ? '⚠️' : '•'} ${c.index !== undefined ? `Fix ${c.index + 1} at ${esc(c.time)} — ` : ''}${c.ok === false ? '<b>doesn’t match.</b> It shows: ' : ''}${esc(c.seen)}</p>`).join('')}
       <button class="pill" type="button" data-recheck>Re-check moments after changing times</button>` : ''}
     ${ai.moments?.length ? `<details class="rb__moments"><summary>All moments the AI found (${ai.moments.length}) — swap a fix for another moment</summary>
