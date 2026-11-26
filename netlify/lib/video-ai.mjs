@@ -258,7 +258,7 @@ const MOMENTS_SCHEMA = {
 // Pass 1: the server cuts the video into parts (lib/clips.mjs cutParts); each part is watched on
 // its own and gives a list of the student's moments. Part 1 also works out who the student is.
 // cut(onPart) runs the cutting and calls onPart(k, Buffer) per finished part.
-async function findMoments(cut, r, onProgress, guide = [], guideNotes = {}, watch = 'flash') {
+async function findMoments(cut, r, onProgress, guide = [], guideNotes = {}, watch = 'flash', fps) {
   const models = WATCH_MODELS[watch] ?? WATCH_MODELS.flash;
   let who = r.studentNotes || '';
   let setting = 'match';
@@ -301,7 +301,7 @@ async function findMoments(cut, r, onProgress, guide = [], guideNotes = {}, watc
       console.log(`part ${k + 1}: uploaded ${Math.round(buf.length / 1e5) / 10} MB in ${took()}`);
       const { json, model } = await ask({
         contents: [{ role: 'user', parts: [
-          { fileData: { mimeType: 'video/mp4', fileUri: file.uri } },
+          { fileData: { mimeType: 'video/mp4', fileUri: file.uri }, ...(fps ? { videoMetadata: { fps } } : {}) }, // Gemini looks at 1 frame/s unless told more
           { text: `Padel video, part ${k + 1} (this file starts at ${fmt(a)} of the video; it has no sound).
 It is either a MATCH (points are played) or a TRAINING session (drills, a coach feeding or a ball machine, often only one player, no points) — say which in "setting".
 The student is ${r.student.firstName} ${r.student.lastName}. ${who ? `How to recognise them: ${who}` : 'Work out which player it is (name on the shirt, the note below) and describe them.'}
@@ -345,7 +345,7 @@ Only the student, not the partner or opponents (except to explain what happened)
 
 // Pass 2: write the report from the moment list — every fix must point at a found moment
 export async function analyzeVideo(cut, r, ctx, onProgress) {
-  const { moments, who, setting, duration, partLog } = await findMoments(cut, r, onProgress, ctx.guide ?? [], ctx.guideNotes ?? {}, ctx.watch);
+  const { moments, who, setting, duration, partLog } = await findMoments(cut, r, onProgress, ctx.guide ?? [], ctx.guideNotes ?? {}, ctx.watch, ctx.fps);
   const errors = moments.filter((m) => m.kind === 'error');
   if (!errors.length) throw new Error('The AI didn’t find clear errors by the student in this video. Your report wasn’t changed.');
   const sch = schema(r.kind);

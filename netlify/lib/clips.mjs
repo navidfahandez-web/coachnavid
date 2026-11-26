@@ -226,7 +226,9 @@ export async function cutMoments(videoFileId, moments) {
 // 480p, no sound). Gemini can't jump into the middle of some phone videos, so each part is its
 // own file with its own 0:00. onPart(k, Buffer) is called as soon as part k is finished, so the
 // AI can start on it while the next parts are still being cut.
-export async function cutParts(videoFileId, partSec, onPart) {
+// { short: true } = a short clip (training): every frame is decoded, 5 frames/s at 720p, so a fast
+// shot (a smash takes ~0.4 s) is really seen; a long match keeps the key-frames-only cut.
+export async function cutParts(videoFileId, partSec, onPart, { short = false } = {}) {
   const dir = mkdtempSync(path.join(tmpdir(), 'parts-'));
   const proxy = await driveProxy(videoFileId);
   const sent = new Set();
@@ -248,10 +250,23 @@ export async function cutParts(videoFileId, partSec, onPart) {
     // 5 minutes), so only the key frames are decoded (phones put one every ~0.5-1 s) — see runKeyframes
     // -seekable 0: one straight pass from start to end (with seeking, ffmpeg first scans the
     // whole fragmented file for its index, which downloads it twice)
-    await runKeyframes(proxy.url, ['-loglevel', 'error', '-an', '-vf', 'fps=2,scale=-2:480', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '30', '-pix_fmt', 'yuv420p',
+    const outArgs = (fps, height) => ['-an', '-vf', `fps=${fps},scale=-2:${height}`, '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '30', '-pix_fmt', 'yuv420p',
       '-force_key_frames', `expr:gte(t,n_forced*${partSec})`,
       '-f', 'segment', '-segment_time', String(partSec), '-reset_timestamps', '1', '-segment_format', 'mp4',
-      path.join(dir, 'p%03d.mp4')], 11 * 60 * 1000);
+      path.join(dir, 'p%03d.mp4')];
+    // every frame, with seeking allowed: also reads phone .MOV files whose index (moov) is at the end
+    const full = (fps, height) => run(['-hide_banner', '-nostdin', '-y', '-loglevel', 'error', '-seekable', '1', '-i', proxy.url, ...outArgs(fps, height)], 11 * 60 * 1000);
+    if (short) await full(5, 720);
+    else {
+      try {
+        await runKeyframes(proxy.url, ['-loglevel', 'error', ...outArgs(2, 480)], 11 * 60 * 1000);
+      } catch (err) {
+        // an iPhone .MOV keeps its index at the end, so it can't be read in one straight pass
+        if (!/Invalid data|moov atom/i.test(err.message) || sent.size) throw err;
+        for (const f of readdirSync(dir)) rmSync(path.join(dir, f), { force: true });
+        await full(2, 480);
+      }
+    }
     clearInterval(timer);
     flush(true);
     const out = await Promise.all(jobs);

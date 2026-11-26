@@ -74,13 +74,14 @@ export default async (req) => {
 
     // Safety: a video whose internal clock is broken comes out much longer than it really is (the AI
     // would then get repeated frames and wrong times) — stop before spending AI credits on it.
+    const short = ms > 0 && ms < 4 * 60e3; // a short clip (training): cut and watched in more detail
     const cut = (onPart) => cutParts(videoId, PART, async (k, buf) => {
       if (ms && k * PART > ms / 1000 + 30) throw new Error(`The video’s timing looks broken (part ${k + 1} starts after the real end at ${Math.round(ms / 60000)} min), so the AI’s times would be wrong. Your report wasn’t changed — tell Claude which video this is.`);
       return onPart(k, buf);
-    });
+    }, { short });
     const guide = (await readJSON('learn/candidates', [])).filter((c) => c.status === 'approved');
     const guideNotes = await readJSON('learn/notes', {});
-    const { draft, model, moments, setting, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide, guideNotes, watch },
+    const { draft, model, moments, setting, parts, duration } = await analyzeVideo(cut, r, { history, glasswall, guide, guideNotes, watch, fps: short ? 5 : undefined },
       (done) => setAi({ step: done === total ? 'Writing the draft from the moments…' : `Watched part ${done} of ${total}…` }));
     await updateJSON(key, (x) => {
       const filled = draftToReport(x, draft);
