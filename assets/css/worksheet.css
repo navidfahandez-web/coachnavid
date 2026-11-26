@@ -28,3 +28,5 @@
   .ws__row { grid-template-columns: 1fr; gap: 8px; }
   .ws__cell span { display: block; }
 }
+.ws__warns { grid-column: 1 / -1; }
+.ws__warn { margin: 0; padding: 6px 10px; border-radius: 8px; background: rgba(229, 72, 77, .15); border: 1.5px solid #e5484d; font-size: 13px; }

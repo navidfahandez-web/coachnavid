@@ -53,11 +53,21 @@ const filtered = () => {
     && (!q || `${r.fix} ${r.mistake} ${r.why}`.toLowerCase().includes(q)));
 };
 
+// lines that go against Navid's own rules get a warning, so he can fix or reject them quickly
+const warn = (r) => {
+  const t = `${r.mistake} ${r.fix} ${r.why}`;
+  const out = [];
+  if (/neutral stance|closed stance|square stance|step(s|ping)? (in|across|forward) (with|into)/i.test(r.fix) || /open stance/i.test(r.mistake)) out.push('Against your stance rule: open or semi-open from the start, closed only off the glass or short balls.');
+  if (/no[\s-]*man'?s[\s-]*land|tierra de nadie/i.test(t)) out.push('Says “no man’s land”: in your method it is the transition area.');
+  return out.map((w) => `<p class="ws__warn">⚠️ ${esc(w)}</p>`).join('');
+};
+
 const row = (r) => `
   <article class="ws__row is-${esc(r.status)}" data-id="${esc(r.id)}">
     <div class="ws__topic"><b>${esc(techName(r.tech))}</b>
       <small>said in ${r.vids} video${r.vids === 1 ? '' : 's'}${r.tips > r.vids ? ` · ${r.tips} tips` : ''} · AI: ${esc(lvLabel(r.levels))}</small>
       <a href="https://www.youtube.com/watch?v=${esc(r.first.source)}&t=${toSec(r.first.time)}s" target="_blank" rel="noopener">▶ watch</a></div>
+    ${warn(r) ? `<div class="ws__warns">${warn(r)}</div>` : ''}
     <label class="ws__cell"><span>Mistake</span><textarea rows="3" data-f="mistake">${esc(r.mistake)}</textarea></label>
     <label class="ws__cell"><span>Cue</span><textarea rows="3" data-f="fix">${esc(r.fix)}</textarea>${r.why ? `<small>${esc(r.why)}</small>` : ''}</label>
     <label class="ws__cell ws__start"><span>Starts at</span><select data-start><option value="">—</option>${LEVELS.map((l) => `<option value="${l.n}"${r.start === l.n ? ' selected' : ''}>${l.n} · ${l.label}</option>`).join('')}</select></label>
