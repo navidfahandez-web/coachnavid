@@ -95,6 +95,8 @@ function sanitize(r, given) {
     headline: line(b.headline, 140), summary: str(b.summary, 1500), strengths: str(b.strengths, 800), closing: str(b.closing, 800),
     items, scores: keepScores ? r.scores ?? {} : scores, weeks, videoFileId: fileId(b.videoFileId), mediaFileId: fileId(b.mediaFileId),
     // one voice-over line per fix (spoken in Navid's Higgsfield voice, then laid on the fix clip)
+    // Navid's choice: show the AI's shot breakdown (marked pictures) on the student's report
+    showBreakdown: 'showBreakdown' in b ? b.showBreakdown === true : r.showBreakdown === true,
     voiceLines: (Array.isArray(b.voiceLines) ? b.voiceLines : r.voiceLines ?? []).slice(0, spec.items).map((t) => str(t, 300)),
     updatedAt: new Date().toISOString(),
   };
@@ -117,7 +119,12 @@ async function publicView(r) {
   }
   const { student, folderId, studentNotes, ai, clips, ...rest } = r; // ai notes and raw clips are for Navid only
   const player = await readJSON(playerKey(digits(student.phone)));
-  return { ...rest, student: { firstName: student.firstName, lastName: student.lastName }, history, playerToken: player?.token ?? null };
+  // the shot breakdown pictures, only when Navid ticked "show on the student's report"
+  const breakdown = r.showBreakdown && ai?.breakdown?.length ? ai.breakdown.map((s) => ({
+    index: s.index, time: s.time, title: s.title,
+    phases: s.phases.map((p) => ({ name: p.name, time: p.time, caption: p.caption, img: `/api/report-frame?token=${r.token}&img=${encodeURIComponent(p.img.split('/').pop())}&v=${encodeURIComponent(ai.breakdownAt ?? '')}` })),
+  })) : null;
+  return { ...rest, breakdown, student: { firstName: student.firstName, lastName: student.lastName }, history, playerToken: player?.token ?? null };
 }
 
 export default async (req, context) => {

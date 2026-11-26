@@ -231,6 +231,7 @@ function breakdownHtml(ai) {
     ${ai.breakdownStatus === 'failed' ? `<p class="rb__bad">⚠️ ${esc(ai.breakdownError)}</p>` : ''}
     ${(ai.breakdown ?? []).map((s) => `<div class="rb__bd-shot"><p><b>Fix ${s.index + 1} at ${esc(s.time)} — ${esc(s.title)}</b></p>
       <div class="rb__bd-row">${s.phases.map((p) => `<figure><img data-frame="${esc(p.img)}" alt="${esc(p.name)} at ${esc(p.time)}"><figcaption><b>${esc(p.name)}</b> · ${esc(p.time)}</figcaption></figure>`).join('')}</div></div>`).join('')}
+    ${ai.breakdown?.length ? `<label class="check"><input type="checkbox" data-show-bd ${report.showBreakdown ? 'checked' : ''} /> Show these pictures on the student’s report (under each fix)</label>` : ''}
     <button class="pill" type="button" data-breakdown ${running ? 'disabled' : ''}>${ai.breakdown?.length ? 'Make the breakdown again (after changing fix times)' : 'Make the shot breakdown'}</button>
   </div>`;
 }
@@ -313,6 +314,7 @@ function collect() {
     kind: val('kind'), lang: val('lang'), headline: val('headline'), summary: val('summary'),
     strengths: val('strengths'), closing: val('closing'), videoFileId: val('videoFileId'), mediaFileId: val('mediaFileId'),
     items, weeks, scores,
+    showBreakdown: document.querySelector('[data-show-bd]') ? document.querySelector('[data-show-bd]').checked : report.showBreakdown === true,
     voiceLines: document.querySelector('[data-voice-line]') ? [...document.querySelectorAll('[data-voice-line]')].map((t) => t.value.trim()) : undefined,
   };
 }

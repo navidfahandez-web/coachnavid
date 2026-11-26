@@ -1,13 +1,25 @@
 // Pro comparison: GET /api/admin/compare/clip?ref=VA0002&t=20:26 → the student's shot (MP4), or 202
 // while it is being cut (the first request starts the cut).
 import { getStore } from '@netlify/blobs';
-import { json, requireAdmin } from '../lib/auth.mjs';
+import { isAdmin, json, requireAdmin } from '../lib/auth.mjs';
+import { readJSON } from '../lib/store.mjs';
 
 const clipStore = () => getStore({ name: 'compare-clips', consistency: 'strong' });
 const clipKey = (ref, t) => `${ref}/${String(t).replace(/[^\d:.]/g, '')}`;
 
 export default async (req) => {
   const url = new URL(req.url);
+  if (url.pathname === '/api/report-frame') { // a breakdown picture on the student's report: ?token=&img=0-execution
+    const token = url.searchParams.get('token') ?? '';
+    const img = (url.searchParams.get('img') ?? '').replace(/[^\w-]/g, '');
+    const pointer = /^[a-f0-9]{32}$/.test(token) && await readJSON(`reports/by-token/${token}`);
+    const r = pointer && await readJSON(`reports/by-ref/${pointer.ref}`);
+    // the token is the report's secret link; ticked pictures also show in Navid's preview before publishing
+    const allowed = r && (isAdmin(req) || r.showBreakdown === true);
+    if (!allowed || !img) return json({ error: 'Not found' }, 404);
+    const b = await clipStore().get(`breakdown/${r.ref}/${img}.jpg`, { type: 'arrayBuffer' });
+    return b ? new Response(b, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=3600' } }) : json({ error: 'Not found' }, 404);
+  }
   const denied = await requireAdmin(req); // the page fetches with the header and plays it from a blob URL
   if (denied) return denied;
   if (url.pathname.endsWith('/reel')) { // POST starts a reel; GET ?key= → status, &mp4=1 → the video
@@ -62,4 +74,4 @@ export default async (req) => {
   return json({ status: 'cutting' }, 202);
 };
 
-export const config = { path: ['/api/admin/compare/clip', '/api/admin/compare/reel', '/api/admin/compare/probe', '/api/admin/compare/frame'] };
+export const config = { path: ['/api/admin/compare/clip', '/api/admin/compare/reel', '/api/admin/compare/probe', '/api/admin/compare/frame', '/api/report-frame'] };

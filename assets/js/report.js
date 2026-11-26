@@ -57,10 +57,20 @@ function items(r, L) {
             ${i.detail ? para(i.detail) : ''}
             ${i.fix ? `<div class="rp__fix"><b>${L.fix}</b>${para(i.fix)}</div>` : ''}
             ${i.drillName || i.drillHow ? `<div class="rp__drill"><b>${L.drill}: ${esc(i.drillName)}</b>${para(i.drillHow)}</div>` : ''}
+            ${breakdown(r, i)}
           </div>
         </li>`;
       }).join('')}</ol>
     </section>`;
+}
+
+// The shot in 3 marked pictures (preparation → contact → ending), when Navid chose to show it
+function breakdown(r, item) {
+  const s = (r.breakdown ?? []).find((x) => r.items[x.index] === item);
+  if (!s) return '';
+  return `<div class="rp__bd"><b>${r.lang === 'lt' ? 'Smūgis po fazę' : 'Your shot, phase by phase'}</b>
+    <div class="rp__bd-row">${s.phases.map((p) => `<figure><a href="${esc(p.img)}" target="_blank" rel="noopener"><img src="${esc(p.img)}" alt="${esc(p.name)} ${esc(p.time)}" loading="lazy" /></a><figcaption><b>${esc(p.name)}</b> · ${esc(p.time)}${p.caption ? `<br />${esc(p.caption)}` : ''}</figcaption></figure>`).join('')}</div>
+  </div>`;
 }
 
 function render(r) {
