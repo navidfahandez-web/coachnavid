@@ -213,7 +213,7 @@ function renderAi() {
       <button class="pill" type="button" data-recheck>Re-check moments after changing times</button>` : ''}
     ${ai.moments?.length ? `<details class="rb__moments"><summary>All moments the AI found (${ai.moments.length}) — swap a fix for another moment</summary>
       ${ai.moments.map((m) => `<div class="rb__moment">
-        <span class="rb__mt">${esc(m.time)}</span><span>${m.kind === 'error' ? '⚠️' : '👍'} ${esc(m.what_happens)}</span>
+        <span class="rb__mt">${esc(m.time)}</span><span>${m.kind === 'error' ? '⚠️' : '👍'} ${esc(m.what_happens)}${m.tip ? ` <i>Tip: ${esc(m.tip)}</i>` : ''}</span>
         <span class="rb__mb">${(report.items ?? []).map((_, k) => `<button type="button" class="pill" data-use-moment="${m.id}" data-fix="${k}">Fix ${k + 1}</button>`).join('')}</span>
       </div>`).join('')}</details>` : ''}`;
   clearTimeout(aiTimer);
