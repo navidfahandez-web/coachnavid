@@ -131,7 +131,7 @@ function render() {
         ${actions(c)}
       </article>`).join('')}`;
   }).join('');
-  const noCredits = data.sources.some((s) => s.status === 'waiting');
+  const noCredits = !data.settings?.videosPaused && data.sources.some((s) => s.status === 'waiting'); // paused: nothing waits on credits
   $('[data-credits]').hidden = !noCredits;
   const running = data.sources.filter((s) => s.status === 'running').length;
   const watched = data.sources.filter((s) => s.status === 'ready').length;
